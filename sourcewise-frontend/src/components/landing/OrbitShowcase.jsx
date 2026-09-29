@@ -67,7 +67,7 @@ const ORBIT_STEPS = [
 const STEP_COUNT = ORBIT_STEPS.length;
 // Perfectly calibrated orbit radii giving comfortable breathing room around center text
 const ORBIT_RADIUS_X = 'clamp(260px, 34vw, 360px)';
-const ORBIT_RADIUS_Y = 'clamp(190px, 26vh, 235px)';
+const ORBIT_RADIUS_Y = 'clamp(160px, 22vh, 195px)';
 
 export default function OrbitShowcase() {
   const containerRef = useRef(null);
@@ -152,12 +152,12 @@ export default function OrbitShowcase() {
       aria-label="SourceWise student outcomes orbit"
     >
       {/* Pinned viewport — stays fixed while user scrolls through the 5 outcomes */}
-      <div className="sticky top-0 h-screen max-h-screen overflow-hidden flex flex-col justify-center items-center pt-24 pb-4 gap-2">
+      <div className="sticky top-0 h-screen max-h-screen overflow-hidden flex flex-col justify-between items-center pt-28 pb-8">
         {/* Ambient atmospheric glow */}
         <div className="pointer-events-none absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[1000px] h-[850px] max-w-none bg-gradient-to-b from-primary-fixed/25 via-secondary-fixed/15 to-transparent blur-3xl opacity-80" />
 
         {/* Section header */}
-        <div className="relative text-center max-w-2xl mx-auto px-4 mb-0.5 sm:mb-1 shrink-0">
+        <div className="relative text-center max-w-2xl mx-auto px-4 mb-4 shrink-0">
           <div className="inline-flex items-center gap-1.5 px-3 py-0.5 rounded-full bg-primary-fixed text-on-primary-fixed font-label-sm text-[11px] font-bold uppercase tracking-wider mb-1 shadow-2xs">
             The Student Transformation
           </div>
@@ -170,7 +170,7 @@ export default function OrbitShowcase() {
         </div>
 
         {/* Orbit stage — generous width with calibrated elliptical track */}
-        <div className="relative mx-auto w-[min(98vw,920px)] h-[min(98vw,520px)] max-h-[530px] shrink-0 min-h-0 flex items-center justify-center">
+        <div className="relative mx-auto w-[min(98vw,920px)] h-[min(98vw,520px)] max-h-[530px] shrink-0 min-h-0 flex items-center justify-center mt-8 mb-2">
           {/* Circular/Elliptical orbit tracks passing through image centers */}
           <div
             className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 rounded-full border-2 border-dashed border-primary-container/25 pointer-events-none"

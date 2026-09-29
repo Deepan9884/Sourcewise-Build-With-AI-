@@ -45,3 +45,7 @@ Date: 2026-09-29
 ### 2026-09-29 — scroll center + gap fix
 - Did: scrollToSection block center, hero pb cut 12/20->2/4 + scroll-mt-24, orbit sticky justify-center pt-24 gap-2 + scroll-mt-24, scrollToDemo center, video-tour scroll-mt-24.
 - Files: LandingPage.jsx, OrbitShowcase.jsx
+
+### 2026-09-29 — orbit overlap fix
+- Did: radiusY 190-235->160-195, sticky justify-between pt-28 pb-8, header mb-4, stage mt-8 mb-2.
+- Files: OrbitShowcase.jsx
