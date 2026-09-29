@@ -31,4 +31,4 @@ Date: 2026-09-29
 
 ### 2026-09-29 — journey.md created
 - Did: created journey.md per user instr (1-5 + token-efficient style).
-- Pending: commit this file.
+- Committed: 1c7bf07 docs: add journey.md tracker with repo map and workflow rules.
