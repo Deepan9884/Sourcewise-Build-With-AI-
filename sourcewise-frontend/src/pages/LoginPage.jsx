@@ -5,7 +5,7 @@ import { motion } from 'framer-motion'
 import { useAuthStore } from '../store/authStore'
 import { Button } from '../components/ui/button'
 import { Input } from '../components/ui/input'
-import { LogIn, Eye, EyeOff, Zap, Mail, Lock, ShieldCheck, Flame, ArrowLeft, CheckCircle2 } from 'lucide-react'
+import { LogIn, Eye, EyeOff, Mail, Lock, ArrowLeft } from 'lucide-react'
 import axios from 'axios'
 import LandingBackground from '../components/landing/LandingBackground'
 import { ParticleBackground } from '../components/ui/particle-background'
@@ -14,7 +14,7 @@ import { AmbientLight } from '../components/ui/ambient-light'
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:4000'
 
 export default function LoginPage() {
-  const { register, handleSubmit, setValue, formState: { errors } } = useForm()
+  const { register, handleSubmit, formState: { errors } } = useForm()
   const navigate = useNavigate()
   const login = useAuthStore((state) => state.login)
   const [isLoading, setIsLoading] = useState(false)
@@ -48,11 +48,6 @@ export default function LoginPage() {
     } else {
       setError('Google Sign-In will be available soon. Please sign in with your email.')
     }
-  }
-
-  const handleQuickDemo = () => {
-    setValue('email', 'scholar@sourcewise.ai')
-    setValue('password', 'sourcewise2026')
   }
 
   return (
@@ -101,8 +96,8 @@ export default function LoginPage() {
           
           {/* Left Column: Visual Mascot & Headline (Unboxed, seamlessly blended with background) */}
           <motion.div
-            initial={{ opacity: 0, x: -25 }}
-            animate={{ opacity: 1, x: 0 }}
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
             transition={{ duration: 0.6, ease: [0.16, 1, 0.3, 1] }}
             className="w-full max-w-[420px] xl:max-w-[460px] shrink-0 hidden lg:flex flex-col items-center text-center relative"
           >
@@ -121,8 +116,8 @@ export default function LoginPage() {
             <div className="relative w-full flex flex-col items-center my-3">
               {/* Friendly Speech Bubble */}
               <motion.div
-                initial={{ opacity: 0, y: 6, scale: 0.96 }}
-                animate={{ opacity: 1, y: 0, scale: 1 }}
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
                 transition={{ delay: 0.2, duration: 0.4 }}
                 className="mb-2 px-3.5 py-1.5 rounded-full bg-white/75 backdrop-blur-md border border-outline-variant/30 shadow-xs flex items-center gap-2 text-xs font-semibold text-on-surface"
               >
@@ -144,28 +139,12 @@ export default function LoginPage() {
                 />
               </motion.div>
             </div>
-
-            {/* 3 Live Interactive Modality Chips (Unboxed pills) */}
-            <div className="flex flex-wrap items-center justify-center gap-2 mt-1">
-              <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-white/50 backdrop-blur-sm border border-outline-variant/30 text-[11px] font-semibold text-on-surface shadow-2xs">
-                <Flame className="w-3.5 h-3.5 fill-primary text-primary" />
-                FSRS-5 98.4%
-              </span>
-              <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-white/50 backdrop-blur-sm border border-outline-variant/30 text-[11px] font-semibold text-on-surface shadow-2xs">
-                <Zap className="w-3.5 h-3.5 text-secondary" />
-                40Hz Flow
-              </span>
-              <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-white/50 backdrop-blur-sm border border-outline-variant/30 text-[11px] font-semibold text-on-surface shadow-2xs">
-                <ShieldCheck className="w-3.5 h-3.5 text-tertiary" />
-                Socratic Zero Halluc
-              </span>
-            </div>
           </motion.div>
 
           {/* Upgraded Sign In Card with Glassmorphism & Micro-details (Blended & Reduced) */}
           <motion.div
-            initial={{ opacity: 0, x: 20 }}
-            animate={{ opacity: 1, x: 0 }}
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
             transition={{ duration: 0.5, ease: [0.16, 1, 0.3, 1], delay: 0.05 }}
             className="w-full max-w-[390px] lg:max-w-[410px] rounded-[24px] p-6 sm:p-7 relative overflow-hidden transition-all duration-300"
             style={{
@@ -214,8 +193,8 @@ export default function LoginPage() {
             <form className="space-y-3" onSubmit={handleSubmit(onSubmit)}>
               {error && (
                 <motion.div 
-                  initial={{ opacity: 0, y: -8 }}
-                  animate={{ opacity: 1, y: 0 }}
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
                   className="p-2.5 bg-red-50/80 border border-red-200/80 rounded-xl text-red-700 text-xs"
                 >
                   {error}
@@ -290,15 +269,6 @@ export default function LoginPage() {
                   </div>
                 )}
               </Button>
-              
-              {/* Quick Demo Pre-fill Button */}
-              <button
-                type="button"
-                onClick={handleQuickDemo}
-                className="w-full py-0.5 text-center text-[11px] font-semibold text-primary-container/80 hover:text-primary transition-colors cursor-pointer"
-              >
-                ✨ Click to prefill demo credentials
-              </button>
 
               <p className="text-center text-xs text-on-surface-variant pt-0.5">
                 Don&apos;t have an account?{' '}
@@ -306,12 +276,6 @@ export default function LoginPage() {
                   Sign up for free
                 </Link>
               </p>
-
-              {/* Security Footnote */}
-              <div className="pt-2 mt-1 border-t border-outline-variant/20 flex items-center justify-center gap-1.5 text-[10px] text-on-surface-variant/60 font-medium">
-                <ShieldCheck className="w-3 h-3 text-emerald-600" />
-                <span>End-to-end encrypted · 100% private study vault</span>
-              </div>
             </form>
           </motion.div>
 

@@ -65,3 +65,9 @@ Date: 2026-09-29
 - Did: LoginPage catch splits no-response/server-down vs 401 vs other.
 - Test: landing login/signup nav 2/2 pass workers=1 (parallel 2-worker flake, vite dev slow). eslint clean except pre-existing CheckCircle2 unused.
 - Files: sourcewise-frontend/src/pages/LoginPage.jsx
+
+### 2026-09-29 — login strip + jitter fix
+- Did: removed modality chips, prefill demo btn + handler, encrypted footnote. Entrance x/y anims -> opacity-only. Cleaned unused icons.
+- Cause jitter: mount x-shift (-25/+20) + error y-shift replayed layout.
+- Test: eslint clean, login nav 1/1 pass.
+- Files: sourcewise-frontend/src/pages/LoginPage.jsx
