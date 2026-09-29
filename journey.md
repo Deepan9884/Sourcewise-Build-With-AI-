@@ -85,3 +85,8 @@ Date: 2026-09-29
 - Did: added opencode.json mcp.playwright local npx @playwright/mcp@latest. Verified --help boots v0.0.83, headed default = live view.
 - Note: restart opencode to load. MCP tools appear next session.
 - Files: opencode.json
+
+### 2026-09-29 — local env files
+- Did: created node-api/.env (placeholders, needs real Supabase/JWT from working device) + frontend/.env VITE_API_URL=:4000. Both gitignored, not committed.
+- Next: user pastes creds, runs backend npm run dev, restarts vite.
+- Files: journey.md (env files local-only)
