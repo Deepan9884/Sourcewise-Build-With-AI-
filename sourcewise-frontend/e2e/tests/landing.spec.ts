@@ -30,21 +30,24 @@ test.describe('landing page', () => {
     await expect(page.getByText('How SourceWise Transforms Your Studies')).toBeVisible({ timeout: 10000 });
   });
 
-  // 4. Journey gap: pt-12 class applied (not pt-28)
-  test('journey gap: sticky has pt-12 not pt-28', async ({ page }) => {
+  // 4. Journey gap: sticky packs header+orbit centered with gap-4
+  test('journey gap: sticky justify-center gap-4', async ({ page }) => {
     const sticky = page.locator('#nine-tails-grid .sticky').first();
     const cls = await sticky.getAttribute('class');
-    expect(cls).toContain('pt-12');
-    expect(cls).not.toContain('pt-28');
+    expect(cls).toContain('justify-center');
+    expect(cls).toContain('gap-4');
   });
 
-  // 5. Journey orbit stage has mt-3 not mt-8
-  test('journey orbit stage: mt-3 not mt-8', async ({ page }) => {
-    // Orbit stage is the large w-[min(98vw,920px)] div inside sticky
-    const orbitStage = page.locator('#nine-tails-grid .sticky').locator('[class*="w-\\[min\\(98vw"]').first();
-    const cls = await orbitStage.getAttribute('class');
-    expect(cls).toContain('mt-3');
-    expect(cls).not.toContain('mt-8');
+  // 5. Journey header and orbit stage: tight, no overlap
+  test('journey header-orbit gap tight no overlap', async ({ page }) => {
+    await page.locator('nav').first().getByText('Journey').click();
+    await page.waitForTimeout(1500);
+    const heading = page.getByText('How SourceWise Transforms Your Studies');
+    const hBox = await heading.boundingBox();
+    const stage = page.locator('#nine-tails-grid .sticky > div').nth(2);
+    const sBox = await stage.boundingBox();
+    expect(hBox && sBox ? sBox.y - (hBox.y + hBox.height) : -1).toBeGreaterThanOrEqual(0);
+    expect(hBox && sBox ? sBox.y - (hBox.y + hBox.height) : 9999).toBeLessThanOrEqual(80);
   });
 
   // 6. Journey section badge visible

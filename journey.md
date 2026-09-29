@@ -90,3 +90,9 @@ Date: 2026-09-29
 - Did: created node-api/.env (placeholders, needs real Supabase/JWT from working device) + frontend/.env VITE_API_URL=:4000. Both gitignored, not committed.
 - Next: user pastes creds, runs backend npm run dev, restarts vite.
 - Files: journey.md (env files local-only)
+
+### 2026-09-29 — orbit gap pack center
+- Cause: justify-between spread header/stage across h-screen = huge gap.
+- Did: sticky justify-center gap-4 pt-20, dropped mb/mt spacers. Spec 4-5 now behavioral gap 0-80px.
+- Test: 8/8 pass 48.9s workers=1.
+- Files: OrbitShowcase.jsx, landing.spec.ts
