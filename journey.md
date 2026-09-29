@@ -9,7 +9,8 @@ Date: 2026-09-29
 ## Rules
 - Update this file after each task.
 - Commit after each task, meaningful msg, report msg to user.
-- Push only on user ask.
+- Push + pull origin for every small task (rule updated 2026-09-29).
+- Testing: no playwright MCP in this env, use CLI headless. headed live runs by other AI/user.
 - Re-read journey.md often — another AI edits simultaneously. Merge, don't overwrite.
 - Style: ultra-token-efficient, telegram-style, diffs only.
 
@@ -75,3 +76,7 @@ Date: 2026-09-29
 ### 2026-09-29 — push to origin
 - Did: user asked push. Pushed main->origin/main.
 - Files: -
+
+### 2026-09-29 — rules update
+- Did: rule4 push+pull every task. Synced origin, no remote ahead.
+- Files: journey.md
