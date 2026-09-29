@@ -152,7 +152,7 @@ export default function OrbitShowcase() {
       aria-label="SourceWise student outcomes orbit"
     >
       {/* Pinned viewport — stays fixed while user scrolls through the 5 outcomes */}
-      <div className="sticky top-0 h-screen max-h-screen overflow-hidden flex flex-col justify-between items-center pt-28 pb-8">
+      <div className="sticky top-0 h-screen max-h-screen overflow-hidden flex flex-col justify-between items-center pt-12 pb-8">
         {/* Ambient atmospheric glow */}
         <div className="pointer-events-none absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[1000px] h-[850px] max-w-none bg-gradient-to-b from-primary-fixed/25 via-secondary-fixed/15 to-transparent blur-3xl opacity-80" />
 
@@ -170,7 +170,7 @@ export default function OrbitShowcase() {
         </div>
 
         {/* Orbit stage — generous width with calibrated elliptical track */}
-        <div className="relative mx-auto w-[min(98vw,920px)] h-[min(98vw,520px)] max-h-[530px] shrink-0 min-h-0 flex items-center justify-center mt-8 mb-2">
+        <div className="relative mx-auto w-[min(98vw,920px)] h-[min(98vw,520px)] max-h-[530px] shrink-0 min-h-0 flex items-center justify-center mt-3 mb-2">
           {/* Circular/Elliptical orbit tracks passing through image centers */}
           <div
             className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 rounded-full border-2 border-dashed border-primary-container/25 pointer-events-none"
