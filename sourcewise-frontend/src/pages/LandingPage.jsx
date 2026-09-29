@@ -276,16 +276,28 @@ export default function LandingPage() {
           {/* Desktop Nav Links */}
           <nav className="hidden lg:flex flex-1 items-center justify-center gap-space-lg">
             <button
+              onClick={() => scrollToSection('powers')}
+              className="font-label-lg text-label-lg text-on-surface-variant hover:text-on-surface transition-colors cursor-pointer"
+            >
+              Powers
+            </button>
+            <button
               onClick={() => scrollToSection('nine-tails-grid')}
               className="font-label-lg text-label-lg text-on-surface-variant hover:text-on-surface transition-colors cursor-pointer"
             >
-              Features
+              Journey
             </button>
             <button
               onClick={() => scrollToSection('video-tour')}
               className="font-label-lg text-label-lg text-on-surface-variant hover:text-on-surface transition-colors cursor-pointer"
             >
               Demo
+            </button>
+            <button
+              onClick={() => scrollToSection('features-briefing')}
+              className="font-label-lg text-label-lg text-on-surface-variant hover:text-on-surface transition-colors cursor-pointer"
+            >
+              Codex
             </button>
           </nav>
 
@@ -332,7 +344,7 @@ export default function LandingPage() {
             {/* ================================================================= */}
             {/* 1. HERO & INTERACTIVE 2D FOX CENTERPIECE                          */}
             {/* ================================================================= */}
-            <section className="relative max-w-[1400px] mx-auto px-margin-mobile md:px-margin-tablet lg:px-margin-desktop pt-8 sm:pt-12 md:pt-16 pb-12 sm:pb-20 flex flex-col items-center text-center">
+            <section id="powers" className="relative max-w-[1400px] mx-auto px-margin-mobile md:px-margin-tablet lg:px-margin-desktop pt-8 sm:pt-12 md:pt-16 pb-12 sm:pb-20 flex flex-col items-center text-center">
               {/* Hero Header Block */}
               <div className="relative max-w-5xl mx-auto flex flex-col items-center mb-6 sm:mb-10">
                 {/* Main Headline */}

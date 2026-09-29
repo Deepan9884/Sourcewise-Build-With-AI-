@@ -36,3 +36,8 @@ Date: 2026-09-29
 ### 2026-09-29 — header extremes
 - Did: LandingPage.jsx header full-width, brand mr-auto left, nav flex-1 center, auth ml-auto right.
 - Files: sourcewise-frontend/src/pages/LandingPage.jsx
+
+### 2026-09-29 — nav 4 sections
+- Did: replaced Features/Demo with Powers/Journey/Demo/Codex, added id powers to hero.
+- Map: powers->hero tails, nine-tails-grid->Journey, video-tour->Demo, features-briefing->Codex.
+- Files: sourcewise-frontend/src/pages/LandingPage.jsx
