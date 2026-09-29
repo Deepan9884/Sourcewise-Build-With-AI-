@@ -239,7 +239,7 @@ export default function LandingPage() {
   const scrollToSection = (id) => {
     const el = document.getElementById(id);
     if (el) {
-      el.scrollIntoView({ behavior: 'smooth' });
+      el.scrollIntoView({ behavior: 'smooth', block: 'center' });
     }
   };
 
@@ -344,7 +344,7 @@ export default function LandingPage() {
             {/* ================================================================= */}
             {/* 1. HERO & INTERACTIVE 2D FOX CENTERPIECE                          */}
             {/* ================================================================= */}
-            <section id="powers" className="relative max-w-[1400px] mx-auto px-margin-mobile md:px-margin-tablet lg:px-margin-desktop pt-8 sm:pt-12 md:pt-16 pb-12 sm:pb-20 flex flex-col items-center text-center">
+            <section id="powers" className="relative max-w-[1400px] mx-auto px-margin-mobile md:px-margin-tablet lg:px-margin-desktop scroll-mt-24 pt-8 sm:pt-12 md:pt-16 pb-2 sm:pb-4 flex flex-col items-center text-center">
               {/* Hero Header Block */}
               <div className="relative max-w-5xl mx-auto flex flex-col items-center mb-6 sm:mb-10">
                 {/* Main Headline */}
@@ -715,7 +715,7 @@ export default function LandingPage() {
             {/* 4. PRODUCT DEMO / INTERACTIVE VIDEO EXPLAINER SECTION             */}
             {/* ================================================================= */}
             <section
-              className="max-w-[1320px] mx-auto px-margin-mobile md:px-margin-tablet lg:px-margin-desktop py-space-2xl md:py-space-3xl"
+              className="max-w-[1320px] mx-auto px-margin-mobile md:px-margin-tablet lg:px-margin-desktop scroll-mt-24 py-space-2xl md:py-space-3xl"
               id="video-tour"
             >
               <div className="bg-transparent p-space-lg md:p-space-2xl">

@@ -133,7 +133,7 @@ export default function OrbitShowcase() {
   };
 
   const scrollToDemo = () => {
-    document.getElementById('video-tour')?.scrollIntoView({ behavior: 'smooth' });
+    document.getElementById('video-tour')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
   };
 
   const step = ORBIT_STEPS[active];
@@ -147,12 +147,12 @@ export default function OrbitShowcase() {
     <section
       id="nine-tails-grid"
       ref={containerRef}
-      className="relative"
+      className="relative scroll-mt-24"
       style={{ height: `${STEP_COUNT * 100}vh` }}
       aria-label="SourceWise student outcomes orbit"
     >
       {/* Pinned viewport — stays fixed while user scrolls through the 5 outcomes */}
-      <div className="sticky top-0 h-screen max-h-screen overflow-hidden flex flex-col justify-between items-center pt-18 sm:pt-20 pb-4">
+      <div className="sticky top-0 h-screen max-h-screen overflow-hidden flex flex-col justify-center items-center pt-24 pb-4 gap-2">
         {/* Ambient atmospheric glow */}
         <div className="pointer-events-none absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[1000px] h-[850px] max-w-none bg-gradient-to-b from-primary-fixed/25 via-secondary-fixed/15 to-transparent blur-3xl opacity-80" />
 
