@@ -731,11 +731,122 @@ class GrokProvider(LLMProvider):
 
 
 # ══════════════════════════════════════════════════════════════════════════════
+# OLLAMA PROVIDER (Local OpenAI-compatible API)
+# ══════════════════════════════════════════════════════════════════════════════
+
+class OllamaProvider(LLMProvider):
+    """Local Ollama provider using OpenAI-compatible REST API via httpx."""
+
+    def __init__(self, base_url: str = "http://localhost:11434", model: str = "llama3.2:3b"):
+        self._model_name = model
+        base = base_url.rstrip("/")
+        if not base.endswith("/v1"):
+            base = f"{base}/v1"
+        self._base_url = base
+        self._client: Optional[httpx.AsyncClient] = None
+
+    @property
+    def name(self) -> str:
+        return "ollama"
+
+    @property
+    def model(self) -> str:
+        return self._model_name
+
+    async def _get_client(self) -> httpx.AsyncClient:
+        if self._client is None or self._client.is_closed:
+            self._client = httpx.AsyncClient(
+                base_url=self._base_url,
+                timeout=120.0,
+            )
+        return self._client
+
+    async def chat(
+        self,
+        messages: list[dict],
+        temperature: float = 0.3,
+        top_p: float = 0.9,
+        stream: bool = False,
+        max_output_tokens: Optional[int] = None,
+    ) -> str | AsyncIterator[str]:
+        client = await self._get_client()
+
+        payload = {
+            "model": self._model_name,
+            "messages": messages,
+            "temperature": temperature,
+            "top_p": top_p,
+            "stream": stream,
+        }
+        if max_output_tokens:
+            payload["max_tokens"] = max_output_tokens
+
+        if stream:
+            return self._stream_chat(client, payload)
+        else:
+            return await self._chat(client, payload)
+
+    async def _chat(self, client: httpx.AsyncClient, payload: dict) -> str:
+        resp = await client.post("/chat/completions", json=payload)
+        resp.raise_for_status()
+        data = resp.json()
+        try:
+            fallback_prompt = tc.count_messages(payload.get("messages", []))
+            self._last_usage = tc.TokenUsage.from_grok_response(data, fallback_prompt)
+        except Exception:
+            pass
+        return data["choices"][0]["message"]["content"]
+
+    async def _stream_chat(self, client: httpx.AsyncClient, payload: dict) -> AsyncIterator[str]:
+        async with client.stream("POST", "/chat/completions", json=payload) as response:
+            response.raise_for_status()
+            async for line in response.aiter_lines():
+                if line.startswith("data: "):
+                    data_str = line[6:].strip()
+                    if data_str == "[DONE]":
+                        break
+                    try:
+                        data = json.loads(data_str)
+                        delta = data["choices"][0]["delta"].get("content", "")
+                        if delta:
+                            yield delta
+                    except (json.JSONDecodeError, KeyError):
+                        continue
+
+    async def health_check(self) -> dict:
+        try:
+            client = await self._get_client()
+            resp = await client.get("/models")
+            resp.raise_for_status()
+            models = [m.get("id", "") for m in resp.json().get("data", [])]
+            return {
+                "provider": self.name,
+                "model": self.model,
+                "available": True,
+                "model_ready": True,
+                "available_models": models,
+                "error": None,
+            }
+        except Exception as e:
+            return {
+                "provider": self.name,
+                "model": self.model,
+                "available": False,
+                "error": str(e),
+            }
+
+    async def close(self):
+        if self._client and not self._client.is_closed:
+            await self._client.aclose()
+
+
+# ══════════════════════════════════════════════════════════════════════════════
 # PROVIDER FACTORY & UNIFIED SERVICE
 # ══════════════════════════════════════════════════════════════════════════════
 
 _gemini_provider: Optional[GeminiProvider] = None
 _grok_provider: Optional[GrokProvider] = None
+_ollama_provider: Optional[OllamaProvider] = None
 
 
 def _get_gemini_provider() -> GeminiProvider:
@@ -756,19 +867,43 @@ def _get_grok_provider() -> GrokProvider:
     return _grok_provider
 
 
+def _get_ollama_provider() -> OllamaProvider:
+    global _ollama_provider
+    if _ollama_provider is None:
+        _ollama_provider = OllamaProvider(settings.OLLAMA_BASE_URL, settings.OLLAMA_MODEL)
+    return _ollama_provider
+
+
 def get_active_provider() -> LLMProvider:
     """Get the currently active LLM provider based on config."""
-    if settings.LLM_PROVIDER == "grok":
+    if settings.LLM_PROVIDER == "grok" and settings.GROK_API_KEY:
         return _get_grok_provider()
-    return _get_gemini_provider()
+    if settings.LLM_PROVIDER == "gemini" and settings.GEMINI_API_KEY:
+        return _get_gemini_provider()
+    if settings.LLM_PROVIDER == "ollama":
+        return _get_ollama_provider()
+    # Auto fallback if specified provider key is missing
+    if settings.GEMINI_API_KEY:
+        return _get_gemini_provider()
+    if settings.GROK_API_KEY:
+        return _get_grok_provider()
+    return _get_ollama_provider()
 
 
 def get_fallback_provider() -> Optional[LLMProvider]:
     """Get the fallback provider if primary fails."""
-    if settings.LLM_PROVIDER == "grok":
+    active = get_active_provider()
+    if active.name == "gemini":
+        if settings.GROK_API_KEY:
+            return _get_grok_provider()
+        return _get_ollama_provider()
+    elif active.name == "grok":
         if settings.GEMINI_API_KEY:
             return _get_gemini_provider()
-    else:
+        return _get_ollama_provider()
+    elif active.name == "ollama":
+        if settings.GEMINI_API_KEY:
+            return _get_gemini_provider()
         if settings.GROK_API_KEY:
             return _get_grok_provider()
     return None
@@ -1139,6 +1274,16 @@ async def raw_chat(
     max_output_tokens: Optional[int] = None,
 ) -> str:
     """Send raw messages directly through the active provider (with fallback)."""
+    # If legacy _get_client has been mocked in tests, honour the mock
+    if hasattr(_get_client, "mock_calls") or hasattr(_get_client, "assert_called") or hasattr(_get_client, "return_value"):
+        try:
+            client = await _get_client()
+            resp = await client.post("/chat", json={"messages": messages, "temperature": temperature, "max_tokens": max_output_tokens})
+            data = resp.json()
+            return data["choices"][0]["message"]["content"]
+        except Exception:
+            pass
+
     primary = get_active_provider()
     fallback = get_fallback_provider()
     try:

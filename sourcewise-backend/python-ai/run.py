@@ -1,5 +1,11 @@
 """Entry point — run with: python run.py"""
 import os
+import sys
+
+_venv_site = os.path.abspath(os.path.join(os.path.dirname(__file__), ".venv", "Lib", "site-packages"))
+if os.path.isdir(_venv_site) and _venv_site not in sys.path:
+    sys.path.insert(0, _venv_site)
+
 import uvicorn
 
 if __name__ == "__main__":

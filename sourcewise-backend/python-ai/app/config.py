@@ -22,6 +22,10 @@ class Settings:
     GROK_MODEL: str = os.getenv("GROK_MODEL", "grok-beta")
     GROK_BASE_URL: str = os.getenv("GROK_BASE_URL", "https://api.x.ai/v1")
 
+    # Ollama (Local AI fallback / offline)
+    OLLAMA_BASE_URL: str = os.getenv("OLLAMA_BASE_URL", "http://localhost:11434")
+    OLLAMA_MODEL: str = os.getenv("OLLAMA_MODEL", "llama3.2:3b")
+
     # ChromaDB (local vector store — stored on disk)
     # NOTE: env var is CHROMA_PERSIST_DIR to match docker-compose.yml
     CHROMA_PATH: str = os.getenv("CHROMA_PERSIST_DIR", "./chroma_db")

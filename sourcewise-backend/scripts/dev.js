@@ -26,7 +26,26 @@ const ONLY = onlyArg ? onlyArg.split('=')[1] : null; // 'api' | 'ai' | null
 
 const API_PORT = Number(process.env.PORT || 4000);
 const AI_PORT = 8000;
-const PYTHON_BIN = process.env.PYTHON_BIN || (process.platform === 'win32' ? 'python' : 'python3');
+function resolvePythonBin() {
+  if (process.env.PYTHON_BIN) return process.env.PYTHON_BIN;
+  if (process.platform === 'win32') {
+    const appData = process.env.APPDATA || '';
+    const candidates = [
+      path.join(appData, 'uv', 'python', 'cpython-3.11-windows-x86_64-none', 'python.exe'),
+      path.join(appData, 'uv', 'python', 'cpython-3.11.15-windows-x86_64-none', 'python.exe'),
+      path.join(aiDir, '.venv', 'Scripts', 'python.exe'),
+      'python',
+    ];
+    for (const cand of candidates) {
+      if (fs.existsSync(cand) && checkBin(cand)) {
+        return cand;
+      }
+    }
+    return 'python';
+  }
+  return 'python3';
+}
+const PYTHON_BIN = resolvePythonBin();
 // npm.cmd on Windows so we can spawn without shell:true (avoids DEP0190 + quoting issues).
 const NPM_BIN = process.env.NPM_BIN || (process.platform === 'win32' ? 'npm.cmd' : 'npm');
 
@@ -164,10 +183,14 @@ async function main() {
 
   // ── Python AI (agents, RAG, Gemini/Grok — the engine behind Generate) ──
   if (wantAi) {
+    const venvSite = path.join(aiDir, '.venv', 'Lib', 'site-packages');
+    const existingPyPath = process.env.PYTHONPATH || '';
+    const pythonPath = [venvSite, aiDir, existingPyPath].filter(Boolean).join(path.delimiter);
     const ai = spawn(PYTHON_BIN, ['run.py'], {
       ...spawnOpts(aiDir, {
         ENVIRONMENT: PROD ? 'production' : 'development',
         PYTHONUNBUFFERED: '1',
+        PYTHONPATH: pythonPath,
       }),
     });
     ai.on('error', (e) => log('ai', `failed to spawn ${PYTHON_BIN}: ${e.message}`, C.err));

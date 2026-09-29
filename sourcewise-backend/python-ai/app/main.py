@@ -2,6 +2,13 @@
 FastAPI application entry point.
 Wires together all routers with CORS and startup events.
 """
+import os
+import sys
+
+_venv_site = os.path.abspath(os.path.join(os.path.dirname(os.path.dirname(__file__)), ".venv", "Lib", "site-packages"))
+if os.path.isdir(_venv_site) and _venv_site not in sys.path:
+    sys.path.insert(0, _venv_site)
+
 from fastapi import Depends, FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from contextlib import asynccontextmanager
