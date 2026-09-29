@@ -34,7 +34,9 @@ export default function LoginPage() {
       login(response.data.user, response.data.token)
       navigate('/plan')
     } catch (err) {
-      setError(err.response?.data?.error || 'Login failed. Please try again.')
+      if (!err.response) setError('Cannot reach server. Start backend on :4000.')
+      else if (err.response.status === 401) setError('Wrong email or password.')
+      else setError(err.response?.data?.error || 'Login failed. Please try again.')
     } finally {
       setIsLoading(false)
     }

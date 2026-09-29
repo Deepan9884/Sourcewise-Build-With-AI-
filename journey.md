@@ -59,3 +59,9 @@ Date: 2026-09-29
 - Did: fixed landing.spec (strict-mode .or selector, networkidle->domcontentloaded+header). Ran headless chromium: 8 passed 47.5s.
 - Note: app.spec/api.spec need backend :4000+:8000 + E2E_EMAIL/PW. Backend down, skipped. No playwright MCP in this env, used CLI.
 - Files: sourcewise-frontend/e2e/tests/landing.spec.ts
+
+### 2026-09-29 — login fail diagnosis
+- Cause: backend :4000+:8000 down on this Mac, no .env files exist. Login POST has nowhere to go, generic fail msg. Other device has backend up, works.
+- Did: LoginPage catch splits no-response/server-down vs 401 vs other.
+- Test: landing login/signup nav 2/2 pass workers=1 (parallel 2-worker flake, vite dev slow). eslint clean except pre-existing CheckCircle2 unused.
+- Files: sourcewise-frontend/src/pages/LoginPage.jsx
