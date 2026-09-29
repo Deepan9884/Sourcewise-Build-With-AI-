@@ -54,3 +54,8 @@ Date: 2026-09-29
 - Did: sticky div pt-28->pt-12, orbit stage mt-8->mt-3. Reduces gap between heading text and orbit graphic.
 - Committed: 6aa8a4d fix(landing): reduce journey section gap — pt-28→pt-12, mt-8→mt-3
 - Files: OrbitShowcase.jsx
+
+### 2026-09-29 — playwright landing suite 8/8 pass
+- Did: fixed landing.spec (strict-mode .or selector, networkidle->domcontentloaded+header). Ran headless chromium: 8 passed 47.5s.
+- Note: app.spec/api.spec need backend :4000+:8000 + E2E_EMAIL/PW. Backend down, skipped. No playwright MCP in this env, used CLI.
+- Files: sourcewise-frontend/e2e/tests/landing.spec.ts
