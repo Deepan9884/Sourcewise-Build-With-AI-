@@ -80,3 +80,8 @@ Date: 2026-09-29
 ### 2026-09-29 — rules update
 - Did: rule4 push+pull every task. Synced origin, no remote ahead.
 - Files: journey.md
+
+### 2026-09-29 — playwright MCP wired
+- Did: added opencode.json mcp.playwright local npx @playwright/mcp@latest. Verified --help boots v0.0.83, headed default = live view.
+- Note: restart opencode to load. MCP tools appear next session.
+- Files: opencode.json
