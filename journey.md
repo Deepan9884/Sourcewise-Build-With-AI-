@@ -6,13 +6,14 @@ Old-origin: https://github.com/Deepan9884/Source-wise (kept as old-origin)
 Branch: main (tracks origin/main)
 Date: 2026-09-29
 
-## Rules
-- Update this file after each task.
-- Commit after each task, meaningful msg, report msg to user.
-- Push + pull origin for every small task (rule updated 2026-09-29).
-- Testing: no playwright MCP in this env, use CLI headless. headed live runs by other AI/user.
-- Re-read journey.md often — another AI edits simultaneously. Merge, don't overwrite.
-- Style: ultra-token-efficient, telegram-style, diffs only.
+## Rules & Workflow Instructions
+1. **Track in journey.md**: Update journey.md after completing each and every single task to track project progress in one file.
+2. **Commit every task**: Commit current directory status with meaningful commit message after completing each task.
+3. **Report commit message**: Output the commit message used after every commit.
+4. **Push and pull on every task**: Pull before starting and push to GitHub after each task.
+5. **Multi-AI sync**: Regularly inspect journey.md as another AI edits simultaneously. Merge cleanly, do not overwrite.
+6. **Ultra-token-efficient communication**: Broken telegram-style English, zero filler/pleasantries, strict diffs only.
+7. **Iterative Playwright testing**: Test web app iteratively until 100% pass rate achieved, verify live in browser.
 
 ## Stack (from AGENTS.md v13)
 - frontend: React19/Vite8 :5173, not containerised
@@ -96,3 +97,9 @@ Date: 2026-09-29
 - Did: sticky justify-center gap-4 pt-20, dropped mb/mt spacers. Spec 4-5 now behavioral gap 0-80px.
 - Test: 8/8 pass 48.9s workers=1.
 - Files: OrbitShowcase.jsx, landing.spec.ts
+
+### 2026-09-29 — fix login backend connectivity & env sync
+- Cause: node-api/.env held dummy placeholders (`your-project.supabase.co`) while active creds sat in node-api/src/.env; node-api failed DB health and dropped connection, triggering "Cannot reach server. Start backend on :4000." on frontend login.
+- Did: synced active credentials into node-api/.env and created python-ai/.env; augmented node-api/src/index.js to resolve dotenv across working directories.
+- Test: backend /health status: healthy, database: ok. Auth /auth/login returns 401 on bad credentials instead of connection drop. Headed Playwright landing tests 8/8 passed in 21.2s.
+- Files: node-api/src/index.js, journey.md
