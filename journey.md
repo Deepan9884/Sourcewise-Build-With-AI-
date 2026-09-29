@@ -49,3 +49,8 @@ Date: 2026-09-29
 ### 2026-09-29 — orbit overlap fix
 - Did: radiusY 190-235->160-195, sticky justify-between pt-28 pb-8, header mb-4, stage mt-8 mb-2.
 - Files: OrbitShowcase.jsx
+
+### 2026-09-29 — journey section gap reduce
+- Did: sticky div pt-28->pt-12, orbit stage mt-8->mt-3. Reduces gap between heading text and orbit graphic.
+- Committed: 6aa8a4d fix(landing): reduce journey section gap — pt-28→pt-12, mt-8→mt-3
+- Files: OrbitShowcase.jsx
