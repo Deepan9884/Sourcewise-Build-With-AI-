@@ -1,0 +1,38 @@
+# ── Web Framework ─────────────────────────────────────────────────────────────
+fastapi==0.109.0
+uvicorn[standard]==0.27.0
+gunicorn==21.2.0
+python-multipart==0.0.6
+aiofiles==23.2.1
+
+# ── LLM Providers (Cloud APIs — no local Ollama needed) ────────────────────────
+google-generativeai==0.7.2    # Google Gemini API
+httpx==0.26.0                 # used for Grok (xAI) OpenAI-compatible API
+
+# ── Local Embeddings (HuggingFace — downloads model once, then offline) ───────
+sentence-transformers==2.7.0
+torch==2.2.0                  # CPU-only inference is fine for embeddings
+
+# ── Local Vector Store (ChromaDB — stores on disk, no cloud) ──────────────────
+chromadb==0.4.22
+
+# ── Text Extraction ────────────────────────────────────────────────────────────
+pdfplumber==0.10.3
+python-docx==1.1.0
+
+# ── Text Splitting ─────────────────────────────────────────────────────────────
+langchain==0.1.4
+langchain-community==0.0.16
+
+# ── Data Validation ────────────────────────────────────────────────────────────
+pydantic==2.5.3
+
+# ── Token counting (local, no API calls) ─────────────────────────────────────
+tiktoken==0.6.0
+
+# ── Utilities ──────────────────────────────────────────────────────────────────
+python-dotenv==1.0.0
+
+# ── Testing (fail-closed CI: pytest must be installed) ──────────────────────
+pytest==8.3.4
+pytest-asyncio==0.24.0

@@ -1,0 +1,11 @@
+node_modules
+npm-debug.log
+.env
+.env.local
+.pytest_cache
+__pycache__
+*.pyc
+venv
+chroma_db
+.vscode
+.git

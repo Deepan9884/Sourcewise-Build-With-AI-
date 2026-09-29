@@ -1,0 +1,42 @@
+groups:
+  - name: sourcewise-api.rules
+    rules:
+      - alert: HighErrorRate
+        expr: |
+          sum(rate(http_requests_total{status=~"5.."}[5m]))
+          /
+          sum(rate(http_requests_total[5m])) > 0.05
+        for: 2m
+        labels:
+          severity: critical
+          service: sourcewise-node-api
+        annotations:
+          summary: "Error rate above 5% on SourceWise API"
+          runbook: "Check /metrics, /health, logs (requestId), Supabase + python-ai status."
+
+      - alert: HighLatency
+        expr: http_duration_avg_ms > 2000
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Average latency above 2s"
+
+      - alert: ServiceDown
+        expr: up == 0
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: "SourceWise target down — check docker healthchecks (/health)."
+
+  - name: sourcewise-ai.rules
+    rules:
+      - alert: AIProviderDegraded
+        expr: ai_ready == 0
+        for: 5m
+        labels:
+          severity: warning
+          service: sourcewise-python-ai
+        annotations:
+          summary: "Python AI /metrics/ready degraded — check GEMINI/GROK keys, ChromaDB."

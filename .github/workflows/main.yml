@@ -1,0 +1,90 @@
+name: Main Branch
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  build:
+    name: Build & Verify
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: |
+            sourcewise-frontend/package-lock.json
+            sourcewise-dashboard/package-lock.json
+            sourcewise-backend/node-api/package-lock.json
+
+      - name: Build Frontend
+        working-directory: sourcewise-frontend
+        run: |
+          npm ci
+          npm run build
+
+      - name: Build Creator Dashboard
+        working-directory: sourcewise-dashboard
+        run: |
+          npm ci
+          npm run build
+
+      - name: Test Creator Dashboard
+        working-directory: sourcewise-dashboard
+        run: npm test -- --run
+
+      - name: Install Backend Dependencies
+        working-directory: sourcewise-backend/node-api
+        run: npm ci
+
+      - name: Run Backend Tests
+        working-directory: sourcewise-backend/node-api
+        run: npm test
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install AI Dependencies
+        working-directory: sourcewise-backend/python-ai
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Run AI Tests
+        working-directory: sourcewise-backend/python-ai
+        run: |
+          AI_TESTS=$(find . -name "test_*.py" -not -path "./venv/*" -not -path "./__pycache__/*")
+          if [ -n "$AI_TESTS" ]; then
+            echo "Running AI tests:"
+            echo "$AI_TESTS"
+            python -m pytest test_*.py app/services/test_*.py tests/ -v
+          else
+            echo "No AI test files found — skipping"
+            exit 1
+          fi
+
+  docker-build:
+    name: Docker Build
+    runs-on: ubuntu-latest
+    needs: build
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build python-ai image
+        run: docker build -t sourcewise-python-ai:ci ./sourcewise-backend/python-ai
+
+      - name: Build node-api image
+        run: docker build -t sourcewise-node-api:ci ./sourcewise-backend/node-api
+
+      - name: Build dashboard image
+        run: docker build -t sourcewise-dashboard:ci ./sourcewise-dashboard
+
+      - name: Smoke test compose
+        run: docker compose config --quiet && echo "compose OK"

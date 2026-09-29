@@ -1,0 +1,88 @@
+version: '3.8'
+
+services:
+  # Python AI Service
+  python-ai:
+    build:
+      context: ./sourcewise-backend/python-ai
+      dockerfile: Dockerfile
+    ports:
+      - "8000:8000"
+    environment:
+      - ENVIRONMENT=production
+      - LOG_LEVEL=${LOG_LEVEL:-INFO}
+      - LLM_PROVIDER=${LLM_PROVIDER:-gemini}
+      - GEMINI_API_KEY=${GEMINI_API_KEY:-}
+      - GEMINI_MODEL=${GEMINI_MODEL:-gemini-1.5-flash}
+      - GROK_API_KEY=${GROK_API_KEY:-}
+      - GROK_MODEL=${GROK_MODEL:-grok-beta}
+      - GROK_BASE_URL=${GROK_BASE_URL:-https://api.x.ai/v1}
+      - CHROMA_PERSIST_DIR=/app/chroma_db
+      - EMBEDDING_MODEL=all-MiniLM-L6-v2
+      - MAX_CONTEXT_CHUNKS=${MAX_CONTEXT_CHUNKS:-8}
+      - MAX_CHUNK_TOKENS=${MAX_CHUNK_TOKENS:-600}
+      - MAX_HISTORY_TURNS=${MAX_HISTORY_TURNS:-8}
+      - RESERVE_COMPLETION_TOKENS=${RESERVE_COMPLETION_TOKENS:-4096}
+      - MAX_OUTPUT_TOKENS=${MAX_OUTPUT_TOKENS:-2048}
+      - NODE_API_ORIGIN=http://node-api:4000
+      - FRONTEND_ORIGIN=http://localhost:5173
+      - INTERNAL_API_KEY=${INTERNAL_API_KEY:-}
+    volumes:
+      - chroma_data:/app/chroma_db
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # Node.js API
+  node-api:
+    build:
+      context: ./sourcewise-backend/node-api
+      dockerfile: Dockerfile
+    ports:
+      - "4000:4000"
+    environment:
+      - NODE_ENV=production
+      - LOG_LEVEL=${LOG_LEVEL:-info}
+      - PORT=4000
+      - JWT_SECRET=${JWT_SECRET}
+      - SUPABASE_URL=${SUPABASE_URL}
+      - SUPABASE_ANON_KEY=${SUPABASE_ANON_KEY}
+      - SUPABASE_SERVICE_ROLE_KEY=${SUPABASE_SERVICE_ROLE_KEY:-}
+      - PYTHON_AI_URL=http://python-ai:8000
+      - FRONTEND_ORIGIN=http://localhost:5173
+      - INTERNAL_API_KEY=${INTERNAL_API_KEY:-}
+      - LLM_PROVIDER=${LLM_PROVIDER:-gemini}
+      - GEMINI_MODEL=${GEMINI_MODEL:-gemini-1.5-flash}
+      - GROK_MODEL=${GROK_MODEL:-grok-beta}
+    depends_on:
+      python-ai:
+        condition: service_healthy
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:4000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # Creator Dashboard (standalone admin SPA, port 5174)
+  dashboard:
+    build:
+      context: ./sourcewise-dashboard
+      dockerfile: Dockerfile
+    ports:
+      - "5174:80"
+    depends_on:
+      node-api:
+        condition: service_healthy
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+volumes:
+  chroma_data:

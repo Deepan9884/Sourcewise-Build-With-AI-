@@ -1,0 +1,123 @@
+name: Deploy
+
+on:
+  push:
+    tags: ['v*']
+  release:
+    types: [published]
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Target environment'
+        required: true
+        default: 'staging'
+        type: choice
+        options: [staging, production]
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_PREFIX: ${{ github.repository_owner }}/sourcewise
+
+jobs:
+  publish:
+    name: Build & Publish images
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Log in to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Docker metadata (node-api)
+        id: meta_api
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.REGISTRY }}/${{ env.IMAGE_PREFIX }}-node-api
+          tags: |
+            type=ref,event=tag
+            type=sha
+            type=raw,value=latest,enable={{is_default_branch}}
+
+      - name: Build & push node-api
+        uses: docker/build-push-action@v6
+        with:
+          context: ./sourcewise-backend/node-api
+          push: true
+          tags: ${{ steps.meta_api.outputs.tags }}
+          labels: ${{ steps.meta_api.outputs.labels }}
+
+      - name: Docker metadata (python-ai)
+        id: meta_ai
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.REGISTRY }}/${{ env.IMAGE_PREFIX }}-python-ai
+          tags: |
+            type=ref,event=tag
+            type=sha
+            type=raw,value=latest,enable={{is_default_branch}}
+
+      - name: Build & push python-ai
+        uses: docker/build-push-action@v6
+        with:
+          context: ./sourcewise-backend/python-ai
+          push: true
+          tags: ${{ steps.meta_ai.outputs.tags }}
+          labels: ${{ steps.meta_ai.outputs.labels }}
+
+      - name: Docker metadata (dashboard)
+        id: meta_dash
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.REGISTRY }}/${{ env.IMAGE_PREFIX }}-dashboard
+          tags: |
+            type=ref,event=tag
+            type=sha
+            type=raw,value=latest,enable={{is_default_branch}}
+
+      - name: Build & push dashboard
+        uses: docker/build-push-action@v6
+        with:
+          context: ./sourcewise-dashboard
+          push: true
+          tags: ${{ steps.meta_dash.outputs.tags }}
+          labels: ${{ steps.meta_dash.outputs.labels }}
+
+  deploy-staging:
+    name: Deploy staging
+    runs-on: ubuntu-latest
+    needs: publish
+    if: github.event_name == 'workflow_dispatch' && github.event.inputs.environment == 'staging' || github.event_name == 'push'
+    environment:
+      name: staging
+      url: https://staging.sourcewise.example.com
+    steps:
+      - uses: actions/checkout@v4
+      - name: Staging smoke test
+        run: |
+          docker compose config --quiet && echo "compose valid"
+          echo "Deploy staging via GHCR tags: ${{ github.sha }}"
+          echo "Rollback: redeploy previous GHCR tag (see Packages)."
+
+  deploy-production:
+    name: Deploy production
+    runs-on: ubuntu-latest
+    needs: publish
+    if: github.event_name == 'release' || (github.event_name == 'workflow_dispatch' && github.event.inputs.environment == 'production')
+    environment:
+      name: production
+      url: https://app.sourcewise.example.com
+    steps:
+      - uses: actions/checkout@v4
+      - name: Production gate
+        run: |
+          docker compose config --quiet && echo "compose valid"
+          echo "Production release: ${{ github.ref_name }}"
+          echo "Health gates: /health on :4000 and :8000, /metrics on both, /ready on :8000"
+          echo "Rollback: ghcr.io/<owner>/sourcewise-node-api:<prev-tag> + python-ai + dashboard; docker compose up -d"

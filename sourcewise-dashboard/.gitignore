@@ -1,0 +1,35 @@
+# dependencies
+node_modules/
+.pnp
+.pnp.*
+
+# build
+dist/
+dist-ssr/
+*.local
+
+# editor
+.vscode/*
+!.vscode/extensions.json
+.idea/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+
+# env
+.env
+.env.*
+!.env.example
+
+# logs
+*.log
+npm-debug.log*
+
+# os
+.DS_Store
+Thumbs.db
+
+# test
+coverage/

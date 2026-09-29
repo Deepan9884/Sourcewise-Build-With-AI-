@@ -1,0 +1,13 @@
+{
+  "name": "sourcewise-backend",
+  "private": true,
+  "version": "1.0.0",
+  "description": "SourceWise backend — Node API (Express :4000) + Python AI (FastAPI :8000), one command",
+  "scripts": {
+    "dev": "node scripts/dev.js",
+    "start": "node scripts/dev.js --prod",
+    "dev:api": "node scripts/dev.js --only=api",
+    "dev:ai": "node scripts/dev.js --only=ai",
+    "setup": "npm install --prefix node-api && python -m pip install --upgrade pip && python -m pip install -r python-ai/requirements.txt"
+  }
+}
