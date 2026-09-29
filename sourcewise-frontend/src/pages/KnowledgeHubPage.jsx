@@ -355,6 +355,8 @@ export default function KnowledgeHubPage() {
                 key={s.id}
                 layout
                 variants={cardVariants}
+                initial="hidden"
+                animate="show"
                 whileHover={{ y: -4, transition: { duration: 0.2 } }}
                 data-testid={`source-panel-${s.id}`}
                 className={`p-4 rounded-2xl bg-white border transition-all duration-200 ${

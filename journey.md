@@ -98,6 +98,12 @@ Date: 2026-09-29
 - Test: 8/8 pass 48.9s workers=1.
 - Files: OrbitShowcase.jsx, landing.spec.ts
 
+### 2026-09-29 — upload tile invisible until reload
+- Cause: id remap temp->db unmounts/remounts card; inherited variants never re-fire, opacity stuck 0. Reproduced with stubbed slow ingest.
+- Did: card explicit initial="hidden" animate="show". Added knowledge-upload.spec (instant + slow-remap).
+- Test: 2/2 pass. eslint clean.
+- Files: KnowledgeHubPage.jsx, knowledge-upload.spec.ts
+
 ### 2026-09-29 — fix login backend connectivity & env sync
 - Cause: node-api/.env held dummy placeholders (`your-project.supabase.co`) while active creds sat in node-api/src/.env; node-api failed DB health and dropped connection, triggering "Cannot reach server. Start backend on :4000." on frontend login.
 - Did: synced active credentials into node-api/.env and created python-ai/.env; augmented node-api/src/index.js to resolve dotenv across working directories.
