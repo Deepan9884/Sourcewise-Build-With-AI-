@@ -253,9 +253,9 @@ export default function LandingPage() {
       {/* HEADER / NAVIGATION                                               */}
       {/* ================================================================= */}
       <header className="fixed top-0 inset-x-0 z-50 backdrop-blur-2xl border-b" style={{ background: 'hsla(28 30% 97% / 0.72)', borderColor: 'hsla(14 40% 70% / 0.18)', boxShadow: '0 1px 32px hsla(14 55% 60% / 0.07), inset 0 -1px 0 hsla(38 60% 85% / 0.30)' }}>
-        <div className="h-20 max-w-[1320px] mx-auto px-margin-mobile md:px-margin-tablet lg:px-margin-desktop flex items-center justify-between gap-space-md">
+        <div className="h-20 w-full px-4 md:px-6 flex items-center justify-between gap-space-md">
           {/* Brand Logo */}
-          <div className="flex items-center gap-space-sm shrink-0">
+          <div className="flex items-center gap-space-sm shrink-0 mr-auto">
             <Link className="flex items-center gap-space-sm group" to="/">
               <img
                 alt="SourceWise Circular Fox Logo"
@@ -274,7 +274,7 @@ export default function LandingPage() {
           </div>
 
           {/* Desktop Nav Links */}
-          <nav className="hidden lg:flex items-center gap-space-lg">
+          <nav className="hidden lg:flex flex-1 items-center justify-center gap-space-lg">
             <button
               onClick={() => scrollToSection('nine-tails-grid')}
               className="font-label-lg text-label-lg text-on-surface-variant hover:text-on-surface transition-colors cursor-pointer"
@@ -290,7 +290,7 @@ export default function LandingPage() {
           </nav>
 
           {/* Auth & CTA buttons */}
-          <div className="flex items-center gap-space-sm shrink-0">
+          <div className="flex items-center gap-space-sm shrink-0 ml-auto">
             {isAuthenticated ? (
               <Link
                 to="/dashboard"

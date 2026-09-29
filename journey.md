@@ -32,3 +32,7 @@ Date: 2026-09-29
 ### 2026-09-29 — journey.md created
 - Did: created journey.md per user instr (1-5 + token-efficient style).
 - Committed: 1c7bf07 docs: add journey.md tracker with repo map and workflow rules.
+
+### 2026-09-29 — header extremes
+- Did: LandingPage.jsx header full-width, brand mr-auto left, nav flex-1 center, auth ml-auto right.
+- Files: sourcewise-frontend/src/pages/LandingPage.jsx
