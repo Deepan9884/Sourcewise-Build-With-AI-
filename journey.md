@@ -71,3 +71,7 @@ Date: 2026-09-29
 - Cause jitter: mount x-shift (-25/+20) + error y-shift replayed layout.
 - Test: eslint clean, login nav 1/1 pass.
 - Files: sourcewise-frontend/src/pages/LoginPage.jsx
+
+### 2026-09-29 — push to origin
+- Did: user asked push. Pushed main->origin/main.
+- Files: -
