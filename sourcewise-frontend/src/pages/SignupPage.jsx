@@ -5,7 +5,7 @@ import { motion } from 'framer-motion'
 import { useAuthStore } from '../store/authStore'
 import { Button } from '../components/ui/button'
 import { Input } from '../components/ui/input'
-import { UserPlus, Eye, EyeOff, Zap, CheckCircle2, User, Mail, Lock, ShieldCheck, Flame, ArrowLeft } from 'lucide-react'
+import { UserPlus, Eye, EyeOff, CheckCircle2, User, Mail, Lock, ArrowLeft } from 'lucide-react'
 import axios from 'axios'
 import LandingBackground from '../components/landing/LandingBackground'
 import { ParticleBackground } from '../components/ui/particle-background'
@@ -140,22 +140,6 @@ export default function SignupPage() {
                   className="relative w-full h-auto max-h-[210px] xl:max-h-[240px] max-w-[330px] xl:max-w-[360px] object-contain select-none pointer-events-none drop-shadow-sm"
                 />
               </div>
-            </div>
-
-            {/* 3 Live Interactive Modality Chips (Unboxed pills) */}
-            <div className="flex flex-wrap items-center justify-center gap-2 mt-1">
-              <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-white/50 backdrop-blur-sm border border-outline-variant/30 text-[11px] font-semibold text-on-surface shadow-2xs">
-                <Flame className="w-3.5 h-3.5 fill-primary text-primary" />
-                FSRS-5 98.4%
-              </span>
-              <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-white/50 backdrop-blur-sm border border-outline-variant/30 text-[11px] font-semibold text-on-surface shadow-2xs">
-                <Zap className="w-3.5 h-3.5 text-secondary" />
-                40Hz Flow
-              </span>
-              <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-white/50 backdrop-blur-sm border border-outline-variant/30 text-[11px] font-semibold text-on-surface shadow-2xs">
-                <ShieldCheck className="w-3.5 h-3.5 text-tertiary" />
-                Socratic Zero Halluc
-              </span>
             </div>
           </div>
 
@@ -321,12 +305,6 @@ export default function SignupPage() {
                   Log in
                 </Link>
               </p>
-
-              {/* Security Footnote */}
-              <div className="pt-2 mt-0.5 border-t border-outline-variant/20 flex items-center justify-center gap-1.5 text-[10px] text-on-surface-variant/60 font-medium">
-                <ShieldCheck className="w-3.5 h-3.5 text-emerald-600" />
-                <span>End-to-end encrypted · 100% private study vault</span>
-              </div>
             </form>
           </motion.div>
 
