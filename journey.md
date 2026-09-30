@@ -104,6 +104,11 @@ Date: 2026-09-29
 - Test: 2/2 pass. eslint clean.
 - Files: KnowledgeHubPage.jsx, knowledge-upload.spec.ts
 
+### 2026-09-29 — remove RAG Active badge
+- Did: dropped badge span from hub header.
+- Test: upload spec 2/2 pass. eslint clean.
+- Files: KnowledgeHubPage.jsx
+
 ### 2026-09-29 — fix login backend connectivity & env sync
 - Cause: node-api/.env held dummy placeholders (`your-project.supabase.co`) while active creds sat in node-api/src/.env; node-api failed DB health and dropped connection, triggering "Cannot reach server. Start backend on :4000." on frontend login.
 - Did: synced active credentials into node-api/.env and created python-ai/.env; augmented node-api/src/index.js to resolve dotenv across working directories.

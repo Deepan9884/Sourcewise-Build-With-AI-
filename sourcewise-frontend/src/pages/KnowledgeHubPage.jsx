@@ -178,13 +178,6 @@ export default function KnowledgeHubPage() {
             <span className="text-[11px] font-extrabold uppercase tracking-widest text-coral-deep">
               Knowledge Hub
             </span>
-            <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-teal-soft text-teal border border-teal/20">
-              <span className="relative flex h-1.5 w-1.5">
-                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-teal opacity-75" />
-                <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-teal" />
-              </span>
-              RAG Active
-            </span>
           </div>
 
           <h1 className="text-[28px] sm:text-[32px] font-display font-bold text-ink tracking-tight">
