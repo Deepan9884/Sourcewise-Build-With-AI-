@@ -875,10 +875,12 @@ Begin our session by giving a warm 2-sentence welcome, introducing the first fun
                   key={i}
                   type="button"
                   onClick={() => { setInput(suggestion); inputRef.current?.focus() }}
-                  className="p-3 rounded-xl border border-[#EDE7E1] bg-white hover:border-[#E8845F] hover:bg-[#FFF8F5] text-xs text-[#1E1B16] text-left transition-all"
+                  className="p-3 rounded-xl border border-[#EDE7E1] bg-white hover:border-[#E8845F] hover:bg-[#FFF8F5] text-xs text-[#1E1B16] text-center transition-all"
                 >
-                  <Sparkles className="w-3.5 h-3.5 text-[#E8845F] mb-1" />
-                  <span className="font-medium line-clamp-2">{suggestion}</span>
+                  <span className="font-medium line-clamp-2 text-center">
+                    <Sparkles className="w-3.5 h-3.5 text-[#E8845F] inline-block mr-1.5 -mt-0.5" />
+                    {suggestion}
+                  </span>
                 </button>
               ))}
             </div>

@@ -109,6 +109,11 @@ Date: 2026-09-29
 - Test: upload spec 2/2 pass. eslint clean.
 - Files: KnowledgeHubPage.jsx
 
+### 2026-09-30 — workspace pills centered bullets
+- Did: pill text-center, sparkles icon inline bullet. Verified via screenshot.
+- Test: workspace render pass, eslint clean.
+- Files: AIWorkspacePage.jsx
+
 ### 2026-09-29 — fix login backend connectivity & env sync
 - Cause: node-api/.env held dummy placeholders (`your-project.supabase.co`) while active creds sat in node-api/src/.env; node-api failed DB health and dropped connection, triggering "Cannot reach server. Start backend on :4000." on frontend login.
 - Did: synced active credentials into node-api/.env and created python-ai/.env; augmented node-api/src/index.js to resolve dotenv across working directories.
