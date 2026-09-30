@@ -166,3 +166,9 @@ Date: 2026-09-29
 - Step 2: Integrated study suite features: DeepCode code compiler, personal context service, FloatingFox companion, background task workspace store, AI action executor & intent parser, and backend tests.
 - Step 4/5 (Commit & Push): Tracked in journey.md and pushed cleanly to origin/main.
 - Files: journey.md
+
+### 2026-09-30 — remove student-transformation + codex eyebrow pills
+- Did: deleted "The Student Transformation" pill (OrbitShowcase.jsx) + "The Ninefold Codex · 3D Interactive Tome" pill (SourceWiseBookShowcase.jsx). Headings + orbit/book untouched. Reworded badge spec to assert removal, added codex-removal spec.
+- Committed: fa56c51 ui: remove student-transformation and codex eyebrow pills from landing.
+- Test: MCP live :5173 — both pills 0 matches, both headings present; Journey/outcome-2/Codex clicks pass; console 0 errors/0 warnings. CLI: 11/11 pass 57.2s workers=1. Note: 2 pre-existing eslint unused-var errors in SourceWiseBookShowcase.jsx (jumpToChapter/displayChapter), unrelated to this edit.
+- Files: OrbitShowcase.jsx, SourceWiseBookShowcase.jsx, e2e/tests/landing.spec.ts
