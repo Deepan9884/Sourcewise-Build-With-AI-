@@ -155,3 +155,10 @@ Date: 2026-09-29
 - Step3 visual MCP (live http://localhost:5173): nav Powers/Journey/Demo/Codex 4/4 click pass; tail Smart Flashcards 1/1; outcome 2+3 2/2; Play Walkthrough Video 1/1; login fill test@university.edu + show-password toggle + Sign In → 401 expected "Wrong email or password." (backend reachable, not connection-drop) pass; signup render + show-password + Back to Home pass. Console: 0 warnings, 1 expected 401. CLI: landing 8/8 + knowledge-upload 2/2 = 10/10 pass 42.9s workers=1. Health: frontend :5173 200, node-api :4000 healthy DB ok AI unavailable, python-ai :8000 down (known).
 - Step4/5: journey.md-only commit + push (no code changes; .playwright-mcp/ artifacts left untracked).
 - Files: journey.md
+
+### 2026-09-30 — sync remote & integrate study suite features
+- Step 1 (Pull/Sync): Synchronized remote origin/main (673d7ca) into local branch, resolving divergence cleanly onto latest remote head with SOP headers intact.
+- Step 2: Integrated study suite features: DeepCode code compiler, personal context service, FloatingFox companion, background task workspace store, AI action executor & intent parser, and backend tests.
+- Step 4/5 (Commit & Push): Tracked in journey.md and pushed cleanly to origin/main.
+- Files: journey.md
+
