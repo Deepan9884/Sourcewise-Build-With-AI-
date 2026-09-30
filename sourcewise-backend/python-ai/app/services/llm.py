@@ -1041,22 +1041,19 @@ def _build_action_prompt(
         )
     context_str = "\n\n".join(context_parts)
 
-    action_prompt = ACTION_PROMPTS.get(action_type, "")
-
-    system_content = f"""{SYSTEM_PROMPT}
+    system_content = f"""You are SourceWise AI — an expert academic material generator and personal study coach.
+Your job is to generate accurate, high-quality, and engaging study resources (quizzes, flashcards, notes, summaries) strictly adhering to the requested format.
 
 ## CURRENT TASK
 {action_prompt}
 
 CRITICAL INSTRUCTIONS:
-- Generate ONLY the requested content type. No preamble, no "Here's your quiz:" — just the content.
+- Generate ONLY the requested content type. No conversational filler, no introductory remarks — output the structured content immediately.
 - Follow the format template EXACTLY as specified above.
-- If the source material doesn't contain enough information, say so clearly rather than making up content.
-- Every factual element must be grounded in the provided source material.
-- For quizzes: ensure distractors are plausible but clearly wrong to someone who studied.
-- For flashcards: front = question, back = concise answer. One concept per card.
-- For summaries: prioritize depth over breadth. Cover all major topics.
-- For study guides: organize by importance, not document order."""
+- Ground factual elements in the provided source material when available.
+- For quizzes: ensure distractors are plausible but clearly incorrect.
+- For flashcards: make fronts clear questions or terms, and backs concise definitions or explanations.
+- For summaries & notes: organize with clean markdown headings and key takeaways."""
 
     messages = [{"role": "system", "content": system_content}]
 
@@ -1188,6 +1185,11 @@ async def stream_chat(
     async for event in stream_chat_with_usage(question, context_chunks, history, action_type, user_level):
         if event["type"] == "token":
             yield event["data"]
+
+
+# Alias for backward compatibility
+chat_stream = stream_chat
+
 
 
 async def stream_chat_with_usage(

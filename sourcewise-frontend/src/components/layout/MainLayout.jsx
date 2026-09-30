@@ -2,6 +2,11 @@ import { useState, useEffect } from 'react'
 import { Outlet, Link, useLocation } from 'react-router-dom'
 import { motion } from 'framer-motion'
 import { useAuthStore } from '../../store/authStore'
+import { useChatStore } from '../../store/chatStore'
+import { useSourceStore } from '../../store/sourceStore'
+import { useWorkspaceStore } from '../../store/workspaceStore'
+import FloatingFoxCompanion from './FloatingFoxCompanion'
+import GlobalChatPanel from '../knowledge/GlobalChatPanel'
 import {
   Home, BookCopy, MessageSquare, Trophy, Calendar, Settings, Compass,
   LogOut, User as UserIcon, ChevronLeft, ChevronRight, Puzzle, CalendarDays, Code2,
@@ -171,12 +176,18 @@ export default function MainLayout() {
   const logout = useAuthStore((state) => state.logout)
   const user = useAuthStore((state) => state.user)
   const accessToken = useAuthStore((state) => state.accessToken)
+  const { isOpen, openChat, closeChat, chatSeed } = useChatStore()
+  const activeSourceIds = useSourceStore((state) => state.activeSourceIds) || []
   const location = useLocation()
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false)
   const [hoveredItem, setHoveredItem] = useState(null)
   const [activeQuestsCount, setActiveQuestsCount] = useState(4)
   const [eventsCount, setEventsCount] = useState(3)
   const [railStreak, setRailStreak] = useState(null)
+  const workspaceTotalNotifs = useWorkspaceStore((state) => state.notifications.total) || 0
+  const isAnyWorkspaceGenerating = useWorkspaceStore((state) => Object.values(state.isGenerating).some(Boolean))
+  const lastToast = useWorkspaceStore((state) => state.lastCompletedToast)
+  const dismissToast = useWorkspaceStore((state) => state.dismissToast)
 
   // Sync available quests count from daily quests localStorage
   useEffect(() => {
@@ -275,12 +286,21 @@ export default function MainLayout() {
               </span>
             )}
 
-            {/* Live Badge: AI Workspace Activity Dot */}
+            {/* Live Badge: AI Workspace Activity Dot & Completed Notification Count */}
             {item.badge === 'ai_dot' && (
-              <span className="absolute -top-1 -right-1 flex h-2.5 w-2.5">
-                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#E8845F] opacity-75" />
-                <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-[#E8845F] ring-2 ring-white" />
-              </span>
+              workspaceTotalNotifs > 0 ? (
+                <span 
+                  className="absolute -top-1.5 -right-2 min-w-[17px] h-[17px] px-1 bg-[#10B981] text-white text-[10px] font-extrabold rounded-full flex items-center justify-center ring-2 ring-white shadow-xs animate-bounce"
+                  title={`${workspaceTotalNotifs} completed materials ready`}
+                >
+                  {workspaceTotalNotifs}
+                </span>
+              ) : isAnyWorkspaceGenerating ? (
+                <span className="absolute -top-1 -right-1 flex h-2.5 w-2.5" title="AI generating in background...">
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#E8845F] opacity-75" />
+                  <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-[#E8845F] ring-2 ring-white" />
+                </span>
+              ) : null
             )}
 
             {/* Live Badge: DeepCode Live Pulse Dot */}
@@ -502,6 +522,48 @@ export default function MainLayout() {
       <main className="flex-1 p-6 lg:p-8 overflow-auto relative">
         <Outlet />
       </main>
+
+      {/* Floating Fox Companion Mascot Trigger (Corner FAB) */}
+      <FloatingFoxCompanion onClick={() => openChat()} activeCount={activeSourceIds.length} />
+
+      {/* Pure Overlay Study Chat Panel */}
+      <GlobalChatPanel
+        open={isOpen}
+        onClose={closeChat}
+        sourceIds={activeSourceIds}
+        contextLabel={activeSourceIds.length ? `${activeSourceIds.length} source${activeSourceIds.length === 1 ? '' : 's'} in context` : 'Personal study companion'}
+        seed={chatSeed}
+      />
+
+      {/* Floating Background Task Completion Alert Toast */}
+      {lastToast && (
+        <div className="fixed top-5 right-5 z-50 flex items-center gap-3 bg-white/95 backdrop-blur-md border border-[#E8845F]/40 shadow-xl px-4 py-3 rounded-2xl max-w-sm animate-in fade-in slide-in-from-top-3 duration-300">
+          <div className="w-9 h-9 rounded-xl bg-[#FDEEE6] text-[#C05A35] flex items-center justify-center font-bold text-base shrink-0 ring-2 ring-[#E8845F]/20">
+            ✨
+          </div>
+          <div className="flex-1 min-w-0">
+            <h5 className="text-xs font-bold text-[#1E1B16] truncate">{lastToast.title}</h5>
+            <p className="text-[11px] text-[#5B544E] line-clamp-2 leading-tight mt-0.5">{lastToast.message}</p>
+          </div>
+          <div className="flex items-center gap-1.5 shrink-0">
+            <Link
+              to={`/workspace/${lastToast.mode}`}
+              onClick={dismissToast}
+              className="sw-btn-primary !h-7 !px-3 !text-[11px] font-semibold flex items-center shadow-xs"
+            >
+              Open
+            </Link>
+            <button
+              type="button"
+              onClick={dismissToast}
+              className="text-[#8A817B] hover:text-[#1E1B16] p-1 text-xs rounded-md transition-colors"
+              title="Dismiss"
+            >
+              ✕
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

@@ -73,9 +73,6 @@ export default function DashboardPage() {
     return 0
   })
 
-  // Quick prompt input
-  const [quickQuery, setQuickQuery] = useState('')
-
   // Active recall mini widget state
   const [currentCardIndex, setCurrentCardIndex] = useState(0)
   const [isFlipped, setIsFlipped] = useState(false)
@@ -333,13 +330,6 @@ export default function DashboardPage() {
 
   const greeting = getGreeting()
 
-  // Handle Quick Search
-  const handleQuickSubmit = (e) => {
-    e.preventDefault()
-    if (!quickQuery.trim()) return
-    navigate('/workspace', { state: { initialPrompt: quickQuery, mode: 'chat' } })
-  }
-
   // Handle Flashcard Flip & Rating
   const handleRateFlashcard = (rating) => {
     completeQuest('q2')
@@ -438,54 +428,7 @@ export default function DashboardPage() {
         ))}
       </div>
 
-      {/* 3. Interactive "Ask SourceWise" Quick Action Bar */}
-      <motion.div
-        initial={{ opacity: 0, y: 16 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.05 }}
-        className="bg-surface-container-lowest border border-outline-variant/30 rounded-3xl p-5 shadow-sm space-y-3.5"
-      >
-        <form onSubmit={handleQuickSubmit} className="relative flex items-center">
-          <Search className="w-5 h-5 text-primary-container absolute left-4 pointer-events-none" />
-          <input
-            type="text"
-            value={quickQuery}
-            onChange={(e) => setQuickQuery(e.target.value)}
-            placeholder="Ask your study companion anything, test a concept, or paste lecture text..."
-            className="w-full h-12 pl-12 pr-28 rounded-full bg-surface-container-low/70 border border-outline-variant/40 focus:border-primary-container focus:bg-white focus:ring-2 focus:ring-primary-container/20 text-sm text-on-surface placeholder:text-on-surface-variant/60 transition-all outline-none"
-          />
-          <button
-            type="submit"
-            className="absolute right-2 h-8.5 px-4 rounded-full bg-primary-container hover:bg-primary text-on-primary font-semibold text-xs flex items-center gap-1.5 transition-all"
-          >
-            <span>Ask AI</span>
-            <Send className="w-3 h-3" />
-          </button>
-        </form>
-
-        {/* 4 One-Tap Action Chips */}
-        <div className="flex flex-wrap items-center gap-2 pt-1">
-          <span className="text-xs font-semibold text-on-surface-variant mr-1 flex items-center gap-1">
-            <Zap className="w-3.5 h-3.5 text-primary-container" /> Quick Sprints:
-          </span>
-          {[
-            { label: '⚡ 3-Question Diagnostic', mode: 'quiz', q: 'Give me a 3-question diagnostic quiz on my active sources.' },
-            { label: '💡 Explain Tough Concept', mode: 'tutor', q: 'Explain a key concept from my notes using the Feynman technique.' },
-            { label: '🗂️ Spaced Flashcard Review', mode: 'flashcards', q: '' },
-            { label: '📝 Extract Key Equations', mode: 'notes', q: 'Extract all key formulas and definition points from my sources.' },
-          ].map((chip) => (
-            <button
-              key={chip.label}
-              onClick={() => navigate(`/workspace/${chip.mode}`, { state: { initialPrompt: chip.q } })}
-              className="px-3.5 py-1.5 rounded-full bg-surface-container-low hover:bg-primary-fixed text-on-surface hover:text-on-primary-fixed font-medium text-xs border border-outline-variant/30 hover:border-primary-fixed-dim transition-all flex items-center gap-1.5"
-            >
-              <span>{chip.label}</span>
-            </button>
-          ))}
-        </div>
-      </motion.div>
-
-      {/* 3. Primary Grid: Live Focus Studio & Daily Study Missions */}
+      {/* Primary Grid: Live Focus Studio & Daily Study Missions */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
 
         {/* Left Col: Live Flow & Focus Studio (Pomodoro) */}

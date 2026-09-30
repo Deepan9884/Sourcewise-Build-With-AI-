@@ -20,7 +20,6 @@ import {
   FileText,
   Users,
   Code2,
-  Sparkles,
   BookOpen,
   Laptop,
   Clock,
@@ -342,7 +341,7 @@ export default function EventsPage() {
             <div>
               <div className="flex items-center gap-2 mb-2 flex-wrap">
                 <span className="px-3 py-1 text-xs font-semibold bg-[#D1FAE5] text-[#047857] rounded-full inline-flex items-center gap-1.5 shadow-2xs">
-                  <Sparkles className="w-3.5 h-3.5 text-[#10B981]" />
+                  <Award className="w-3.5 h-3.5 text-[#10B981]" />
                   Student Activity & Event Hub
                 </span>
                 <span className="text-xs text-stone-400 font-medium">

@@ -26,6 +26,11 @@ class ActionType(str, Enum):
     EXPLAIN_CONCEPT = "explain_concept"
     FIND_CONNECTIONS = "find_connections"
     ANALYZE_SOURCE = "analyze_source"
+    LIST_TASKS = "list_tasks"
+    RECOMMEND_STUDY = "recommend_study"
+    COMPLETE_TASK = "complete_task"
+    PACING_STATUS = "pacing_status"
+    GET_SCHEDULE = "get_schedule"
 
 
 class ParsedIntent(BaseModel):
@@ -42,17 +47,22 @@ class ParsedIntent(BaseModel):
     metadata: Optional[dict] = None
 
 
-INTENT_SYSTEM_PROMPT = """You are an intent parser for SourceWise AI, an educational study assistant. Parse the student's message into a JSON action. Return ONLY valid JSON — no explanation, no markdown, no code blocks.
+INTENT_SYSTEM_PROMPT = """You are an intent parser for SourceWise AI, a personal study assistant and companion. Parse the student's message into a JSON action. Return ONLY valid JSON — no explanation, no markdown, no code blocks.
 
 ## Available Actions
 
 | Action | When to Use | Required Fields | Optional Fields |
 |--------|------------|-----------------|-----------------|
-| chat | General questions, greetings, follow-ups | question | — |
+| list_tasks | Inquiring about pending tasks, today's tasks, study checklist | — | — |
+| recommend_study | Asking what to study right now, what's next, what to prioritize | — | topic |
+| complete_task | Marking a task or study session as done / completed | topic | — |
+| pacing_status | Checking study pace, exam readiness, on-track status | — | topic |
+| get_schedule | Viewing timetable, today's or weekly study schedule | — | exam_date |
+| chat | General questions, personal conversation, greetings, follow-ups | question | — |
 | create_quiz | Requesting quiz, test, practice questions, MCQ | topic | count, difficulty |
 | create_flashcards | Requesting flashcards, cards, memorization aids | topic | count |
 | summarize | Requesting summary, overview, TLDR, key points | — | topic |
-| create_planner | Requesting study plan, schedule, timetable | — | topic, exam_date |
+| create_planner | Requesting study plan, schedule creation, timetable | — | topic, exam_date |
 | tutor | Requesting Socratic method, guided teaching, "help me understand" | question | mode (direct/socratic/exploratory/exam_prep) |
 | generate_audio | Requesting audio, podcast, voice, listen | topic | — |
 | create_study_guide | Requesting comprehensive guide, complete review | topic | — |
@@ -66,6 +76,17 @@ Return exactly this JSON structure:
 {"action": "<action>", "topic": "<topic or null>", "count": <number or null>, "question": "<full question text>", "exam_date": "<date or null>", "mode": "<mode or null>"}
 
 ## Few-Shot Examples
+
+### Personal Tasks & Schedule
+"what are all the task pending here like list today's task" → {"action": "list_tasks"}
+"what are my pending tasks?" → {"action": "list_tasks"}
+"list today's tasks" → {"action": "list_tasks"}
+"what do I have to do today?" → {"action": "list_tasks"}
+"what should I study right now?" → {"action": "recommend_study"}
+"what's next to study?" → {"action": "recommend_study"}
+"mark physics as done" → {"action": "complete_task", "topic": "physics"}
+"how is my study pace?" → {"action": "pacing_status"}
+"show my schedule for today" → {"action": "get_schedule"}
 
 ### Simple Questions
 "what is photosynthesis?" → {"action": "explain_concept", "question": "what is photosynthesis?", "topic": "photosynthesis"}
@@ -126,7 +147,7 @@ async def parse_intent(
     history: Optional[List[dict]] = None,
 ) -> ParsedIntent:
     """
-    Parse user message into a structured intent using LLM.
+    Parse user message into a structured intent using LLM with deterministic fast path.
     
     Args:
         message: User's natural language message
@@ -136,6 +157,105 @@ async def parse_intent(
     Returns:
         ParsedIntent with action and parameters
     """
+    import re
+    message_clean = message.strip()
+    message_lower = message_clean.lower()
+
+    # Fast-path deterministic detection for personal assistant & task queries
+    # 1. Pending tasks / list today's tasks
+    if re.search(r"\b(pending\s+tasks?|tasks?\s+pending|list\s+(today'?s?\s+)?tasks?|today'?s?\s+tasks?|what\s+are\s+(all\s+)?(the\s+|my\s+)?tasks?|my\s+tasks?|tasks?\s+for\s+today|what\s+do\s+i\s+have\s+to\s+do\s+today|what\s+to\s+do\s+today|what'?s\s+pending|pending\s+work|pending\s+assignment|to-?do\s+list)\b", message_lower):
+        return ParsedIntent(
+            action=ActionType.LIST_TASKS,
+            question=message_clean,
+            source_ids=source_ids,
+        )
+
+    # 2. What should I study next
+    if re.search(r"\b(what\s+should\s+i\s+study|what\s+to\s+study\s+next|what'?s\s+next|next\s+task|where\s+should\s+i\s+start|recommend\s+study|what\s+next|what\s+now)\b", message_lower):
+        return ParsedIntent(
+            action=ActionType.RECOMMEND_STUDY,
+            question=message_clean,
+            source_ids=source_ids,
+        )
+
+    # 3. Complete task
+    complete_match = re.search(r"\b(mark|finish|complete|check)\s+(.+?)\s+(as\s+)?(done|completed|finished)\b", message_lower)
+    if complete_match:
+        topic_extracted = complete_match.group(2).strip()
+        return ParsedIntent(
+            action=ActionType.COMPLETE_TASK,
+            topic=topic_extracted,
+            question=message_clean,
+            source_ids=source_ids,
+        )
+
+    # 4. Pacing status
+    if re.search(r"\b(how\s+is\s+my\s+pace|how\s+am\s+i\s+pacing|pacing\s+status|am\s+i\s+on\s+track|study\s+pace|exam\s+countdown)\b", message_lower):
+        return ParsedIntent(
+            action=ActionType.PACING_STATUS,
+            question=message_clean,
+            source_ids=source_ids,
+        )
+
+    # 5. Get schedule
+    if re.search(r"\b(my\s+schedule|show\s+(my\s+)?schedule|today'?s?\s+schedule|timetable|study\s+calendar)\b", message_lower):
+        return ParsedIntent(
+            action=ActionType.GET_SCHEDULE,
+            question=message_clean,
+            source_ids=source_ids,
+        )
+
+    # 6. Friendly greetings & chitchat
+    if re.match(r"^\s*(hi|hello|hey|greetings|howdy|sup|hola|yo|good\s+(morning|afternoon|evening)|who\s+are\s+you|what\s+can\s+you\s+do|help)(\s*!|\s*\.|\s*\?|\s*$)", message_lower):
+        return ParsedIntent(
+            action=ActionType.CHAT,
+            question=message_clean,
+            source_ids=source_ids,
+        )
+
+    # 7. Fast-path Quiz generation
+    if re.search(r"\b(create|make|generate|build|give\s+me|start)\b.*\b(quiz|test|mcqs?)\b", message_lower) or re.search(r"\b(quiz\s+me|take\s+a\s+quiz)\b", message_lower):
+        count_match = re.search(r"(\d+)\s*(?:-?\s*questions?|questions?|mcqs?|\b)", message_lower)
+        count = int(count_match.group(1)) if count_match and 1 <= int(count_match.group(1)) <= 50 else 5
+        diff_match = re.search(r"\b(easy|medium|hard|advanced|beginner)\b", message_lower)
+        difficulty = diff_match.group(1) if diff_match else "medium"
+        topic_match = re.search(r'(?:focusing\s+on|about|on|covering)\s+["\']?([^"\'\n.,]+)["\']?', message_clean, re.IGNORECASE)
+        topic = topic_match.group(1).strip() if topic_match else "selected materials"
+        return ParsedIntent(
+            action=ActionType.CREATE_QUIZ,
+            count=count,
+            difficulty=difficulty,
+            topic=topic,
+            question=message_clean,
+            source_ids=source_ids,
+        )
+
+    # 8. Fast-path Flashcards generation
+    if re.search(r"\b(create|make|generate|build|give\s+me)\b.*\b(flashcards?|flash\s+cards?|cards?|anki)\b", message_lower):
+        count_match = re.search(r"(\d+)\s*(?:flashcards?|cards?)", message_lower)
+        count = int(count_match.group(1)) if count_match and 1 <= int(count_match.group(1)) <= 50 else 10
+        topic_match = re.search(r'(?:focusing\s+on|about|on|covering)\s+["\']?([^"\'\n.,]+)["\']?', message_clean, re.IGNORECASE)
+        topic = topic_match.group(1).strip() if topic_match else "key concepts"
+        return ParsedIntent(
+            action=ActionType.CREATE_FLASHCARDS,
+            count=count,
+            topic=topic,
+            question=message_clean,
+            source_ids=source_ids,
+        )
+
+    # 9. Fast-path Notes / Summary generation
+    if re.search(r"\b(generate|create|write|make|take)\b.*\b(notes?|study\s+guide|summary|summarize)\b", message_lower):
+        topic_match = re.search(r'(?:focusing\s+on|about|on|covering)\s+["\']?([^"\'\n.,]+)["\']?', message_clean, re.IGNORECASE)
+        topic = topic_match.group(1).strip() if topic_match else "selected materials"
+        action = ActionType.SUMMARIZE if "summar" in message_lower else ActionType.CREATE_NOTES
+        return ParsedIntent(
+            action=action,
+            topic=topic,
+            question=message_clean,
+            source_ids=source_ids,
+        )
+
     try:
         from app.services.llm import raw_chat
 
@@ -216,10 +336,31 @@ def parse_intent_sync(message: str, source_ids: Optional[List[str]] = None) -> P
     Synchronous fallback for intent parsing using keyword matching.
     Used when LLM is unavailable or fails.
     """
-    message_lower = message.lower()
+    import re
+    message_clean = message.strip()
+    message_lower = message_clean.lower()
     
+    # Fast regex match for task queries
+    if re.search(r"\b(pending\s+tasks?|tasks?\s+pending|list\s+(today'?s?\s+)?tasks?|today'?s?\s+tasks?|what\s+are\s+(all\s+)?(the\s+|my\s+)?tasks?|my\s+tasks?|tasks?\s+for\s+today|what\s+do\s+i\s+have\s+to\s+do\s+today|what\s+to\s+do\s+today|what'?s\s+pending|to-?do\s+list)\b", message_lower):
+        return ParsedIntent(action=ActionType.LIST_TASKS, question=message_clean, source_ids=source_ids)
+
+    if re.search(r"\b(what\s+should\s+i\s+study|what\s+to\s+study\s+next|what'?s\s+next|next\s+task|where\s+should\s+i\s+start|recommend\s+study)\b", message_lower):
+        return ParsedIntent(action=ActionType.RECOMMEND_STUDY, question=message_clean, source_ids=source_ids)
+
+    complete_match = re.search(r"\b(mark|finish|complete|check)\s+(.+?)\s+(as\s+)?(done|completed|finished)\b", message_lower)
+    if complete_match:
+        return ParsedIntent(action=ActionType.COMPLETE_TASK, topic=complete_match.group(2).strip(), question=message_clean, source_ids=source_ids)
+
+    if re.search(r"\b(how\s+is\s+my\s+pace|how\s+am\s+i\s+pacing|pacing\s+status|am\s+i\s+on\s+track|study\s+pace)\b", message_lower):
+        return ParsedIntent(action=ActionType.PACING_STATUS, question=message_clean, source_ids=source_ids)
+
     # Keyword-based intent detection with weighted scoring
     intent_scores = {
+        ActionType.LIST_TASKS: 0,
+        ActionType.RECOMMEND_STUDY: 0,
+        ActionType.COMPLETE_TASK: 0,
+        ActionType.PACING_STATUS: 0,
+        ActionType.GET_SCHEDULE: 0,
         ActionType.CREATE_QUIZ: 0,
         ActionType.CREATE_FLASHCARDS: 0,
         ActionType.SUMMARIZE: 0,
@@ -234,6 +375,10 @@ def parse_intent_sync(message: str, source_ids: Optional[List[str]] = None) -> P
         ActionType.CHAT: 0,
     }
     
+    # Task indicators
+    if any(w in message_lower for w in ["task", "tasks", "pending", "todo", "to-do", "checklist"]):
+        intent_scores[ActionType.LIST_TASKS] += 3
+
     # Quiz indicators
     quiz_words = ["quiz", "test", "exam", "question", "practice", "mcq", "multiple choice", "evaluate"]
     for word in quiz_words:

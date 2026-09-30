@@ -52,11 +52,11 @@ export default function LoginPage() {
 
   return (
     <div className="min-h-screen bg-surface text-on-surface relative flex flex-col justify-between overflow-x-hidden">
-      {/* Rich Atmospheric Landing Background */}
-      <LandingBackground />
+      {/* Rich Atmospheric Landing Background (Static mode for rock-solid stability) */}
+      <LandingBackground staticMode={true} />
 
       {/* Floating Golden Ember Particles */}
-      <ParticleBackground color="amber" particleCount={25} />
+      <ParticleBackground color="amber" particleCount={20} />
 
       {/* Ambient Radial Lighting Glows */}
       <AmbientLight position="top-right" intensity="lg" color="candle" />
@@ -90,17 +90,12 @@ export default function LoginPage() {
         </Link>
       </header>
 
-      {/* Centered layout: Executive Showcase Card on Left, Sign In Card on Right */}
-      <main className="relative z-10 flex-1 flex items-center justify-center px-4 sm:px-6 lg:px-8 py-4 my-auto">
-        <div className="w-full max-w-6xl mx-auto flex flex-col lg:flex-row items-center justify-center gap-8 lg:gap-14 xl:gap-20">
+      {/* Centered layout: Executive Showcase on Left, Sign In Card on Right with spacious gap */}
+      <main className="relative z-10 flex-1 flex items-center justify-center px-4 sm:px-6 lg:px-8 py-6">
+        <div className="w-full max-w-5xl xl:max-w-6xl mx-auto flex flex-col lg:flex-row items-center justify-center gap-10 lg:gap-20 xl:gap-28">
           
-          {/* Left Column: Visual Mascot & Headline (Unboxed, seamlessly blended with background) */}
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ duration: 0.6, ease: [0.16, 1, 0.3, 1] }}
-            className="w-full max-w-[420px] xl:max-w-[460px] shrink-0 hidden lg:flex flex-col items-center text-center relative"
-          >
+          {/* Left Column: Visual Mascot & Headline (Rock-solid, ample gap to card) */}
+          <div className="w-full max-w-[390px] xl:max-w-[430px] shrink-0 hidden lg:flex flex-col items-center text-center relative lg:self-center">
             {/* Ambient radial glow behind the mascot to blend seamlessly with the page bg */}
             <div className="pointer-events-none absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-80 h-80 bg-radial-gradient from-primary-fixed/35 via-amber-warm/15 to-transparent rounded-full blur-3xl opacity-70 -z-10" />
 
@@ -112,41 +107,32 @@ export default function LoginPage() {
               Transform lecture overload and dense papers into effortless cognitive mastery.
             </p>
 
-            {/* Mascot Display with breathing animation & speech bubble */}
+            {/* Mascot Display with stable grounded illustration & speech bubble */}
             <div className="relative w-full flex flex-col items-center my-3">
               {/* Friendly Speech Bubble */}
-              <motion.div
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                transition={{ delay: 0.2, duration: 0.4 }}
-                className="mb-2 px-3.5 py-1.5 rounded-full bg-white/75 backdrop-blur-md border border-outline-variant/30 shadow-xs flex items-center gap-2 text-xs font-semibold text-on-surface"
-              >
+              <div className="mb-2 px-3.5 py-1.5 rounded-full bg-white/75 backdrop-blur-md border border-outline-variant/30 shadow-xs flex items-center gap-2 text-xs font-semibold text-on-surface">
                 <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse ring-3 ring-emerald-500/20 shrink-0" />
                 <span>Welcome back! Ready to pick up where we left off?</span>
-              </motion.div>
+              </div>
 
-              {/* Mascot Image with breathing physics and soft ambient ground shadow */}
-              <motion.div
-                animate={{ y: [0, -6, 0] }}
-                transition={{ duration: 4.8, repeat: Infinity, ease: "easeInOut" }}
-                className="relative w-full flex items-center justify-center py-2"
-              >
+              {/* Mascot Image - Grounded & stable without jitter/bobbing */}
+              <div className="relative w-full flex items-center justify-center py-2">
                 <div className="pointer-events-none absolute bottom-1 inset-x-12 h-7 bg-radial-gradient from-black/15 via-primary/5 to-transparent blur-lg rounded-full" />
                 <img
                   src="/signin.png"
                   alt="Student studying with SourceWise fox companion"
-                  className="relative w-full h-auto max-h-[220px] xl:max-h-[250px] object-contain select-none pointer-events-none drop-shadow-sm"
+                  className="relative w-full h-auto max-h-[210px] xl:max-h-[240px] max-w-[330px] xl:max-w-[360px] object-contain select-none pointer-events-none drop-shadow-sm"
                 />
-              </motion.div>
+              </div>
             </div>
-          </motion.div>
+          </div>
 
-          {/* Upgraded Sign In Card with Glassmorphism & Micro-details (Blended & Reduced) */}
+          {/* Upgraded Sign In Card with Glassmorphism & Rock-solid Dimensions */}
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
-            transition={{ duration: 0.5, ease: [0.16, 1, 0.3, 1], delay: 0.05 }}
-            className="w-full max-w-[390px] lg:max-w-[410px] rounded-[24px] p-6 sm:p-7 relative overflow-hidden transition-all duration-300"
+            transition={{ duration: 0.35, ease: [0.16, 1, 0.3, 1] }}
+            className="w-full max-w-[390px] lg:max-w-[420px] min-h-[500px] lg:min-h-[520px] rounded-[24px] p-6 sm:p-7 relative overflow-hidden transition-all duration-300 flex flex-col justify-between"
             style={{
               background: 'linear-gradient(145deg, hsla(28 35% 100% / 0.60) 0%, hsla(14 30% 98% / 0.40) 100%)',
               backdropFilter: 'blur(20px) saturate(1.3)',

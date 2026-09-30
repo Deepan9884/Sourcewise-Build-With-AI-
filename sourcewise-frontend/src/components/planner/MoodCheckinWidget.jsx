@@ -1,5 +1,5 @@
 import { motion } from 'framer-motion'
-import { Brain, Sparkles, Activity, ShieldCheck, Zap, BatteryCharging } from 'lucide-react'
+import { Brain, Activity, ShieldCheck, Zap, BatteryCharging } from 'lucide-react'
 
 const MOOD_PROFILES = {
   energized: {

@@ -18,9 +18,9 @@ const SUPPORTED_LANGUAGES = {
     version: '3.12.7',
     compiler: 'cpython-3.12.7',
     extension: '.py',
-    icon: '🐍',
+    icon: 'py',
     aliases: ['py', 'python3'],
-    defaultCode: `# DeepCode Python 3 Playground\ndef solve():\n    nums = [2, 7, 11, 15]\n    target = 9\n    lookup = {}\n    for i, n in enumerate(nums):\n        complement = target - n\n        if complement in lookup:\n            return [lookup[complement], i]\n        lookup[n] = i\n    return []\n\nif __name__ == "__main__":\n    result = solve()\n    print("Welcome to DeepCode Python! 🚀")\n    print(f"Two Sum Indices for target 9: {result}")\n`,
+    defaultCode: `# DeepCode Python 3 Playground\ndef solve():\n    nums = [2, 7, 11, 15]\n    target = 9\n    lookup = {}\n    for i, n in enumerate(nums):\n        complement = target - n\n        if complement in lookup:\n            return [lookup[complement], i]\n        lookup[n] = i\n    return []\n\nif __name__ == "__main__":\n    result = solve()\n    print("Welcome to DeepCode Python!")\n    print(f"Two Sum Indices for target 9: {result}")\n`,
     sampleInput: '',
   },
   javascript: {
@@ -29,9 +29,9 @@ const SUPPORTED_LANGUAGES = {
     version: 'Node.js 20.17',
     compiler: 'nodejs-20.17.0',
     extension: '.js',
-    icon: '⚡',
+    icon: 'js',
     aliases: ['js', 'node'],
-    defaultCode: `// DeepCode JavaScript Playground\nfunction main() {\n    console.log("Welcome to DeepCode JS! ⚡");\n    \n    function fibonacci(n) {\n        const seq = [0, 1];\n        for (let i = 2; i < n; i++) {\n            seq.push(seq[i - 1] + seq[i - 2]);\n        }\n        return seq.slice(0, n);\n    }\n    \n    console.log("First 8 Fibonacci numbers:", fibonacci(8));\n}\n\nmain();\n`,
+    defaultCode: `// DeepCode JavaScript Playground\nfunction main() {\n    console.log("Welcome to DeepCode JS!");\n    \n    function fibonacci(n) {\n        const seq = [0, 1];\n        for (let i = 2; i < n; i++) {\n            seq.push(seq[i - 1] + seq[i - 2]);\n        }\n        return seq.slice(0, n);\n    }\n    \n    console.log("First 8 Fibonacci numbers:", fibonacci(8));\n}\n\nmain();\n`,
     sampleInput: '',
   },
   typescript: {
@@ -40,7 +40,7 @@ const SUPPORTED_LANGUAGES = {
     version: '5.6.2',
     compiler: 'typescript-5.6.2',
     extension: '.ts',
-    icon: '🟦',
+    icon: 'ts',
     aliases: ['ts'],
     defaultCode: `// DeepCode TypeScript Playground\ninterface Scholar {\n    id: number;\n    name: string;\n    skills: string[];\n}\n\nfunction inspect(scholar: Scholar): string {\n    return \`Scholar: \${scholar.name} (Skills: \${scholar.skills.join(', ')})\`;\n}\n\nconst user: Scholar = {\n    id: 101,\n    name: "SourceWise Learner",\n    skills: ["AI Systems", "TypeScript", "Algorithms"]\n};\n\nconsole.log(inspect(user));\n`,
     sampleInput: '',
@@ -51,9 +51,9 @@ const SUPPORTED_LANGUAGES = {
     version: 'GCC 13.2 / C++20',
     compiler: 'gcc-head',
     extension: '.cpp',
-    icon: '⚙️',
+    icon: 'cpp',
     aliases: ['c++', 'cxx'],
-    defaultCode: `// DeepCode C++20 Playground\n#include <iostream>\n#include <vector>\n#include <algorithm>\n\nint main() {\n    std::cout << "Welcome to DeepCode C++! ⚙️\\n";\n    \n    std::vector<int> numbers = {42, 17, 99, 8, 23};\n    std::sort(numbers.begin(), numbers.end());\n    \n    std::cout << "Sorted elements: ";\n    for (int n : numbers) {\n        std::cout << n << " ";\n    }\n    std::cout << std::endl;\n    return 0;\n}\n`,
+    defaultCode: `// DeepCode C++20 Playground\n#include <iostream>\n#include <vector>\n#include <algorithm>\n\nint main() {\n    std::cout << "Welcome to DeepCode C++!\\n";\n    \n    std::vector<int> numbers = {42, 17, 99, 8, 23};\n    std::sort(numbers.begin(), numbers.end());\n    \n    std::cout << "Sorted elements: ";\n    for (int n : numbers) {\n        std::cout << n << " ";\n    }\n    std::cout << std::endl;\n    return 0;\n}\n`,
     sampleInput: '',
   },
   c: {
@@ -62,9 +62,9 @@ const SUPPORTED_LANGUAGES = {
     version: 'GCC 13.2',
     compiler: 'gcc-head-c',
     extension: '.c',
-    icon: '🔧',
+    icon: 'c',
     aliases: ['gcc'],
-    defaultCode: `// DeepCode C Playground\n#include <stdio.h>\n\nint main() {\n    printf("Welcome to DeepCode C! 🔧\\n");\n    int sum = 0;\n    for (int i = 1; i <= 10; i++) {\n        sum += i;\n    }\n    printf("Sum of 1..10 is: %d\\n", sum);\n    return 0;\n}\n`,
+    defaultCode: `// DeepCode C Playground\n#include <stdio.h>\n\nint main() {\n    printf("Welcome to DeepCode C!\\n");\n    int sum = 0;\n    for (int i = 1; i <= 10; i++) {\n        sum += i;\n    }\n    printf("Sum of 1..10 is: %d\\n", sum);\n    return 0;\n}\n`,
     sampleInput: '',
   },
   java: {
@@ -73,9 +73,9 @@ const SUPPORTED_LANGUAGES = {
     version: 'OpenJDK 21',
     compiler: 'openjdk-jdk-21+35',
     extension: '.java',
-    icon: '☕',
+    icon: 'java',
     aliases: [],
-    defaultCode: `// DeepCode Java Playground\nimport java.util.*;\n\nclass Main {\n    public static void main(String[] args) {\n        System.out.println("Welcome to DeepCode Java! ☕");\n        List<String> items = Arrays.asList("Neural Networks", "Compilers", "Distributed Systems");\n        items.forEach(item -> System.out.println("  • " + item));\n    }\n}\n`,
+    defaultCode: `// DeepCode Java Playground\nimport java.util.*;\n\nclass Main {\n    public static void main(String[] args) {\n        System.out.println("Welcome to DeepCode Java!");\n        List<String> items = Arrays.asList("Neural Networks", "Compilers", "Distributed Systems");\n        items.forEach(item -> System.out.println("  • " + item));\n    }\n}\n`,
     sampleInput: '',
   },
   rust: {
@@ -84,9 +84,9 @@ const SUPPORTED_LANGUAGES = {
     version: '1.82.0',
     compiler: 'rust-1.82.0',
     extension: '.rs',
-    icon: '🦀',
+    icon: 'rust',
     aliases: ['rs'],
-    defaultCode: `// DeepCode Rust Playground\nfn main() {\n    println!("Welcome to DeepCode Rust! 🦀");\n    let numbers = vec![1, 2, 3, 4, 5];\n    let doubled: Vec<i32> = numbers.iter().map(|&x| x * 2).collect();\n    println!("Doubled elements: {:?}", doubled);\n}\n`,
+    defaultCode: `// DeepCode Rust Playground\nfn main() {\n    println!("Welcome to DeepCode Rust!");\n    let numbers = vec![1, 2, 3, 4, 5];\n    let doubled: Vec<i32> = numbers.iter().map(|&x| x * 2).collect();\n    println!("Doubled elements: {:?}", doubled);\n}\n`,
     sampleInput: '',
   },
   go: {
@@ -95,9 +95,9 @@ const SUPPORTED_LANGUAGES = {
     version: '1.23.2',
     compiler: 'go-1.23.2',
     extension: '.go',
-    icon: '🐹',
+    icon: 'go',
     aliases: ['golang'],
-    defaultCode: `// DeepCode Go Playground\npackage main\n\nimport "fmt"\n\nfunc main() {\n    fmt.Println("Welcome to DeepCode Go! 🐹")\n    steps := []string{"Analyze", "Compile", "Execute"}\n    for i, s := range steps {\n        fmt.Printf("[%d] %s\\n", i+1, s)\n    }\n}\n`,
+    defaultCode: `// DeepCode Go Playground\npackage main\n\nimport "fmt"\n\nfunc main() {\n    fmt.Println("Welcome to DeepCode Go!")\n    steps := []string{"Analyze", "Compile", "Execute"}\n    for i, s := range steps {\n        fmt.Printf("[%d] %s\\n", i+1, s)\n    }\n}\n`,
     sampleInput: '',
   },
   sql: {
@@ -106,7 +106,7 @@ const SUPPORTED_LANGUAGES = {
     version: '3.46.1',
     compiler: 'sqlite-3.46.1',
     extension: '.sql',
-    icon: '🐬',
+    icon: 'sql',
     aliases: ['sqlite'],
     defaultCode: `-- DeepCode SQL Playground\nCREATE TABLE scholars (id INTEGER PRIMARY KEY, name TEXT, xp INTEGER);\nINSERT INTO scholars VALUES (1, 'Ada Lovelace', 950);\nINSERT INTO scholars VALUES (2, 'Alan Turing', 980);\nINSERT INTO scholars VALUES (3, 'Grace Hopper', 920);\n\nSELECT * FROM scholars ORDER BY xp DESC;\n`,
     sampleInput: '',
@@ -273,6 +273,76 @@ function runLocalJavaScript(code, stdin) {
 }
 
 /**
+ * Quick static syntax validator fallback when remote AI is unreachable
+ */
+function inspectSyntaxFallback(language, code, error_output) {
+  const issues = [];
+  const lines = code.split('\n');
+  const lang = (language || '').toLowerCase();
+
+  if (lang === 'python' || lang === 'py') {
+    const blockHeaders = ['if', 'elif', 'else', 'while', 'for', 'def', 'class', 'try', 'except', 'finally', 'with'];
+    for (let i = 0; i < lines.length; i++) {
+      const line = lines[i];
+      const trimmed = line.trim();
+      if (!trimmed || trimmed.startsWith('#')) continue;
+
+      // Check for missing colon on block headers
+      for (const header of blockHeaders) {
+        if (trimmed === header || trimmed.startsWith(header + ' ') || trimmed.startsWith(header + '(')) {
+          if (!trimmed.endsWith(':')) {
+            issues.push(`Line ${i + 1}: Missing colon (\`:\`) at the end of statement \`${trimmed}\`. In Python, compound statements must terminate with a colon.`);
+          }
+          // Check following non-empty line for indentation
+          let nextIdx = i + 1;
+          while (nextIdx < lines.length && !lines[nextIdx].trim()) nextIdx++;
+          if (nextIdx < lines.length) {
+            const nextLine = lines[nextIdx];
+            const currentIndent = line.match(/^\s*/)[0].length;
+            const nextIndent = nextLine.match(/^\s*/)[0].length;
+            if (nextIndent <= currentIndent && !nextLine.trim().startsWith('#')) {
+              issues.push(`Line ${nextIdx + 1}: Indentation error expected after line ${i + 1}. Python requires blocks inside \`${header}\` statements to be indented.`);
+            }
+          }
+          break;
+        }
+      }
+
+      // Check for direct string input comparison with number
+      if (/\binput\s*\(/.test(code) && /[><!=]=?\s*\d+/.test(line)) {
+        if (!/\bint\s*\(|\bfloat\s*\(/.test(code)) {
+          issues.push(`Line ${i + 1}: Potential Type Error. \`input()\` returns a string (\`str\`) in Python 3. Comparing a string to an integer with \`>=\` raises \`TypeError\`. Convert the input with \`int(input())\`.`);
+        }
+      }
+    }
+  }
+
+  // Bracket delimiter matching
+  const stack = [];
+  const openPairs = { '(': ')', '[': ']', '{': '}' };
+  const closePairs = { ')': '(', ']': '[', '}': '{' };
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i];
+    for (let char of line) {
+      if (openPairs[char]) stack.push({ char, line: i + 1 });
+      else if (closePairs[char]) {
+        if (stack.length === 0 || stack[stack.length - 1].char !== closePairs[char]) {
+          issues.push(`Line ${i + 1}: Unmatched closing delimiter \`${char}\`.`);
+        } else {
+          stack.pop();
+        }
+      }
+    }
+  }
+  while (stack.length > 0) {
+    const unclosed = stack.pop();
+    issues.push(`Line ${unclosed.line}: Unclosed delimiter \`${unclosed.char}\`.`);
+  }
+
+  return issues;
+}
+
+/**
  * AI Code Assistant: Explains code, diagnoses errors, optimizes, or generates tests
  */
 async function aiAssist({ action, language, code, error_output = '', user_id = null }) {
@@ -280,7 +350,9 @@ async function aiAssist({ action, language, code, error_output = '', user_id = n
   
   const prompts = {
     explain: `Analyze this ${canonical} code. Explain what it does step by step, its time complexity (Big-O), space complexity, and any edge case handling. Keep it educational and concise for a computer science scholar.`,
-    fix: `This ${canonical} code produced the following error or output:\n"""\n${error_output}\n"""\nFind the bug, explain why it happened, and provide the corrected code snippet.`,
+    fix: error_output
+      ? `This ${canonical} code produced the following compiler or runtime diagnostic:\n"""\n${error_output}\n"""\nIdentify the exact line causing the error, explain why it happened, find any additional syntax or logical flaws, and provide the complete corrected code snippet.`
+      : `Thoroughly inspect this ${canonical} code for syntax errors (e.g. missing colons, missing indentation in Python), type mismatches, logic bugs, and runtime exceptions. Explicitly identify each error, explain why it happens, and provide the complete corrected code snippet.`,
     optimize: `Review this ${canonical} code for performance and readability. Suggest improvements for lower time/space complexity or cleaner idiomatic style, with before/after snippets.`,
     test_cases: `Generate 4 diverse test cases (including normal inputs, edge cases like empty/single elements, negative numbers, or large inputs) for this ${canonical} code.`,
   };
@@ -288,33 +360,49 @@ async function aiAssist({ action, language, code, error_output = '', user_id = n
   const instruction = prompts[action] || prompts.explain;
 
   try {
-    // Attempt proxy to python-ai /chat or /tutor/agent
+    // Proxy to python-ai /chat endpoint
     const response = await axios.post(
       `${AI_URL}/chat`,
       {
-        message: `${instruction}\n\nHere is the code:\n\`\`\`${canonical}\n${code}\n\`\`\``,
-        history: [],
+        question: `You are DeepCode AI Inspector, an expert programming mentor and compiler diagnostics engine.\n\n${instruction}\n\nHere is the code:\n\`\`\`${canonical}\n${code}\n\`\`\``,
+        source_ids: [],
+        conversation_history: [],
         user_id: user_id || 'anonymous_scholar',
       },
-      { headers: aiHeaders(), timeout: 25000 }
+      { headers: aiHeaders(), timeout: 35000 }
     );
 
-    return {
-      action,
-      language: canonical,
-      analysis: response.data?.reply || response.data?.message || 'Analysis complete.',
-    };
+    const answer = response.data?.answer || response.data?.reply || response.data?.message;
+    if (answer) {
+      return {
+        action,
+        language: canonical,
+        analysis: answer,
+      };
+    }
   } catch (err) {
     logger.warn('compiler.ai_assist_failed', { err: err.message, action });
-    // Local fallback intelligent response when AI service is disconnected
-    return {
-      action,
-      language: canonical,
-      analysis: `### 🤖 DeepCode AI Inspector\n\n**Action:** ${action.toUpperCase()}\n**Language:** ${canonical}\n\n**Code Overview:**\n- Analyzed ${code.split('\n').length} lines of code.\n\n${
-        error_output ? `**Observed Diagnostic:**\n\`\`\`\n${error_output}\n\`\`\`\n\n💡 *Tip: Check variable scoping, array bounds, and return types.*` : '✅ Code structure appears syntactically sound. Run the code to verify execution output.'
-      }`,
-    };
   }
+
+  // Local fallback intelligent diagnostic inspector
+  const detectedIssues = inspectSyntaxFallback(canonical, code, error_output);
+  let fallbackMessage = '';
+
+  if (detectedIssues.length > 0) {
+    fallbackMessage = `### 🔍 Detected Syntax & Runtime Errors\n\n` +
+      detectedIssues.map((issue) => `- ❌ **${issue}**`).join('\n\n') +
+      `\n\n💡 *Tip: Fix the highlighted syntax errors and re-run your program.*`;
+  } else if (error_output) {
+    fallbackMessage = `**Observed Diagnostic:**\n\`\`\`\n${error_output}\n\`\`\`\n\n💡 *Tip: Check variable scoping, array bounds, and return types.*`;
+  } else {
+    fallbackMessage = `Run the code to verify execution output. (Static inspection found no obvious syntax delimiter errors).`;
+  }
+
+  return {
+    action,
+    language: canonical,
+    analysis: `### 🤖 DeepCode AI Inspector\n\n**Action:** ${action.toUpperCase()}\n**Language:** ${canonical}\n\n**Code Overview:**\n- Analyzed ${code.split('\n').length} lines of code.\n\n${fallbackMessage}`,
+  };
 }
 
 module.exports = {

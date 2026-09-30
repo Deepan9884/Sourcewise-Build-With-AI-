@@ -17,12 +17,29 @@ router = APIRouter()
 
 @router.post("", response_model=ChatResponse)
 async def chat(req: ChatRequest):
-    """Blocking RAG chat — returns complete answer with citations + usage."""
+    """Blocking RAG or personal study chat."""
     if not req.source_ids:
-        raise HTTPException(
-            status_code=400,
-            detail="Please select at least one source to chat with.",
-        )
+        # Fall back to general study & coding mentor
+        try:
+            messages = [
+                {
+                    "role": "system",
+                    "content": "You are SourceWise AI & DeepCode AI Inspector — an elite programming mentor, compiler diagnostic engine, and study assistant. Provide accurate, clear, and structured assistance. When analyzing code, thoroughly inspect it for syntax errors (such as missing colons, invalid indentation, unclosed brackets), type mismatches, logic bugs, and runtime exceptions. Explicitly identify each error, explain why it happens, and provide the complete corrected code snippet.",
+                }
+            ]
+            for m in req.conversation_history:
+                messages.append({"role": m.role, "content": m.content})
+            messages.append({"role": "user", "content": req.question})
+
+            answer_text = await llm_service.raw_chat(messages, temperature=0.2)
+            return ChatResponse(
+                answer=answer_text,
+                citations=[],
+                model=settings.GEMINI_MODEL if settings.LLM_PROVIDER == "gemini" else settings.GROK_MODEL,
+                usage={},
+            )
+        except Exception as e:
+            raise HTTPException(status_code=500, detail=str(e))
 
     try:
         answer_text, raw_citations, usage = await rag_chain.answer_with_usage(
@@ -46,7 +63,7 @@ async def chat(req: ChatRequest):
 @router.post("/stream")
 async def stream_chat(req: ChatRequest):
     """
-    Streaming RAG chat — returns SSE stream.
+    Streaming chat — returns SSE stream.
     Events:
       data: {"type": "citations", "data": [...]}
       data: {"type": "token",     "data": "word"}
@@ -54,9 +71,26 @@ async def stream_chat(req: ChatRequest):
       data: {"type": "error",     "data": "..."}
     """
     if not req.source_ids:
-        raise HTTPException(
-            status_code=400,
-            detail="Please select at least one source to chat with.",
+        async def event_generator():
+            try:
+                yield f"data: {json.dumps({'type': 'citations', 'data': []})}\n\n"
+                async for token in llm_service.stream_chat(
+                    question=req.question,
+                    context_chunks=[],
+                    history=[m.model_dump() for m in req.conversation_history],
+                ):
+                    yield f"data: {json.dumps({'type': 'token', 'data': token})}\n\n"
+                yield f"data: {json.dumps({'type': 'done'})}\n\n"
+            except Exception as e:
+                yield f"data: {json.dumps({'type': 'error', 'data': str(e)})}\n\n"
+
+        return StreamingResponse(
+            event_generator(),
+            media_type="text/event-stream",
+            headers={
+                "Cache-Control": "no-cache",
+                "X-Accel-Buffering": "no",
+            },
         )
 
     async def event_generator():

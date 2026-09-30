@@ -14,9 +14,11 @@ export const useChatStore = create(
     (set, get) => ({
       // Slide-over panel (used by the FAB button)
       isOpen: false,
+      chatSeed: '',
       toggleChat: () => set((s) => ({ isOpen: !s.isOpen })),
-      openChat: () => set({ isOpen: true }),
-      closeChat: () => set({ isOpen: false }),
+      openChat: (seed = '') => set({ isOpen: true, chatSeed: typeof seed === 'string' ? seed : '' }),
+      closeChat: () => set({ isOpen: false, chatSeed: '' }),
+      setChatSeed: (seed) => set({ chatSeed: typeof seed === 'string' ? seed : '' }),
 
       // Conversations: { [conversationId]: { id, title, messages: [] } }
       conversations: {

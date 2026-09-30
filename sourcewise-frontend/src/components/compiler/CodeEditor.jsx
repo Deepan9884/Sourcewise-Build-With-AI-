@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
 import { createPortal } from 'react-dom';
 import { Copy, Check, Download, RotateCcw, Maximize2, Minimize2, ZoomIn, ZoomOut } from 'lucide-react';
+import LanguageIcon from './LanguageIcon';
 
 export default function CodeEditor({
   code,
@@ -214,8 +215,8 @@ export default function CodeEditor({
       <div className="flex items-center justify-between px-4 py-2.5 bg-[#FAF7F4] border-b border-[#EBE4DC] text-xs select-none">
         {/* File tab pill */}
         <div className="flex items-center space-x-2">
-          <div className="flex items-center space-x-1.5 px-3 py-1 bg-white border border-[#E2DAD1] rounded-xl text-[#2C2520] font-mono font-semibold shadow-2xs">
-            <span>{languageConfig?.icon || '📄'}</span>
+          <div className="flex items-center space-x-2 px-3 py-1 bg-white border border-[#E2DAD1] rounded-xl text-[#2C2520] font-mono font-semibold shadow-2xs">
+            <LanguageIcon lang={language} className="w-3.5 h-3.5 shrink-0" />
             <span className="text-[#3D352E]">main{languageConfig?.extension || '.txt'}</span>
           </div>
           <span className="text-[11px] text-[#8C827A] font-mono hidden sm:inline">
@@ -272,8 +273,8 @@ export default function CodeEditor({
             <button
               onClick={onReset}
               className="p-1.5 hover:text-[#C05A35] hover:bg-[#FDEEE6] rounded-lg transition-colors"
-              title="Reset code to starter template"
-              aria-label="Reset code to starter template"
+              title="Reset code to default"
+              aria-label="Reset code to default"
             >
               <RotateCcw className="w-3.5 h-3.5" />
             </button>
@@ -351,6 +352,9 @@ export default function CodeEditor({
             fontSize: `${fontSize}px`,
             lineHeight: `${fontSize * 1.5}px`,
             tabSize: 2,
+            fontVariantLigatures: 'none',
+            fontFeatureSettings: '"liga" 0, "calt" 0, "dlig" 0',
+            WebkitFontFeatureSettings: '"liga" 0, "calt" 0, "dlig" 0',
           }}
         />
       </div>

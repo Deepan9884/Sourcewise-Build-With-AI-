@@ -3,7 +3,7 @@ import { createPortal } from 'react-dom'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useParams, useNavigate } from 'react-router-dom'
 import {
-  X, Sparkles, Trophy, AlertCircle, Loader2, Maximize2, Minimize2,
+  X, Zap, Trophy, AlertCircle, Loader2, Maximize2, Minimize2,
   Gamepad2, ScanText, Waypoints, Flame, Layers, Shuffle, Type, Play, Crosshair, Target
 } from 'lucide-react'
 import { useAuthStore } from '../store/authStore'
@@ -285,7 +285,7 @@ export default function PuzzleArenePage() {
           {[
             { icon: Target, label: 'Total Sessions', value: stats.total_sessions || 0, color: 'text-cyan-700', bg: 'bg-cyan-50 border-cyan-200/80', iconColor: 'text-cyan-600' },
             { icon: Trophy, label: 'Completed Today', value: stats.today_count || 0, color: 'text-emerald-700', bg: 'bg-emerald-50 border-emerald-200/80', iconColor: 'text-emerald-600' },
-            { icon: Sparkles, label: 'Total XP Earned', value: `+${stats.total_xp || 0} XP`, color: 'text-[#C05A35]', bg: 'bg-amber-50 border-amber-200/80', iconColor: 'text-[#C05A35]' },
+            { icon: Zap, label: 'Total XP Earned', value: `+${stats.total_xp || 0} XP`, color: 'text-[#C05A35]', bg: 'bg-amber-50 border-amber-200/80', iconColor: 'text-[#C05A35]' },
           ].map(stat => (
             <div key={stat.label} className="bg-white rounded-2xl p-4 md:p-5 border border-[#EDE7E1] shadow-xs flex items-center gap-4 hover:shadow-sm transition-all">
               <div className={`p-2.5 rounded-xl border ${stat.bg} ${stat.iconColor} shrink-0`}>
@@ -416,7 +416,7 @@ export default function PuzzleArenePage() {
                           {game.difficulty}
                         </span>
                         <span className="text-[11px] font-bold text-amber-900 bg-amber-50 px-2 py-0.5 rounded-full border border-amber-200/80 flex items-center gap-1 shrink-0 whitespace-nowrap shadow-2xs">
-                          <Sparkles className="w-3 h-3 text-amber-600 shrink-0" /> +{game.xp} XP
+                          <Zap className="w-3 h-3 text-amber-600 shrink-0" /> +{game.xp} XP
                         </span>
                       </div>
                     </div>

@@ -68,7 +68,7 @@ export async function getAIAssist({ action = 'explain', language, code, error_ou
         'Content-Type': 'application/json',
         ...getAuthHeaders(),
       },
-      timeout: 30000,
+      timeout: 45000,
     }
   );
   return response.data;

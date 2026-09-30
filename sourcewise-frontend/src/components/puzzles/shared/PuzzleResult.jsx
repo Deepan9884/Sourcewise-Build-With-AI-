@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { motion } from 'framer-motion'
-import { Sparkles, RotateCcw, ArrowLeft, Trophy, Clock, Lightbulb } from 'lucide-react'
+import { Zap, RotateCcw, ArrowLeft, Trophy, Clock, Lightbulb } from 'lucide-react'
 
 const GRADES = [
   { min: 95, letter: 'S', label: 'Exceptional Mastery!', color: 'text-fuchsia-700', bg: 'bg-fuchsia-50', ring: 'border-fuchsia-400', glow: 'shadow-xl shadow-fuchsia-100 ring-4 ring-fuchsia-100' },
@@ -95,7 +95,7 @@ export default function PuzzleResult({ score = 0, maxScore = 10, xpEarned = 0, h
           transition={{ delay: 0.45, type: 'spring', stiffness: 300 }}
           className="flex items-center gap-3 px-6 py-3.5 bg-gradient-to-r from-[#FFF5EE] to-[#FFE6D8] border border-[#F3C5A8] rounded-2xl shadow-xs mt-2 text-[#C05A35]"
         >
-          <Sparkles className="w-5 h-5 text-[#E8845F]" />
+          <Zap className="w-5 h-5 text-[#E8845F]" />
           <span className="text-lg font-bold text-[#C05A35] font-sans">+{xpDisplay} XP</span>
           <span className="text-xs font-semibold uppercase tracking-wider text-[#C05A35]/80 font-sans">Earned</span>
         </motion.div>

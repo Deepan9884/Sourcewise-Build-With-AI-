@@ -4,6 +4,18 @@
 @tailwind components;
 @tailwind utilities;
 
+@layer base {
+  /* Prevent code ligatures from hiding symbols like >=, <=, =>, != in textareas */
+  textarea.font-mono,
+  input.font-mono,
+  pre.font-mono,
+  code.font-mono {
+    font-variant-ligatures: none !important;
+    font-feature-settings: "liga" 0, "calt" 0, "dlig" 0 !important;
+    -webkit-font-feature-settings: "liga" 0, "calt" 0, "dlig" 0 !important;
+  }
+}
+
 @layer components {
   .btn-primary {
     @apply bg-gradient-to-r from-amber-warm to-amber-gold text-white px-6 py-3 rounded-xl font-semibold hover:shadow-candle hover:scale-[1.02] transition-all duration-500 shadow-warm;
