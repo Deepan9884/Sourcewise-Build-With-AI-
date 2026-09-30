@@ -720,9 +720,6 @@ export default function LandingPage() {
             >
               <div className="bg-transparent p-space-lg md:p-space-2xl">
                 <div className="text-center max-w-2xl mx-auto mb-space-xl">
-                  <span className="font-label-sm text-label-sm font-bold uppercase tracking-widest text-primary mb-space-2xs inline-block">
-                    Visual Demonstration
-                  </span>
                   <h2 className="font-headline-lg text-headline-lg text-on-surface font-bold">See Ninefold Intelligence in Action</h2>
                   <p className="font-body-md text-body-md text-on-surface-variant">
                     Watch how the kitsune companion effortlessly orchestrates your entire semester curriculum.
