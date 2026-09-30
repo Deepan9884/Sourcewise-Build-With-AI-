@@ -155,3 +155,9 @@ Date: 2026-09-29
 - Step3 visual MCP (live http://localhost:5173): nav Powers/Journey/Demo/Codex 4/4 click pass; tail Smart Flashcards 1/1; outcome 2+3 2/2; Play Walkthrough Video 1/1; login fill test@university.edu + show-password toggle + Sign In → 401 expected "Wrong email or password." (backend reachable, not connection-drop) pass; signup render + show-password + Back to Home pass. Console: 0 warnings, 1 expected 401. CLI: landing 8/8 + knowledge-upload 2/2 = 10/10 pass 42.9s workers=1. Health: frontend :5173 200, node-api :4000 healthy DB ok AI unavailable, python-ai :8000 down (known).
 - Step4/5: journey.md-only commit + push (no code changes; .playwright-mcp/ artifacts left untracked).
 - Files: journey.md
+
+### 2026-09-30 — remove Visual Demonstration eyebrow from demo section
+- Did: deleted eyebrow span (3 lines) above "See Ninefold Intelligence in Action" in video-tour section. Heading + subtext + player untouched.
+- Committed: 851c23d ui: remove Visual Demonstration eyebrow from demo section.
+- Test: MCP live :5173 — find "Visual Demonstration" 0 matches, heading still present; Demo nav + Play Walkthrough Video clicks pass; console 0 errors/0 warnings. CLI: landing + knowledge-upload 10/10 pass (8 passed + 2 flaky-retry pass, 4.1m, workers=1). eslint LandingPage.jsx clean.
+- Files: sourcewise-frontend/src/pages/LandingPage.jsx
