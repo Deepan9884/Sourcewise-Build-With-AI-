@@ -148,3 +148,10 @@ Date: 2026-09-29
 - Did: SOP 5-step exec for SOP-adoption prompt. Step1 pull already up-to-date. Step2 prepended full SOP block to journey.md top (mandatory rule). Committed: c17c8d6 docs: prepend SOP 5-step protocol to journey.md top per mandatory rule.
 - Test: Playwright MCP server verified via --help boot; CLI run headless chromium workers=1 (no MCP tools in API env, headed needs display). landing.spec 8/8 pass (6 passed + 2 flaky-retry pass, 2.8m, vite slow goto timeout) + knowledge-upload.spec 2/2 pass 18.8s = 10/10 100%. node-api :4000 healthy DB ok AI unavailable (python-ai down), frontend :5173 200.
 - Files: journey.md
+
+### 2026-09-30 — SOP 5-step re-exec (SOP prompt) + visual MCP 100% pass
+- Step1: `git pull origin main` — already up-to-date at 37b0599. Remote origin = desumidhun2006/Source-wise-Build-Fast-with-AI--AI-Build-Challenge-2026.git verified.
+- Step2: journey.md exists, top 22 lines = exact SOP block (mandatory rule satisfied). No re-create needed.
+- Step3 visual MCP (live http://localhost:5173): nav Powers/Journey/Demo/Codex 4/4 click pass; tail Smart Flashcards 1/1; outcome 2+3 2/2; Play Walkthrough Video 1/1; login fill test@university.edu + show-password toggle + Sign In → 401 expected "Wrong email or password." (backend reachable, not connection-drop) pass; signup render + show-password + Back to Home pass. Console: 0 warnings, 1 expected 401. CLI: landing 8/8 + knowledge-upload 2/2 = 10/10 pass 42.9s workers=1. Health: frontend :5173 200, node-api :4000 healthy DB ok AI unavailable, python-ai :8000 down (known).
+- Step4/5: journey.md-only commit + push (no code changes; .playwright-mcp/ artifacts left untracked).
+- Files: journey.md
