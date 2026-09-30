@@ -291,7 +291,12 @@ export default function AIWorkspacePage() {
   // Tutor aliases
   const isTutorSessionActive = tutorState.isSessionActive
   const setIsTutorSessionActive = (v) => setTutorOption('isSessionActive', typeof v === 'function' ? v(tutorState.isSessionActive) : v)
-  const tutorStyle = tutorState.style
+  const rawTutorStyle = tutorState.style || ''
+  const tutorStyle = ['Friendly', 'Tutor', 'Mentor'].includes(rawTutorStyle)
+    ? rawTutorStyle
+    : (typeof window !== 'undefined' && localStorage.getItem('sw_ai_persona')
+        ? (localStorage.getItem('sw_ai_persona').charAt(0).toUpperCase() + localStorage.getItem('sw_ai_persona').slice(1))
+        : 'Tutor')
   const setTutorStyle = (v) => setTutorOption('style', v)
   const tutorTopic = tutorState.topic
   const setTutorTopic = (v) => setTutorOption('topic', v)
@@ -1880,12 +1885,12 @@ Begin our session by giving a warm 2-sentence welcome, introducing the first fun
             </h4>
 
             <div>
-              <label className="block text-xs font-semibold text-[#5B544E] mb-2">Tutoring Style</label>
+              <label className="block text-xs font-semibold text-[#5B544E] mb-2">Tutoring Mode</label>
               <div className="grid grid-cols-1 md:grid-cols-3 gap-2.5">
                 {[
-                  { id: 'Socratic Coach', title: 'Socratic Coach', desc: 'Asks guiding questions to help you deduce answers yourself' },
-                  { id: 'Patient Explainer', title: 'Patient Explainer', desc: 'Step-by-step breakdown with analogies and worked examples' },
-                  { id: 'Exam Drill Tutor', title: 'Exam Drill Tutor', desc: 'Challenges you with exam-level questions and targets gaps' },
+                  { id: 'Friendly', title: 'Friendly', desc: 'Warm, encouraging companion with conversational explanations' },
+                  { id: 'Tutor', title: 'Tutor', desc: 'Direct, step-by-step breakdown with worked examples' },
+                  { id: 'Mentor', title: 'Mentor', desc: 'Socratic inquiry that guides you to deduce answers yourself' },
                 ].map((style) => (
                   <button
                     key={style.id}

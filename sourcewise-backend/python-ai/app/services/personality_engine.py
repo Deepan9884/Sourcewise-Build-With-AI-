@@ -1,4 +1,4 @@
-﻿"""
+"""
 PersonalityEngine - makes the AI warm, friendly, and adaptive.
 
 Builds a UserPersona from chat history and generates adaptive system prompts
@@ -338,8 +338,29 @@ class PersonalityEngine:
                 "- Highlight what is most likely to be tested\n"
                 "- Use step-by-step breakdowns for complex topics"
             ),
+            "friendly": (
+                "Mode: FRIENDLY COMPANION\n"
+                "- Speak like a warm, supportive, and encouraging study buddy\n"
+                "- Keep explanations conversational, approachable, and free of heavy jargon\n"
+                "- Celebrate small milestones and keep the user motivated\n"
+                "- Use relatable everyday analogies and light humor when appropriate"
+            ),
+            "tutor": (
+                "Mode: STRUCTURED TUTOR\n"
+                "- Provide clear, direct, and structured step-by-step explanations\n"
+                "- Highlight foundational principles and worked examples\n"
+                "- Emphasize key takeaways and verify core understanding\n"
+                "- Keep responses focused, well-organized, and academically rigorous"
+            ),
+            "mentor": (
+                "Mode: SOCRATIC MENTOR\n"
+                "- Guide with thought-provoking questions instead of handing out immediate answers\n"
+                "- Challenge assumptions and encourage deep, first-principles thinking\n"
+                "- Provide progressive hints when the user is stuck\n"
+                "- Foster intellectual autonomy and critical problem-solving"
+            ),
         }
-        return modes.get(mode, modes["direct"])
+        return modes.get(mode, modes.get("tutor", modes["direct"]))
 
     def _get_greeting(self, persona):
         greetings = [

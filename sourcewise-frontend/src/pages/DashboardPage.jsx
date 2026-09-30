@@ -50,7 +50,7 @@ const INITIAL_FLASHCARDS = [
 export default function DashboardPage() {
   const navigate = useNavigate()
   const { user, accessToken } = useAuthStore()
-  const { uploadedSources, activeSourceIds, addSource, toggleActiveSource } = useSourceStore()
+  const { uploadedSources, activeSourceIds, addSource, toggleActiveSource, fetchSources } = useSourceStore()
 
   // Backend dashboard data
   const [dashboard, setDashboard] = useState(null)
@@ -115,7 +115,8 @@ export default function DashboardPage() {
 
   useEffect(() => {
     fetchDashboard()
-  }, [])
+    if (accessToken) fetchSources(accessToken)
+  }, [accessToken])
 
   // Timer Tick Hook
   useEffect(() => {
@@ -641,7 +642,7 @@ export default function DashboardPage() {
                             if (q.action === 'timer') toggleTimer()
                             else if (q.action === 'recall') setIsFlipped(true)
                             else if (q.action === 'quiz') navigate('/workspace/quiz')
-                            else if (q.action === 'source') navigate('/sources')
+                            else if (q.action === 'source') navigate('/knowledge')
                           }}
                           className="text-xs font-semibold text-primary-container hover:text-primary transition-colors flex items-center gap-0.5"
                         >
@@ -785,7 +786,7 @@ export default function DashboardPage() {
                 </div>
 
                 <button
-                  onClick={() => navigate('/sources')}
+                  onClick={() => navigate('/knowledge')}
                   className="text-xs font-semibold text-primary-container hover:text-primary flex items-center gap-1"
                 >
                   <span>Manage All ({uploadedSources.length})</span>
@@ -852,7 +853,7 @@ export default function DashboardPage() {
             <div className="pt-3 border-t border-outline-variant/20 flex justify-between items-center text-xs text-on-surface-variant">
               <span>{uploadedSources.length} sources indexed</span>
               <button
-                onClick={() => navigate('/sources')}
+                onClick={() => navigate('/knowledge')}
                 className="font-bold text-primary-container hover:underline"
               >
                 + Upload New Source

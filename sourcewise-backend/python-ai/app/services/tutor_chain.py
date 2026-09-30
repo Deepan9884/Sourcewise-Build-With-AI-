@@ -24,6 +24,9 @@ class TutoringMode(str, Enum):
     SOCRATIC = "socratic"
     EXPLORATORY = "exploratory"
     EXAM_PREP = "exam_prep"
+    FRIENDLY = "friendly"
+    TUTOR = "tutor"
+    MENTOR = "mentor"
 
 
 class Citation(BaseModel):
@@ -152,7 +155,7 @@ class TutorChain:
         ) or (session_id and session_id not in self._conversation_contexts)
         
         # Generate response based on tutoring mode
-        if mode == TutoringMode.SOCRATIC:
+        if mode in (TutoringMode.SOCRATIC, TutoringMode.MENTOR):
             main_explanation = await self._generate_socratic_response(
                 question, context, history or [], session_id, user_profile
             )
@@ -165,9 +168,9 @@ class TutorChain:
                 is_first_message=is_first_message,
             )
         
-        # Generate alternative explanations (for direct, exploratory, exam_prep modes)
+        # Generate alternative explanations (for direct, exploratory, exam_prep, friendly, tutor modes)
         alternative_explanations = []
-        if mode != TutoringMode.SOCRATIC:
+        if mode not in (TutoringMode.SOCRATIC, TutoringMode.MENTOR):
             alternative_explanations = await self._generate_alternatives(
                 question, context, user_level, strategy_used
             )
@@ -268,7 +271,7 @@ class TutorChain:
         ) or (session_id and session_id not in self._conversation_contexts)
         
         # Stream main explanation based on mode
-        if mode == TutoringMode.SOCRATIC:
+        if mode in (TutoringMode.SOCRATIC, TutoringMode.MENTOR):
             response = await self._generate_socratic_response(
                 question, context, history or [], session_id, user_profile
             )
@@ -283,7 +286,7 @@ class TutorChain:
             yield {"type": "token", "data": response}
         
         # Emit alternative explanations
-        if mode != TutoringMode.SOCRATIC:
+        if mode not in (TutoringMode.SOCRATIC, TutoringMode.MENTOR):
             alternatives = await self._generate_alternatives(
                 question, context, user_level, strategy_used
             )
@@ -676,16 +679,21 @@ class TutorChain:
         explanation = ""
         strategy = ""
         
-        if mode == TutoringMode.EXAM_PREP:
+        if mode in (TutoringMode.EXAM_PREP, TutoringMode.TUTOR):
             explanation = await self._generate_with_personality(
                 question, enhanced_context, system_prompt, user_level, "stepwise"
             )
             strategy = "stepwise"
-        elif mode == TutoringMode.EXPLORATORY:
+        elif mode in (TutoringMode.EXPLORATORY, TutoringMode.FRIENDLY):
             explanation = await self._generate_with_personality(
                 question, enhanced_context, system_prompt, user_level, "example"
             )
             strategy = "example"
+        elif mode in (TutoringMode.SOCRATIC, TutoringMode.MENTOR):
+            explanation = await self._generate_with_personality(
+                question, enhanced_context, system_prompt, user_level, "socratic"
+            )
+            strategy = "socratic"
         else:
             # For direct mode, use analogy as default
             explanation = await self._generate_with_personality(
@@ -1111,7 +1119,7 @@ SUMMARY: [Your 1-2 sentence summary]
         suggestions = []
         concept = self._extract_main_concept(question)
 
-        if mode == TutoringMode.EXAM_PREP:
+        if mode in (TutoringMode.EXAM_PREP, TutoringMode.TUTOR):
             suggestions.extend([
                 PracticeSuggestion(
                     concept=concept, difficulty=2,
@@ -1126,12 +1134,12 @@ SUMMARY: [Your 1-2 sentence summary]
                     reason="Challenge yourself with an analysis-level problem"
                 ),
             ])
-        elif mode == TutoringMode.SOCRATIC:
+        elif mode in (TutoringMode.SOCRATIC, TutoringMode.MENTOR):
             suggestions.append(PracticeSuggestion(
                 concept=concept, difficulty=3,
                 reason="Continue exploring this concept through guided questions"
             ))
-        elif mode == TutoringMode.EXPLORATORY:
+        elif mode in (TutoringMode.EXPLORATORY, TutoringMode.FRIENDLY):
             suggestions.extend([
                 PracticeSuggestion(
                     concept=concept, difficulty=2,

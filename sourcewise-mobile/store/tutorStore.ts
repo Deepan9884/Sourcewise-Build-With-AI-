@@ -1,4 +1,4 @@
-﻿import { create } from 'zustand';
+import { create } from 'zustand';
 import { API_URL } from '../utils/api';
 import { useAuthStore } from './authStore';
 
@@ -62,7 +62,7 @@ export interface EvaluationResult {
   suggested_review: string[];
 }
 
-export type TutoringMode = 'direct' | 'socratic' | 'exploratory' | 'exam_prep';
+export type TutoringMode = 'friendly' | 'tutor' | 'mentor' | 'direct' | 'socratic' | 'exploratory' | 'exam_prep';
 
 interface TutorState {
   messages: Message[];

@@ -178,6 +178,7 @@ export default function MainLayout() {
   const accessToken = useAuthStore((state) => state.accessToken)
   const { isOpen, openChat, closeChat, chatSeed } = useChatStore()
   const activeSourceIds = useSourceStore((state) => state.activeSourceIds) || []
+  const fetchSources = useSourceStore((state) => state.fetchSources)
   const location = useLocation()
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false)
   const [hoveredItem, setHoveredItem] = useState(null)
@@ -225,6 +226,13 @@ export default function MainLayout() {
       })
       .catch(() => {})
   }, [accessToken, location.pathname])
+
+  // Global source library hydration
+  useEffect(() => {
+    if (accessToken) {
+      fetchSources(accessToken)
+    }
+  }, [accessToken, fetchSources])
 
   // Render a single high-contrast nav link
   const renderNavItem = (item) => {
@@ -409,27 +417,15 @@ export default function MainLayout() {
                       />
                     </div>
 
-                    {/* Identity & Level */}
+                    {/* Identity: Name & Email */}
                     {!isSidebarCollapsed && (
                       <div className="truncate min-w-0 flex-1">
-                        <div className="flex items-center gap-1.5 min-w-0">
-                          <p className="text-[13px] font-bold text-[#1E1B16] truncate tracking-tight">
-                            {user?.name || 'Scholar'}
-                          </p>
-                          {railStreak !== null && railStreak > 0 && (
-                            <span
-                              className="inline-flex items-center px-1.5 py-0.5 text-[10px] font-extrabold bg-[#FFF1EB] text-[#C05A35] border border-[#FCD8CB] rounded-full shrink-0 leading-none"
-                              title={`${railStreak} day streak`}
-                            >
-                              🔥{railStreak}d
-                            </span>
-                          )}
-                        </div>
-                        <div className="flex items-center gap-1 mt-0.5">
-                          <span className="inline-flex items-center text-[10px] font-semibold text-emerald-700 bg-emerald-50/90 px-1.5 py-0.5 rounded-md border border-emerald-200/50 leading-none">
-                            Level 2 Scholar
-                          </span>
-                        </div>
+                        <p className="text-[13px] font-bold text-[#1E1B16] truncate tracking-tight leading-snug">
+                          {user?.name || 'Scholar'}
+                        </p>
+                        <p className="text-[11px] text-[#8C827A] truncate font-medium leading-tight mt-0.5">
+                          {user?.email || 'scholar@sourcewise.ai'}
+                        </p>
                       </div>
                     )}
                   </div>
@@ -447,34 +443,34 @@ export default function MainLayout() {
                   )}
                 </div>
 
-                {/* Active Momentum Progress */}
+                {/* Badge & Streak Footer Row */}
                 {!isSidebarCollapsed && (
-                  <div className="mt-2.5 pt-2 border-t border-[#F5EFEA]">
-                    <div className="flex justify-between items-center text-[10px] mb-1.5">
-                      <span className="font-semibold text-[9px] uppercase tracking-wider text-[#9E948C]">
-                        Active Momentum
-                      </span>
-                      <span className="font-bold text-[#2C2520] tabular-nums">
-                        340 / 500 XP
-                      </span>
-                    </div>
-                    <div className="w-full h-1.5 bg-[#F0EAE4] rounded-full overflow-hidden p-[0.5px]">
-                      <div
-                        className="h-full bg-gradient-to-r from-[#E8845F] via-[#F59E0B] to-[#10B981] rounded-full transition-all duration-500 shadow-[0_0_8px_rgba(232,132,95,0.25)]"
-                        style={{ width: '68%' }}
-                      />
-                    </div>
+                  <div className="mt-2.5 pt-2 border-t border-[#F5EFEA] flex items-center justify-between gap-1.5">
+                    {/* Badge */}
+                    <span className="inline-flex items-center gap-1 px-2 py-0.5 text-[10px] font-semibold bg-[#F5F3FF] text-[#6D28D9] border border-[#DDD6FE]/70 rounded-full shrink-0">
+                      <GraduationCap className="w-3 h-3 text-[#7C3AED]" />
+                      Scholar
+                    </span>
+
+                    {/* Streak */}
+                    <span
+                      className="inline-flex items-center gap-1 px-2 py-0.5 text-[10px] font-bold bg-[#FFF1EB] text-[#C05A35] border border-[#FCD8CB] rounded-full shrink-0 tabular-nums"
+                      title={`${railStreak !== null && railStreak > 0 ? railStreak : 1} day study streak`}
+                    >
+                      <span>🔥</span>
+                      <span>{railStreak !== null && railStreak > 0 ? `${railStreak}d streak` : '1d streak'}</span>
+                    </span>
                   </div>
                 )}
 
                 {/* Collapsed Sidebar Hover Popover */}
                 {isSidebarCollapsed && (
                   <div className="fixed left-[96px] bottom-14 opacity-0 pointer-events-none group-hover:opacity-100 group-hover:pointer-events-auto transition-opacity z-50">
-                    <div className="bg-[#1E1B16] text-white rounded-2xl shadow-2xl p-3 min-w-[190px] border border-white/10 text-xs backdrop-blur-md">
+                    <div className="bg-[#1E1B16] text-white rounded-2xl shadow-2xl p-3 min-w-[200px] border border-white/10 text-xs backdrop-blur-md">
                       <div className="flex items-center justify-between pb-2 border-b border-white/10 mb-2">
                         <div className="truncate pr-2">
                           <p className="font-bold truncate text-[13px]">{user?.name || 'Scholar'}</p>
-                          <p className="text-[10px] text-emerald-400 font-medium">Level 2 Scholar</p>
+                          <p className="text-[11px] text-gray-400 truncate mt-0.5">{user?.email || 'scholar@sourcewise.ai'}</p>
                         </div>
                         <button
                           onClick={logout}
@@ -484,12 +480,14 @@ export default function MainLayout() {
                           <LogOut className="w-3.5 h-3.5" />
                         </button>
                       </div>
-                      <div className="text-[10px] text-gray-300 flex justify-between mb-1">
-                        <span>Momentum</span>
-                        <span className="font-semibold text-white">340 / 500 XP</span>
-                      </div>
-                      <div className="w-full h-1 bg-white/20 rounded-full overflow-hidden">
-                        <div className="h-full bg-gradient-to-r from-[#E8845F] to-[#10B981] w-[68%]" />
+                      <div className="flex items-center justify-between gap-2 pt-0.5">
+                        <span className="inline-flex items-center gap-1 px-2 py-0.5 text-[10px] font-medium bg-white/10 text-purple-200 rounded-full border border-white/10">
+                          <GraduationCap className="w-3 h-3" />
+                          Scholar
+                        </span>
+                        <span className="inline-flex items-center gap-1 px-2 py-0.5 text-[10px] font-bold bg-[#C05A35]/20 text-[#FFA07A] rounded-full border border-[#C05A35]/40">
+                          🔥 {railStreak !== null && railStreak > 0 ? `${railStreak}d streak` : '1d streak'}
+                        </span>
                       </div>
                     </div>
                   </div>

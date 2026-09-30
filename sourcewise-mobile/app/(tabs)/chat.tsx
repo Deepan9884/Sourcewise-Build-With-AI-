@@ -24,10 +24,9 @@ import { useTutorStore, Message, TutoringMode } from '../../store/tutorStore';
 import { useAuthStore } from '../../store/authStore';
 
 const MODE_OPTIONS: { key: TutoringMode; label: string; icon: string }[] = [
-  { key: 'direct', label: 'Direct', icon: '💡' },
-  { key: 'socratic', label: 'Socratic', icon: '🤔' },
-  { key: 'exploratory', label: 'Explore', icon: '🔍' },
-  { key: 'exam_prep', label: 'Exam Prep', icon: '📝' },
+  { key: 'friendly', label: 'Friendly', icon: '😊' },
+  { key: 'tutor', label: 'Tutor', icon: '🎓' },
+  { key: 'mentor', label: 'Mentor', icon: '💡' },
 ];
 
 const TypingIndicator = () => (
