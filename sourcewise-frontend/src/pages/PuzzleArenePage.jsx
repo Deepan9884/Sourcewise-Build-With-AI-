@@ -1,8 +1,9 @@
 import { useState, useEffect, lazy, Suspense } from 'react'
+import { createPortal } from 'react-dom'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useParams, useNavigate } from 'react-router-dom'
 import {
-  X, Sparkles, Trophy, AlertCircle, Loader2,
+  X, Sparkles, Trophy, AlertCircle, Loader2, Maximize2, Minimize2,
   Gamepad2, ScanText, Waypoints, Flame, Layers, Shuffle, Type, Play, Crosshair, Target
 } from 'lucide-react'
 import { useAuthStore } from '../store/authStore'
@@ -19,91 +20,97 @@ const ClozeGame       = lazy(() => import('../components/puzzles/ClozeGame'))
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:4000'
 
-// ─── Game catalogue (Gamer Aesthetic) ─────────────────────────────────────────
+// ─── Game catalogue (Professional Active Recall Challenges) ───────────────────
 const PUZZLE_GAMES = [
   {
     id: 'word_search',
     name: 'Word Search',
     icon: ScanText,
-    desc: 'Scan the data grid to extract hidden terminology.',
+    desc: 'Discover key vocabulary, definitions, and foundational concepts embedded within an interactive letter grid.',
     xp: 30,
-    difficulty: 'EASY',
+    difficulty: 'Easy',
     themeColor: 'cyan',
-    borderGlow: 'group-hover:border-cyan-500/50',
-    shadowGlow: 'hover:shadow-[0_0_30px_-5px_rgba(6,182,212,0.3)]',
-    iconColor: 'text-cyan-400',
-    btnBg: 'bg-cyan-500 hover:bg-cyan-400 text-cyan-950',
-    tagBorder: 'border-cyan-500/30',
+    iconColor: 'text-cyan-700',
+    iconBg: 'bg-cyan-50 border border-cyan-200/80',
+    badgeBg: 'bg-cyan-50 text-cyan-800 border-cyan-200/80',
+    btnBg: 'bg-gradient-to-r from-cyan-600 to-teal-600 hover:from-cyan-500 hover:to-teal-500 text-white shadow-sm hover:shadow-md hover:shadow-cyan-100 active:scale-98',
+    gradientBar: 'from-cyan-500 to-teal-500',
+    actionText: 'Play Word Search',
   },
   {
     id: 'match_pairs',
-    name: 'Match Pairs',
+    name: 'Concept Match',
     icon: Waypoints,
-    desc: 'Forge neural links between concepts and meanings.',
+    desc: 'Pair core terms, formulas, and principles with their correct definitions to solidify associative memory.',
     xp: 40,
-    difficulty: 'MEDIUM',
+    difficulty: 'Medium',
     themeColor: 'fuchsia',
-    borderGlow: 'group-hover:border-fuchsia-500/50',
-    shadowGlow: 'hover:shadow-[0_0_30px_-5px_rgba(217,70,239,0.3)]',
-    iconColor: 'text-fuchsia-400',
-    btnBg: 'bg-fuchsia-500 hover:bg-fuchsia-400 text-fuchsia-950',
-    tagBorder: 'border-fuchsia-500/30',
+    iconColor: 'text-fuchsia-700',
+    iconBg: 'bg-fuchsia-50 border border-fuchsia-200/80',
+    badgeBg: 'bg-fuchsia-50 text-fuchsia-800 border-fuchsia-200/80',
+    btnBg: 'bg-gradient-to-r from-fuchsia-600 to-purple-600 hover:from-fuchsia-500 hover:to-purple-500 text-white shadow-sm hover:shadow-md hover:shadow-fuchsia-100 active:scale-98',
+    gradientBar: 'from-fuchsia-500 to-purple-500',
+    actionText: 'Start Matching',
   },
   {
     id: 'rapid_fire',
-    name: 'Rapid Fire',
+    name: 'Speed Recall',
     icon: Flame,
-    desc: 'High-stakes 6-second timer. Maintain the combo streak.',
+    desc: 'Fast-paced timed multiple choice challenges designed to strengthen quick, high-accuracy memory retrieval.',
     xp: 80,
-    difficulty: 'HARD',
+    difficulty: 'Challenging',
     themeColor: 'orange',
-    borderGlow: 'group-hover:border-orange-500/50',
-    shadowGlow: 'hover:shadow-[0_0_30px_-5px_rgba(249,115,22,0.3)]',
-    iconColor: 'text-orange-400',
-    btnBg: 'bg-orange-500 hover:bg-orange-400 text-orange-950',
-    tagBorder: 'border-orange-500/30',
+    iconColor: 'text-orange-700',
+    iconBg: 'bg-orange-50 border border-orange-200/80',
+    badgeBg: 'bg-orange-50 text-orange-800 border-orange-200/80',
+    btnBg: 'bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-400 hover:to-amber-400 text-white shadow-sm hover:shadow-md hover:shadow-orange-100 active:scale-98',
+    gradientBar: 'from-orange-500 to-amber-500',
+    actionText: 'Start Speed Recall',
   },
   {
     id: 'memory_flip',
     name: 'Memory Flip',
     icon: Layers,
-    desc: 'Test your spatial recall with face-down data nodes.',
+    desc: 'Train spatial memory and concept retention by revealing and pairing matching flash cards in fewer moves.',
     xp: 35,
-    difficulty: 'EASY',
+    difficulty: 'Easy',
     themeColor: 'emerald',
-    borderGlow: 'group-hover:border-emerald-500/50',
-    shadowGlow: 'hover:shadow-[0_0_30px_-5px_rgba(16,185,129,0.3)]',
-    iconColor: 'text-emerald-400',
-    btnBg: 'bg-emerald-500 hover:bg-emerald-400 text-emerald-950',
-    tagBorder: 'border-emerald-500/30',
+    iconColor: 'text-emerald-700',
+    iconBg: 'bg-emerald-50 border border-emerald-200/80',
+    badgeBg: 'bg-emerald-50 text-emerald-800 border-emerald-200/80',
+    btnBg: 'bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white shadow-sm hover:shadow-md hover:shadow-emerald-100 active:scale-98',
+    gradientBar: 'from-emerald-500 to-teal-500',
+    actionText: 'Play Memory Flip',
   },
   {
     id: 'anagram',
-    name: 'Anagram',
+    name: 'Word Scramble',
     icon: Shuffle,
-    desc: 'Decrypt scrambled concepts using definition clues.',
+    desc: 'Unscramble jumbled key terms and subject vocabulary using contextual definitions and strategic hints.',
     xp: 20,
-    difficulty: 'MEDIUM',
+    difficulty: 'Medium',
     themeColor: 'amber',
-    borderGlow: 'group-hover:border-amber-500/50',
-    shadowGlow: 'hover:shadow-[0_0_30px_-5px_rgba(251,191,36,0.3)]',
-    iconColor: 'text-amber-400',
-    btnBg: 'bg-amber-500 hover:bg-amber-400 text-amber-950',
-    tagBorder: 'border-amber-500/30',
+    iconColor: 'text-amber-800',
+    iconBg: 'bg-amber-50 border border-amber-200/80',
+    badgeBg: 'bg-amber-50 text-amber-800 border-amber-200/80',
+    btnBg: 'bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-white shadow-sm hover:shadow-md hover:shadow-amber-100 active:scale-98',
+    gradientBar: 'from-amber-500 to-yellow-500',
+    actionText: 'Unscramble Words',
   },
   {
     id: 'cloze',
-    name: 'Fill the Blank',
+    name: 'Fill in the Blank',
     icon: Type,
-    desc: 'Restore corrupted source passages with missing terms.',
+    desc: 'Reinforce deep comprehension by selecting missing terms to complete key excerpts from your study materials.',
     xp: 50,
-    difficulty: 'HARD',
+    difficulty: 'Challenging',
     themeColor: 'rose',
-    borderGlow: 'group-hover:border-rose-500/50',
-    shadowGlow: 'hover:shadow-[0_0_30px_-5px_rgba(244,63,94,0.3)]',
-    iconColor: 'text-rose-400',
-    btnBg: 'bg-rose-500 hover:bg-rose-400 text-rose-950',
-    tagBorder: 'border-rose-500/30',
+    iconColor: 'text-rose-700',
+    iconBg: 'bg-rose-50 border border-rose-200/80',
+    badgeBg: 'bg-rose-50 text-rose-800 border-rose-200/80',
+    btnBg: 'bg-gradient-to-r from-rose-500 to-pink-600 hover:from-rose-400 hover:to-pink-500 text-white shadow-sm hover:shadow-md hover:shadow-rose-100 active:scale-98',
+    gradientBar: 'from-rose-500 to-pink-500',
+    actionText: 'Fill Passages',
   },
 ]
 
@@ -116,8 +123,18 @@ const GAME_COMPONENTS = {
   cloze:        ClozeGame,
 }
 
-const DIFFICULTIES = ['Chill', 'Study', 'Challenge', 'Exam Sim']
-const DIFF_MAP = { Chill: 'chill', Study: 'study', Challenge: 'challenge', 'Exam Sim': 'exam' }
+const DIFFICULTIES = ['Casual', 'Standard', 'Challenging', 'Exam Prep']
+const DIFF_MAP = {
+  Casual: 'chill',
+  Standard: 'study',
+  Challenging: 'challenge',
+  'Exam Prep': 'exam',
+  // Backward compatibility:
+  Chill: 'chill',
+  Study: 'study',
+  Challenge: 'challenge',
+  'Exam Sim': 'exam',
+}
 
 const stagger = {
   container: { animate: { transition: { staggerChildren: 0.05 } } },
@@ -137,6 +154,17 @@ export default function PuzzleArenePage() {
   const [activeGame, setActiveGame] = useState(null)
   const [toast, setToast]           = useState(null)
   const [loadingSources, setLoadingSources] = useState(true)
+  const [isFullScreen, setIsFullScreen] = useState(true)
+
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      if (e.key === 'Escape' && activeGame) {
+        handleBack()
+      }
+    }
+    window.addEventListener('keydown', handleKeyDown)
+    return () => window.removeEventListener('keydown', handleKeyDown)
+  }, [activeGame]) // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     if (!accessToken) return
@@ -204,111 +232,46 @@ export default function PuzzleArenePage() {
     )
   }
 
-  // ── Game Modal (Simulation Terminal) ──────────────────────────────────────────
-  if (activeGame) {
-    const GameComponent = GAME_COMPONENTS[activeGame.id]
-    const { isGenerating, generateError, activePuzzle, isComplete, score, maxScore, xpEarned, hintsUsed } = store
-    const timeSecs = 0
+  // ── Game Modal Data ──────────────────────────────────────────────────────────
+  const GameComponent = activeGame ? GAME_COMPONENTS[activeGame.id] : null
+  const { isGenerating, generateError, activePuzzle, isComplete, score, maxScore, xpEarned, hintsUsed, stats } = store
+  const timeSecs = 0
 
-    return (
-      <AnimatePresence>
-        <motion.div
-          key="game-modal"
-          initial={{ opacity: 0, scale: 0.98 }}
-          animate={{ opacity: 1, scale: 1 }}
-          exit={{ opacity: 0, scale: 0.98 }}
-          className="fixed inset-0 z-[60] bg-black/90 backdrop-blur-md flex items-center justify-center p-4 md:p-8"
-        >
-          <div className="bg-[#09090B] w-full max-w-5xl max-h-[95vh] rounded-xl shadow-[0_0_80px_rgba(0,0,0,0.8)] flex flex-col overflow-hidden relative border border-zinc-800">
-            {/* Terminal Header */}
-            <div className="bg-zinc-950 text-zinc-100 px-6 py-4 flex items-center justify-between border-b border-zinc-800 shrink-0">
-              <div className="flex items-center gap-4">
-                <activeGame.icon className={`w-5 h-5 ${activeGame.iconColor}`} />
-                <div>
-                  <p className="font-bold uppercase tracking-[0.2em] text-sm leading-tight text-white">{activeGame.name}</p>
-                  <p className="text-[10px] text-zinc-500 font-mono tracking-widest mt-1 uppercase">
-                    TARGET: {topic || activeGame.name} // TIER: {difficulty}
-                  </p>
-                </div>
-              </div>
-              <button
-                onClick={handleBack}
-                className="p-2 rounded hover:bg-zinc-800 text-zinc-500 hover:text-white transition-colors border border-transparent hover:border-zinc-700"
-              >
-                <X className="w-5 h-5" />
-              </button>
-            </div>
-
-            {/* Game Body */}
-            <div className="flex-1 overflow-auto p-4 md:p-8 bg-[#09090B] flex flex-col text-zinc-100 custom-scrollbar">
-              {isGenerating && (
-                <div className="flex-1 flex flex-col items-center justify-center py-24 gap-4">
-                  <div className="relative">
-                    <Loader2 className="w-12 h-12 text-zinc-300 animate-spin" />
-                    <Crosshair className={`w-6 h-6 absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 ${activeGame.iconColor} animate-pulse`} />
-                  </div>
-                  <p className="text-zinc-800 font-bold uppercase tracking-widest mt-2">Initializing Simulation</p>
-                  <p className="text-xs font-mono text-zinc-500 uppercase">Extracting vectors from source material...</p>
-                </div>
-              )}
-              {generateError && !isGenerating && !activePuzzle && (
-                <div className="flex-1 flex flex-col items-center justify-center py-24 gap-4">
-                  <AlertCircle className="w-12 h-12 text-red-500" />
-                  <p className="text-zinc-900 font-bold uppercase tracking-widest">Simulation Failed</p>
-                  <p className="text-sm font-mono text-zinc-500">{generateError}</p>
-                  <button onClick={handleBack} className="mt-4 px-6 py-3 rounded-xl bg-zinc-900 text-white text-sm font-bold tracking-widest uppercase hover:bg-zinc-800">
-                    Abort
-                  </button>
-                </div>
-              )}
-              {activePuzzle && !isComplete && !isGenerating && (
-                <Suspense fallback={<div className="py-24 text-center text-zinc-500"><Loader2 className="w-8 h-8 animate-spin mx-auto" /></div>}>
-                  <GameComponent puzzleData={activePuzzle} onComplete={handleComplete} onHint={store.addHint} />
-                </Suspense>
-              )}
-              {isComplete && (
-                <div className="flex-1 flex items-center justify-center">
-                  <PuzzleResult
-                    score={score}
-                    maxScore={maxScore}
-                    xpEarned={xpEarned}
-                    hintsUsed={hintsUsed}
-                    timeSeconds={timeSecs}
-                    puzzleType={activeGame.id}
-                    onPlayAgain={handlePlayAgain}
-                    onBack={handleBack}
-                  />
-                </div>
-              )}
-            </div>
-          </div>
-        </motion.div>
-      </AnimatePresence>
-    )
-  }
-
-  // ── Hub page (Dark Gamer Arena) ─────────────────────────────────────────────
-  const { stats } = store
+  // ── Hub page (Professional Light Theme with Game Accent) ───────────────────
 
   return (
-    <div className="bg-[#09090B] text-zinc-100 min-h-[calc(100vh-4rem)] rounded-[2rem] p-6 lg:p-10 relative overflow-hidden shadow-2xl border border-zinc-800/80 -mt-2">
-      {/* Background ambient glow */}
-      <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[800px] h-[400px] bg-indigo-500/10 blur-[120px] rounded-full pointer-events-none" />
+    <div className="bg-gradient-to-b from-[#FFFDF9] via-[#FAF7F2] to-[#F5F0E8] text-[#1E1B16] min-h-[calc(100vh-4rem)] rounded-3xl p-6 lg:p-10 relative overflow-hidden shadow-sm border border-[#EDE7E1] -mt-2">
+      {/* Background warm gaming ambient glows */}
+      <div className="absolute top-0 right-1/4 w-[500px] h-[300px] bg-gradient-to-b from-[#FFE8DC]/40 to-transparent blur-[100px] rounded-full pointer-events-none" />
+      <div className="absolute bottom-10 left-10 w-[400px] h-[300px] bg-gradient-to-t from-[#FEF3C7]/30 to-transparent blur-[100px] rounded-full pointer-events-none" />
+      {/* Subtle clean grid pattern */}
+      <div
+        className="absolute inset-0 pointer-events-none opacity-[0.035]"
+        style={{
+          backgroundImage: 'radial-gradient(circle, #000 1px, transparent 1px)',
+          backgroundSize: '24px 24px'
+        }}
+      />
 
       {/* Header */}
-      <motion.div initial={{ opacity: 0, y: -20 }} animate={{ opacity: 1, y: 0 }} className="relative z-10 mb-10">
+      <motion.div initial={{ opacity: 0, y: -20 }} animate={{ opacity: 1, y: 0 }} className="relative z-10 mb-8">
         <div className="flex items-center gap-4">
-          <div className="p-3 bg-zinc-900 border border-zinc-700/50 rounded-2xl shadow-[0_0_20px_rgba(0,0,0,0.5)]">
-            <Gamepad2 className="w-8 h-8 text-fuchsia-400" />
+          <div className="p-3.5 bg-gradient-to-br from-[#FFF5EE] to-[#FFE5D6] border border-[#F3C5A8] rounded-2xl shadow-sm text-[#C05A35]">
+            <Gamepad2 className="w-8 h-8" />
           </div>
           <div>
-            <h1 className="text-3xl md:text-4xl font-black tracking-widest uppercase text-transparent bg-clip-text bg-gradient-to-r from-zinc-100 to-zinc-400">
-              Game Arena
+            <h1 className="text-3xl md:text-4xl font-extrabold text-[#1E1B16] tracking-tight">
+              Study Arena
             </h1>
-            <p className="text-xs md:text-sm font-mono tracking-widest text-zinc-500 uppercase mt-1 flex items-center gap-2">
-              <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-              Neural Simulation Active
-            </p>
+            <div className="flex flex-wrap items-center gap-2 mt-1.5">
+              <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200">
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                Active Recall Ready
+              </span>
+              <span className="text-xs sm:text-sm text-[#7A7167] font-medium">
+                Interactive retrieval challenges powered by your course documents
+              </span>
+            </div>
           </div>
         </div>
       </motion.div>
@@ -317,18 +280,20 @@ export default function PuzzleArenePage() {
       {stats && (
         <motion.div
           initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }}
-          className="grid grid-cols-3 gap-3 md:gap-4 mb-8 relative z-10"
+          className="grid grid-cols-1 sm:grid-cols-3 gap-3 md:gap-5 mb-8 relative z-10"
         >
           {[
-            { icon: Target, label: 'Simulations', value: stats.total_sessions || 0, color: 'text-cyan-400', border: 'border-cyan-500/20' },
-            { icon: Trophy, label: 'Today', value: stats.today_count || 0, color: 'text-emerald-400', border: 'border-emerald-500/20' },
-            { icon: Sparkles, label: 'XP Gained', value: `+${stats.total_xp || 0}`, color: 'text-fuchsia-400', border: 'border-fuchsia-500/20' },
+            { icon: Target, label: 'Total Sessions', value: stats.total_sessions || 0, color: 'text-cyan-700', bg: 'bg-cyan-50 border-cyan-200/80', iconColor: 'text-cyan-600' },
+            { icon: Trophy, label: 'Completed Today', value: stats.today_count || 0, color: 'text-emerald-700', bg: 'bg-emerald-50 border-emerald-200/80', iconColor: 'text-emerald-600' },
+            { icon: Sparkles, label: 'Total XP Earned', value: `+${stats.total_xp || 0} XP`, color: 'text-[#C05A35]', bg: 'bg-amber-50 border-amber-200/80', iconColor: 'text-[#C05A35]' },
           ].map(stat => (
-            <div key={stat.label} className={`bg-zinc-900/60 backdrop-blur-md rounded-2xl p-4 border ${stat.border} flex items-center gap-4`}>
-              <stat.icon className={`w-6 h-6 ${stat.color} shrink-0 opacity-80`} />
+            <div key={stat.label} className="bg-white rounded-2xl p-4 md:p-5 border border-[#EDE7E1] shadow-xs flex items-center gap-4 hover:shadow-sm transition-all">
+              <div className={`p-2.5 rounded-xl border ${stat.bg} ${stat.iconColor} shrink-0`}>
+                <stat.icon className="w-5 h-5" />
+              </div>
               <div>
-                <p className={`font-black text-xl leading-none ${stat.color} tabular-nums`}>{stat.value}</p>
-                <p className="text-[10px] font-bold tracking-wider uppercase text-zinc-500 mt-1">{stat.label}</p>
+                <p className={`font-extrabold text-xl md:text-2xl leading-none ${stat.color} tabular-nums`}>{stat.value}</p>
+                <p className="text-xs font-medium text-[#7A7167] mt-1.5">{stat.label}</p>
               </div>
             </div>
           ))}
@@ -342,34 +307,34 @@ export default function PuzzleArenePage() {
           className="lg:col-span-1 flex flex-col gap-5"
         >
           {/* Source selector */}
-          <div className="bg-zinc-900/60 backdrop-blur-md p-5 rounded-2xl border border-zinc-800 flex flex-col shadow-lg">
-            <p className="text-[10px] font-bold uppercase tracking-widest text-zinc-400 mb-4 flex items-center gap-2">
-              <ScanText className="w-3.5 h-3.5" /> Data Sources
+          <div className="bg-white p-5 rounded-2xl border border-[#EDE7E1] flex flex-col shadow-xs">
+            <p className="text-xs font-bold uppercase tracking-wider text-[#6B635B] mb-3 flex items-center gap-2">
+              <ScanText className="w-4 h-4 text-[#C05A35]" /> Study Materials
             </p>
             {loadingSources ? (
-              <div className="flex items-center gap-2 text-sm text-zinc-500 font-mono">
-                <Loader2 className="w-4 h-4 animate-spin" /> Fetching...
+              <div className="flex items-center gap-2 text-sm text-[#7A7167] py-2">
+                <Loader2 className="w-4 h-4 animate-spin text-[#C05A35]" /> Loading documents...
               </div>
             ) : sources.length === 0 ? (
-              <div className="text-xs text-zinc-500 bg-zinc-950/50 rounded-xl p-4 text-center font-mono">
-                <p>No nodes available.</p>
-                <a href="/sources" className="text-cyan-400 font-bold mt-2 block hover:underline">Upload PDF →</a>
+              <div className="text-xs text-[#7A7167] bg-[#FAF8F5] rounded-xl p-4 text-center border border-[#EDE7E1]">
+                <p className="font-medium text-[#554E46]">No study materials available yet.</p>
+                <a href="/sources" className="text-[#C05A35] font-semibold mt-2 inline-block hover:underline">Upload PDFs or Notes →</a>
               </div>
             ) : (
-              <div className="flex flex-col gap-2 max-h-[200px] overflow-y-auto pr-2 custom-scrollbar">
+              <div className="flex flex-col gap-2 max-h-[220px] overflow-y-auto pr-2 custom-scrollbar">
                 {sources.map(src => {
                   const sel = selectedSources.includes(src.id)
                   return (
                     <button
                       key={src.id}
                       onClick={() => toggleSource(src.id)}
-                      className={`flex items-center gap-3 px-3 py-2.5 rounded-xl border text-left text-sm transition-all ${
-                        sel ? 'border-indigo-500/50 bg-indigo-500/10 text-indigo-300 font-semibold shadow-[0_0_10px_rgba(99,102,241,0.2)]' 
-                            : 'border-zinc-800 bg-zinc-950/50 text-zinc-400 hover:border-zinc-700 hover:bg-zinc-800'
+                      className={`flex items-center gap-3 px-3.5 py-2.5 rounded-xl border text-left text-sm transition-all ${
+                        sel ? 'border-[#E8845F] bg-[#FDEEE6] text-[#C05A35] font-semibold shadow-xs' 
+                            : 'border-[#EDE7E1] bg-[#FAF8F5] text-[#554E46] hover:border-[#DFD6CD] hover:bg-[#F3EFEA]'
                       }`}
                     >
-                      <div className={`w-2 h-2 rounded-full shrink-0 transition-all ${sel ? 'bg-indigo-400 shadow-[0_0_8px_rgba(129,140,248,0.8)]' : 'bg-zinc-700'}`} />
-                      <span className="truncate">{src.title || src.name || 'Untitled_Node'}</span>
+                      <div className={`w-2 h-2 rounded-full shrink-0 transition-all ${sel ? 'bg-[#E8845F] ring-4 ring-[#E8845F]/20' : 'bg-[#C5BDB3]'}`} />
+                      <span className="truncate font-medium">{src.title || src.name || 'Untitled Document'}</span>
                     </button>
                   )
                 })}
@@ -378,39 +343,39 @@ export default function PuzzleArenePage() {
             {sources.length > 0 && (
               <button
                 onClick={() => setSelectedSources(selectedSources.length === sources.length ? [] : sources.map(s => s.id))}
-                className="mt-4 text-[10px] uppercase font-bold tracking-wider text-zinc-500 hover:text-zinc-300 self-start transition-colors"
+                className="mt-3.5 text-xs font-semibold text-[#8A8177] hover:text-[#C05A35] self-start transition-colors"
               >
-                {selectedSources.length === sources.length ? '[ Deselect All ]' : '[ Select All ]'}
+                {selectedSources.length === sources.length ? 'Clear selection' : 'Select all sources'}
               </button>
             )}
           </div>
 
           {/* Options */}
-          <div className="bg-zinc-900/60 backdrop-blur-md p-5 rounded-2xl border border-zinc-800 flex flex-col shadow-lg">
-            <p className="text-[10px] font-bold uppercase tracking-widest text-zinc-400 mb-4 flex items-center gap-2">
-              <Gamepad2 className="w-3.5 h-3.5" /> Parameters
+          <div className="bg-white p-5 rounded-2xl border border-[#EDE7E1] flex flex-col shadow-xs">
+            <p className="text-xs font-bold uppercase tracking-wider text-[#6B635B] mb-3 flex items-center gap-2">
+              <Gamepad2 className="w-4 h-4 text-[#C05A35]" /> Challenge Settings
             </p>
             <div className="flex flex-col gap-4">
               <div>
-                <label className="text-[10px] font-bold uppercase tracking-wider text-zinc-500 block mb-2">Subject Target</label>
+                <label className="text-xs font-medium text-[#7A7167] block mb-1.5">Topic Focus (Optional)</label>
                 <input
                   value={topic}
                   onChange={e => setTopic(e.target.value)}
-                  placeholder="e.g. Algorithms..."
-                  className="w-full h-10 px-3 text-sm font-mono rounded-xl border border-zinc-800 bg-zinc-950 text-zinc-200 placeholder:text-zinc-600 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-all"
+                  placeholder="e.g. Operating Systems"
+                  className="w-full h-10 px-3.5 text-sm rounded-xl border border-[#EDE7E1] bg-[#FAF8F5] text-[#1E1B16] placeholder:text-[#A69E94] focus:outline-none focus:border-[#E8845F] focus:ring-2 focus:ring-[#E8845F]/20 transition-all"
                 />
               </div>
               <div>
-                <label className="text-[10px] font-bold uppercase tracking-wider text-zinc-500 block mb-2">Difficulty Tier</label>
+                <label className="text-xs font-medium text-[#7A7167] block mb-1.5">Difficulty Level</label>
                 <div className="grid grid-cols-2 gap-2">
                   {DIFFICULTIES.map(d => (
                     <button
                       key={d}
                       onClick={() => setDifficulty(d)}
-                      className={`py-2 px-2 rounded-xl text-xs font-bold uppercase tracking-wider border transition-all ${
+                      className={`py-2 px-1 rounded-xl text-xs font-medium border text-center transition-all truncate ${
                         difficulty === d
-                          ? 'bg-indigo-500/20 text-indigo-400 border-indigo-500/50 shadow-[0_0_10px_rgba(99,102,241,0.2)]'
-                          : 'border-zinc-800 text-zinc-500 hover:border-zinc-700 hover:bg-zinc-800'
+                          ? 'bg-gradient-to-r from-[#E8845F] to-[#C05A35] text-white border-transparent shadow-xs font-semibold'
+                          : 'border-[#EDE7E1] bg-[#FAF8F5] text-[#6B635B] hover:border-[#DFD6CD] hover:bg-[#F3EFEA]'
                       }`}
                     >
                       {d}
@@ -422,12 +387,12 @@ export default function PuzzleArenePage() {
           </div>
         </motion.div>
 
-        {/* Right: Game grid */}
+        {/* Right: Game grid (generous 2-col on desktop, 3-col on 2xl ultra-wide) */}
         <motion.div
           variants={stagger.container}
           initial="initial"
           animate="animate"
-          className="lg:col-span-3 grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-5"
+          className="lg:col-span-3 grid grid-cols-1 sm:grid-cols-2 2xl:grid-cols-3 gap-5"
         >
           {PUZZLE_GAMES.map((game) => {
             const bestScore = stats?.by_type?.[game.id]?.best_score
@@ -435,43 +400,44 @@ export default function PuzzleArenePage() {
 
             return (
               <motion.div key={game.id} variants={stagger.item}>
-                <div className={`group bg-zinc-900/40 backdrop-blur-sm border border-zinc-800 rounded-2xl overflow-hidden transition-all duration-300 relative flex flex-col h-full ${game.borderGlow} ${game.shadowGlow} hover:bg-zinc-900/80`}>
+                <div className="group bg-white hover:bg-[#FFFDFB] border border-[#EDE7E1] hover:border-[#DFD6CD] rounded-2xl overflow-hidden transition-all duration-300 relative flex flex-col h-full shadow-xs hover:shadow-xl hover:-translate-y-1">
                   
-                  {/* Subtle top gradient line */}
-                  <div className={`absolute top-0 left-0 right-0 h-1 bg-gradient-to-r ${game.iconColor.replace('text-', 'from-')} to-transparent opacity-50`} />
+                  {/* Top colored accent bar */}
+                  <div className={`h-1.5 w-full bg-gradient-to-r ${game.gradientBar}`} />
 
-                  <div className="p-6 flex flex-col flex-1">
-                    {/* Top row */}
-                    <div className="flex items-start justify-between mb-4">
-                      <div className={`p-3 rounded-xl bg-zinc-950 border border-zinc-800 ${game.iconColor} group-hover:scale-110 transition-transform duration-300`}>
-                        <game.icon className="w-7 h-7" />
+                  <div className="p-5 md:p-6 flex flex-col flex-1">
+                    {/* Top row with icon & neatly aligned badges */}
+                    <div className="flex items-start justify-between gap-2.5 mb-3.5">
+                      <div className={`p-2.5 rounded-xl ${game.iconBg} ${game.iconColor} group-hover:scale-105 transition-transform duration-300 shadow-xs shrink-0`}>
+                        <game.icon className="w-5 h-5" />
                       </div>
-                      <div className="flex flex-col items-end gap-1.5">
-                        <span className={`text-[9px] font-black tracking-widest uppercase px-2.5 py-1 rounded-sm border ${game.tagBorder} ${game.iconColor} bg-zinc-950/50`}>
+                      <div className="flex items-center gap-1.5 flex-wrap justify-end shrink-0 max-w-[calc(100%-48px)]">
+                        <span className={`text-[11px] font-semibold px-2.5 py-0.5 rounded-full border shrink-0 whitespace-nowrap ${game.badgeBg}`}>
                           {game.difficulty}
                         </span>
-                        <span className="text-[9px] font-black tracking-widest text-zinc-300 bg-zinc-800 px-2.5 py-1 rounded-sm border border-zinc-700">
-                          +{game.xp} XP
+                        <span className="text-[11px] font-bold text-amber-900 bg-amber-50 px-2 py-0.5 rounded-full border border-amber-200/80 flex items-center gap-1 shrink-0 whitespace-nowrap shadow-2xs">
+                          <Sparkles className="w-3 h-3 text-amber-600 shrink-0" /> +{game.xp} XP
                         </span>
                       </div>
                     </div>
 
-                    <h3 className="font-bold text-lg text-zinc-100 tracking-wide mb-2">{game.name}</h3>
-                    <p className="text-xs text-zinc-400 leading-relaxed font-mono mb-6 flex-1">{game.desc}</p>
+                    <h3 className="font-bold text-base md:text-lg text-[#1E1B16] tracking-tight mb-1.5">{game.name}</h3>
+                    <p className="text-xs text-[#6B635B] leading-relaxed mb-4 flex-1 line-clamp-3">{game.desc}</p>
 
                     {/* Stats */}
-                    <div className="h-6 flex items-center gap-3 mb-4 text-[10px] uppercase font-bold tracking-wider text-zinc-500">
-                      {played > 0 && <span>Runs: <strong className="text-zinc-300">{played}</strong></span>}
+                    <div className="h-6 flex items-center gap-3 mb-4 text-xs font-medium text-[#8A8177]">
+                      {played > 0 && <span>{played} {played === 1 ? 'play' : 'plays'}</span>}
                       {bestScore != null && <span>Best: <strong className={game.iconColor}>{bestScore}%</strong></span>}
+                      {played === 0 && <span className="text-[#A69E94]">Ready to play</span>}
                     </div>
 
                     {/* Play button */}
                     <button
                       onClick={() => handlePlay(game)}
-                      className={`w-full py-3.5 rounded-xl font-black text-xs uppercase tracking-[0.2em] flex items-center justify-center gap-2 transition-all ${game.btnBg}`}
+                      className={`w-full py-2.5 rounded-xl font-bold text-xs flex items-center justify-center gap-2 transition-all shadow-sm hover:shadow-md ${game.btnBg}`}
                     >
-                      <Play className="w-4 h-4" />
-                      Initiate
+                      <Play className="w-3.5 h-3.5 fill-current" />
+                      {game.actionText || 'Play Now'}
                     </button>
                   </div>
                 </div>
@@ -481,21 +447,21 @@ export default function PuzzleArenePage() {
         </motion.div>
       </div>
 
-      {/* Custom styles for the scrollbar inside the dark panel */}
+      {/* Custom styles for the scrollbar inside light panels */}
       <style>{`
         .custom-scrollbar::-webkit-scrollbar {
-          width: 4px;
+          width: 5px;
         }
         .custom-scrollbar::-webkit-scrollbar-track {
-          background: rgba(24, 24, 27, 0.5); 
+          background: rgba(237, 231, 225, 0.4); 
           border-radius: 4px;
         }
         .custom-scrollbar::-webkit-scrollbar-thumb {
-          background: rgba(82, 82, 91, 0.5);
+          background: rgba(197, 189, 179, 0.6);
           border-radius: 4px;
         }
         .custom-scrollbar::-webkit-scrollbar-thumb:hover {
-          background: rgba(113, 113, 122, 0.8);
+          background: rgba(160, 150, 138, 0.9);
         }
       `}</style>
 
@@ -504,13 +470,125 @@ export default function PuzzleArenePage() {
         {toast && (
           <motion.div
             initial={{ opacity: 0, y: 20, scale: 0.9 }} animate={{ opacity: 1, y: 0, scale: 1 }} exit={{ opacity: 0, y: 10, scale: 0.9 }}
-            className="fixed bottom-8 left-1/2 -translate-x-1/2 bg-zinc-900 border border-zinc-700 text-zinc-100 px-6 py-4 rounded-2xl shadow-[0_0_30px_rgba(0,0,0,0.8)] text-sm font-bold tracking-wider uppercase z-50 flex items-center gap-3"
+            className="fixed bottom-8 left-1/2 -translate-x-1/2 bg-[#1E1B16] text-white px-6 py-3.5 rounded-2xl shadow-2xl text-xs font-semibold z-50 flex items-center gap-3 border border-white/10"
           >
-            <AlertCircle className="w-5 h-5 text-indigo-400" />
+            <AlertCircle className="w-4 h-4 text-[#E8845F]" />
             {toast}
           </motion.div>
         )}
       </AnimatePresence>
+
+      {/* Simulation Terminal Game Modal */}
+      {typeof document !== 'undefined' && createPortal(
+        <AnimatePresence>
+          {activeGame && (
+            <motion.div
+              key="game-modal"
+              initial={{ opacity: 0, scale: isFullScreen ? 1 : 0.98 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: isFullScreen ? 1 : 0.98 }}
+              className={
+                isFullScreen
+                  ? "fixed inset-0 z-[100] bg-[#FAF8F5] flex flex-col overflow-hidden w-screen h-screen"
+                  : "fixed inset-0 z-[100] bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-3 md:p-6"
+              }
+            >
+              <div
+                className={
+                  isFullScreen
+                    ? "w-full h-full flex flex-col overflow-hidden bg-[#FAF8F5]"
+                    : "bg-[#FAF8F5] w-full max-w-5xl max-h-[95vh] rounded-3xl shadow-2xl flex flex-col overflow-hidden relative border border-[#EDE7E1]"
+                }
+              >
+                {/* Modal Header */}
+                <div className="bg-white text-[#1E1B16] px-6 py-4 flex items-center justify-between border-b border-[#EDE7E1] shrink-0 shadow-xs">
+                  <div className="flex items-center gap-3">
+                    <div className={`p-2.5 rounded-xl ${activeGame.iconBg}`}>
+                      <activeGame.icon className={`w-5 h-5 ${activeGame.iconColor}`} />
+                    </div>
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <p className="font-bold text-base leading-tight text-[#1E1B16]">{activeGame.name}</p>
+                        {isFullScreen && (
+                          <span className="hidden sm:inline-block text-[11px] font-semibold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200">
+                            Full Screen
+                          </span>
+                        )}
+                      </div>
+                      <p className="text-xs text-[#7A7167] font-medium mt-0.5">
+                        Topic: {topic || activeGame.name} • Level: {difficulty}
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center gap-2">
+                    <button
+                      onClick={() => setIsFullScreen(!isFullScreen)}
+                      className="p-2 rounded-xl hover:bg-[#F3EFEA] text-[#7A7167] hover:text-[#1E1B16] transition-colors border border-transparent hover:border-[#EDE7E1]"
+                      title={isFullScreen ? "Exit Full Screen" : "Full Screen"}
+                      aria-label={isFullScreen ? "Exit Full Screen" : "Full Screen"}
+                    >
+                      {isFullScreen ? <Minimize2 className="w-5 h-5" /> : <Maximize2 className="w-5 h-5" />}
+                    </button>
+                    <button
+                      onClick={handleBack}
+                      className="p-2 rounded-xl hover:bg-[#F3EFEA] text-[#7A7167] hover:text-[#1E1B16] transition-colors border border-transparent hover:border-[#EDE7E1]"
+                      title="Close (Esc)"
+                      aria-label="Close"
+                    >
+                      <X className="w-5 h-5" />
+                    </button>
+                  </div>
+                </div>
+
+                {/* Game Body */}
+                <div className={`flex-1 overflow-auto bg-[#FDFBF9] flex flex-col text-[#1E1B16] custom-scrollbar ${isFullScreen ? 'p-6 md:p-10' : 'p-4 md:p-8'}`}>
+                  {isGenerating && (
+                    <div className="flex-1 flex flex-col items-center justify-center py-24 gap-4">
+                      <div className="relative">
+                        <Loader2 className="w-12 h-12 text-[#E8845F] animate-spin" />
+                        <Crosshair className={`w-6 h-6 absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 ${activeGame.iconColor} animate-pulse`} />
+                      </div>
+                      <p className="text-[#1E1B16] font-bold text-base mt-2">Preparing Your Challenge...</p>
+                      <p className="text-xs text-[#7A7167]">Synthesizing interactive questions from your study materials</p>
+                    </div>
+                  )}
+                  {generateError && !isGenerating && !activePuzzle && (
+                    <div className="flex-1 flex flex-col items-center justify-center py-24 gap-4">
+                      <AlertCircle className="w-12 h-12 text-rose-500" />
+                      <p className="text-[#1E1B16] font-bold text-base">Unable to Generate Challenge</p>
+                      <p className="text-sm text-[#7A7167] max-w-md text-center">{generateError}</p>
+                      <button onClick={handleBack} className="mt-4 px-6 py-2.5 rounded-xl bg-[#1E1B16] text-white text-xs font-semibold hover:bg-black transition-colors">
+                        Return to Arena
+                      </button>
+                    </div>
+                  )}
+                  {activePuzzle && !isComplete && !isGenerating && GameComponent && (
+                    <Suspense fallback={<div className="py-24 text-center text-[#7A7167]"><Loader2 className="w-8 h-8 animate-spin mx-auto text-[#E8845F]" /></div>}>
+                      <GameComponent puzzleData={activePuzzle} onComplete={handleComplete} onHint={store.addHint} />
+                    </Suspense>
+                  )}
+                  {isComplete && (
+                    <div className="flex-1 flex items-center justify-center">
+                      <PuzzleResult
+                        score={score}
+                        maxScore={maxScore}
+                        xpEarned={xpEarned}
+                        hintsUsed={hintsUsed}
+                        timeSeconds={timeSecs}
+                        puzzleType={activeGame.id}
+                        onPlayAgain={handlePlayAgain}
+                        onBack={handleBack}
+                      />
+                    </div>
+                  )}
+                </div>
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>,
+        document.body
+      )}
     </div>
   )
 }

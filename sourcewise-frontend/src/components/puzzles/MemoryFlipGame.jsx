@@ -55,15 +55,19 @@ export default function MemoryFlipGame({ puzzleData, onComplete }) {
   const isFaceUp = (card) => flipped.has(card.id) || matched.has(card.pair_id)
 
   return (
-    <div className="w-full max-w-2xl mx-auto flex flex-col items-center">
-      <div className="w-full flex items-center justify-between mb-6 bg-zinc-900/50 border border-zinc-800 p-4 rounded-xl">
+    <div className="w-full max-w-2xl mx-auto flex flex-col items-center font-sans">
+      <div className="w-full flex items-center justify-between mb-6 bg-white border border-[#EDE7E1] p-4 rounded-2xl shadow-xs">
         <div className="flex items-center gap-3">
-          <Layers className="w-5 h-5 text-emerald-400" />
-          <span className="text-xs font-mono uppercase tracking-widest text-zinc-400">Spatial Recall Unit</span>
+          <Layers className="w-5 h-5 text-emerald-600" />
+          <span className="text-xs uppercase tracking-wider text-[#6B635B] font-semibold">Memory Match</span>
         </div>
-        <div className="flex items-center gap-6 font-mono">
-          <span className="text-sm font-bold text-emerald-400 uppercase tracking-widest">PAIRS: {matched.size}/{pair_count}</span>
-          <span className="text-sm font-black text-cyan-400 uppercase tracking-widest">FLIPS: {totalFlips}</span>
+        <div className="flex items-center gap-3">
+          <span className="text-xs font-semibold text-emerald-700 bg-emerald-50 px-3 py-1 rounded-lg border border-emerald-200">
+            Pairs: {matched.size}/{pair_count}
+          </span>
+          <span className="text-xs font-bold text-cyan-800 bg-cyan-50 px-3 py-1 rounded-lg border border-cyan-200">
+            Flips: {totalFlips}
+          </span>
         </div>
       </div>
 
@@ -90,37 +94,39 @@ export default function MemoryFlipGame({ puzzleData, onComplete }) {
                 transition={{ duration: 0.4, ease: 'easeInOut' }}
                 style={{ transformStyle: 'preserve-3d', position: 'relative', height: 120 }}
               >
-                {/* Card Back (Dark/Gamer) */}
+                {/* Card Back (Tactile Arcade Tile) */}
                 <div
-                  className="absolute inset-0 rounded-xl border border-zinc-700 bg-zinc-900 flex items-center justify-center shadow-[0_0_10px_rgba(0,0,0,0.5)] hover:border-emerald-500/50 hover:bg-zinc-800 transition-colors"
+                  className="absolute inset-0 rounded-2xl border-2 border-[#DCD3C7] bg-gradient-to-br from-[#FAF7F2] to-[#EAE3D9] flex items-center justify-center shadow-xs hover:border-emerald-500 hover:shadow-md hover:bg-[#F3ECE2] transition-all"
                   style={{ backfaceVisibility: 'hidden' }}
                 >
-                  <div className="w-8 h-8 rounded-full border border-zinc-700 bg-zinc-950 flex items-center justify-center">
-                    <Layers className="w-4 h-4 text-zinc-600" />
+                  <div className="w-9 h-9 rounded-xl border border-[#D5CCC0] bg-white flex items-center justify-center shadow-xs">
+                    <Layers className="w-4 h-4 text-[#8A8177]" />
                   </div>
                 </div>
 
                 {/* Card Front */}
                 <div
-                  className={`absolute inset-0 rounded-xl border-2 flex items-center justify-center p-3 text-center shadow-[0_0_15px_rgba(0,0,0,0.5)] overflow-hidden ${
+                  className={`absolute inset-0 rounded-2xl border-2 flex items-center justify-center p-3 text-center shadow-xs overflow-hidden bg-white ${
                     isMatch
-                      ? 'border-emerald-500/50 bg-emerald-900/20'
+                      ? 'border-emerald-500 bg-emerald-50'
                       : isWrong
-                      ? 'border-red-500/50 bg-red-900/20'
+                      ? 'border-rose-500 bg-rose-50'
                       : card.card_type === 'term'
-                      ? 'border-indigo-500/50 bg-zinc-900'
-                      : 'border-cyan-500/50 bg-zinc-900'
+                      ? 'border-indigo-400 bg-white'
+                      : 'border-cyan-400 bg-white'
                   }`}
                   style={{ backfaceVisibility: 'hidden', transform: 'rotateY(180deg)' }}
                 >
-                  {isMatch && <div className="absolute inset-0 bg-emerald-500/5" />}
+                  {isMatch && <div className="absolute inset-0 bg-emerald-500/10" />}
                   <span
-                    className={`font-mono leading-tight z-10 ${
+                    className={`leading-snug z-10 ${
                       isMatch
-                        ? 'text-emerald-400 font-bold opacity-70'
+                        ? 'text-emerald-800 font-semibold opacity-90'
+                        : isWrong
+                        ? 'text-rose-700 font-semibold'
                         : card.card_type === 'term'
-                        ? 'text-sm font-black tracking-wider text-indigo-400 uppercase'
-                        : 'text-[11px] font-bold text-cyan-300'
+                        ? 'text-sm font-bold text-indigo-950'
+                        : 'text-xs font-medium text-cyan-950'
                     }`}
                   >
                     {card.content}
@@ -134,7 +140,7 @@ export default function MemoryFlipGame({ puzzleData, onComplete }) {
                   <motion.div
                     initial={{ opacity: 0, scale: 0.9 }}
                     animate={{ opacity: 1, scale: 1 }}
-                    className="absolute inset-0 rounded-xl ring-2 ring-emerald-500 pointer-events-none shadow-[0_0_15px_rgba(16,185,129,0.5)]"
+                    className="absolute inset-0 rounded-2xl ring-4 ring-emerald-300 pointer-events-none shadow-md"
                   />
                 )}
               </AnimatePresence>
@@ -145,9 +151,9 @@ export default function MemoryFlipGame({ puzzleData, onComplete }) {
 
       {/* Progress bar */}
       <div className="w-full max-w-sm mt-8">
-        <div className="h-1 bg-zinc-900 rounded-full overflow-hidden border border-zinc-800">
+        <div className="h-2 bg-[#EAE4DC] border border-[#DFD6CD] rounded-full overflow-hidden shadow-inner">
           <motion.div
-            className="h-full bg-emerald-500 shadow-[0_0_10px_rgba(16,185,129,0.8)]"
+            className="h-full bg-gradient-to-r from-emerald-500 to-teal-500 shadow-sm"
             animate={{ width: `${(matched.size / Math.max(pair_count, 1)) * 100}%` }}
             transition={{ duration: 0.4 }}
           />

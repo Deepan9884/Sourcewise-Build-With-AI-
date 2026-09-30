@@ -1,12 +1,13 @@
 import { useEffect, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
-import { Flame, Target, BookOpen, Zap } from 'lucide-react'
+import { Flame, Target, BookOpen, Zap, CalendarDays } from 'lucide-react'
 import { useAuthStore } from '../store/authStore'
 import { usePlannerStore } from '../store/plannerStore'
 import PlannerPageV2 from './PlannerPageV2'
 import InsightsPage from './InsightsPage'
 import PacingBar from '../components/plan/PacingBar'
 import TaskHybridList from '../components/plan/TaskHybridList'
+import StudyCalendar from '../components/plan/StudyCalendar'
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:4000'
 const ADAPT_KEY = () => `sw_adapt_${new Date().toDateString()}`
@@ -132,21 +133,38 @@ export default function PlanHomePage() {
         </div>
       )}
 
-      {/* 1. Today's Focus & Pacing */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-        <PacingBar planId={currentPlan?.id} />
-        <TaskHybridList
-          slots={todaySlots}
-          onCompleteSlot={(s) => store.completeSlot(s.id, {}).catch(() => {})}
-          onStartSlot={(s) => navigate('/knowledge', { state: { subject: s.plan_subjects?.subject_name, topic: s.topic } })}
-          onBonusAction={(action) => {
-            if (action === 'source') navigate('/knowledge')
-            else navigate('/knowledge', { state: { aiAction: action } })
-          }}
-        />
+      {/* ── My Plan: calendar ── */}
+      <div className="pt-2">
+        <div className="flex items-center gap-2 mb-4">
+          <div className="w-7 h-7 rounded-lg bg-[#F1ECE6] flex items-center justify-center">
+            <CalendarDays className="w-4 h-4 text-[#5B544E]" />
+          </div>
+          <div>
+            <p className="text-[11px] font-extrabold uppercase tracking-widest text-[#8A817B]">My Plan</p>
+            <p className="text-[13px] font-bold text-[#1E1B16] leading-tight">Study Calendar</p>
+          </div>
+        </div>
+        <StudyCalendar planId={currentPlan?.id} />
       </div>
 
-      {/* 2. Full Plan Workspace (The Study Codex) */}
+      {/* ── Quick pacing summary ── */}
+      <div className="pt-2 border-t border-[#F1ECE6]">
+        <p className="text-[11px] font-extrabold uppercase tracking-widest text-[#8A817B] mb-3 px-0.5">Pace &amp; Bonus</p>
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+          <PacingBar planId={currentPlan?.id} />
+          <TaskHybridList
+            slots={todaySlots}
+            onCompleteSlot={(s) => store.completeSlot(s.id, {}).catch(() => {})}
+            onStartSlot={(s) => navigate('/knowledge', { state: { subject: s.plan_subjects?.subject_name, topic: s.topic } })}
+            onBonusAction={(action) => {
+              if (action === 'source') navigate('/knowledge')
+              else navigate('/knowledge', { state: { aiAction: action } })
+            }}
+          />
+        </div>
+      </div>
+
+      {/* ── Full Plan Workspace (The Study Codex) ── */}
       <PlannerPageV2 />
 
       {/* 3. Performance & Insights Section */}

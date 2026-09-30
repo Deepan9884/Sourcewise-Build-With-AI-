@@ -27,6 +27,13 @@ const PROMPTS = {
   summary: (n) => `Summarize "${n}" in 8-10 sentences, then list the 5 key takeaways.`,
 }
 
+function getFileBadge(type) {
+  const ext = (type || 'pdf').toLowerCase()
+  if (ext === 'pdf') return { bg: 'bg-rose-50 text-rose-600 border-rose-200/80', label: 'PDF' }
+  if (ext === 'docx' || ext === 'doc') return { bg: 'bg-blue-50 text-blue-600 border-blue-200/80', label: 'DOCX' }
+  return { bg: 'bg-amber-50 text-amber-700 border-amber-200/80', label: ext.toUpperCase() || 'TXT' }
+}
+
 /**
  * SourceSlideOver — click a source panel → detail + all AI actions.
  * Chat delegates to the global chat (keeps one conversation home).
@@ -108,16 +115,18 @@ export default function SourceSlideOver({ source, onClose, onOpenChat }) {
         transition={{ type: 'spring', damping: 28, stiffness: 280 }}
         className="absolute inset-y-0 right-0 w-full sm:w-[440px] bg-white shadow-2xl flex flex-col max-sm:top-16 max-sm:rounded-t-3xl overflow-hidden z-10"
       >
-        <div className="flex items-start gap-2.5 p-4 border-b border-line bg-white">
-          <span className="text-2xl shrink-0">📄</span>
+        <div className="flex items-start gap-3 p-4 border-b border-line bg-white">
+          <div className={`w-10 h-10 rounded-xl border flex items-center justify-center shrink-0 shadow-2xs ${getFileBadge(source.type).bg}`}>
+            <FileText className="w-5 h-5" />
+          </div>
           <div className="flex-1 min-w-0">
             <h3 className="font-bold text-ink truncate text-sm sm:text-base">{source.name}</h3>
             <p className="text-xs text-faint flex items-center gap-1.5 mt-0.5">
-              <span>{source.type?.toUpperCase()}</span>
+              <span className="font-bold">{getFileBadge(source.type).label}</span>
               <span>·</span>
               <span>{source.chunksIndexed ?? source.chunks_indexed ?? 0} chunks</span>
               <span>·</span>
-              <span className={`font-semibold ${source.status === 'ready' ? 'text-teal' : 'text-faint'}`}>{source.status}</span>
+              <span className={`font-semibold capitalize ${source.status === 'ready' ? 'text-teal' : 'text-faint'}`}>{source.status}</span>
             </p>
           </div>
           <button

@@ -363,7 +363,6 @@ export default function PlanCreationWizard({ onComplete, isGenerating = false })
                     onKeyDown={(e) => e.key === 'Enter' && canProceed() && handleNext()}
                     placeholder="e.g. Computer Networks, Organic Chemistry, Linear Algebra..."
                     className="sw-input text-base py-3 pl-4 pr-10 w-full"
-                    autoFocus
                   />
                   {subjectName.trim().length >= 2 && (
                     <span className="absolute right-3 top-1/2 -translate-y-1/2 text-teal">
@@ -538,7 +537,6 @@ export default function PlanCreationWizard({ onComplete, isGenerating = false })
                   value={grandExamDate}
                   onChange={(e) => setGrandExamDate(e.target.value)}
                   className="sw-input text-base py-3 px-4 w-full"
-                  autoFocus
                 />
               </div>
 

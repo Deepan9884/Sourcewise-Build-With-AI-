@@ -18,6 +18,9 @@ const PlanHomePage = lazy(() => import('../pages/PlanHomePage'));
 const KnowledgeHubPage = lazy(() => import('../pages/KnowledgeHubPage'));
 const InsightsPage = lazy(() => import('../pages/InsightsPage'));
 const PuzzleArenePage = lazy(() => import('../pages/PuzzleArenePage'));
+const EventsPage = lazy(() => import('../pages/EventsPage'));
+const DeepCodePage = lazy(() => import('../pages/DeepCodePage'));
+const LearningPage = lazy(() => import('../pages/LearningPage'));
 
 // Loading fallback
 const PageLoader = () => (
@@ -74,6 +77,10 @@ export const router = createBrowserRouter([
         element: <SuspenseWrapper><KnowledgeHubPage /></SuspenseWrapper>,
       },
       {
+        path: '/learning',
+        element: <SuspenseWrapper><LearningPage /></SuspenseWrapper>,
+      },
+      {
         path: '/insights',
         element: <SuspenseWrapper><PlanHomePage /></SuspenseWrapper>,
       },
@@ -110,8 +117,12 @@ export const router = createBrowserRouter([
         element: <SuspenseWrapper><ProgressCenterPage /></SuspenseWrapper>,
       },
       {
+        path: '/events',
+        element: <SuspenseWrapper><EventsPage /></SuspenseWrapper>,
+      },
+      {
         path: '/arena',
-        element: <SuspenseWrapper><ProgressCenterPage /></SuspenseWrapper>,
+        element: <SuspenseWrapper><EventsPage /></SuspenseWrapper>,
       },
       {
         path: '/puzzles',
@@ -120,6 +131,14 @@ export const router = createBrowserRouter([
       {
         path: '/puzzles/:type',
         element: <SuspenseWrapper><PuzzleArenePage /></SuspenseWrapper>,
+      },
+      {
+        path: '/deepcode',
+        element: <SuspenseWrapper><DeepCodePage /></SuspenseWrapper>,
+      },
+      {
+        path: '/compiler',
+        element: <SuspenseWrapper><DeepCodePage /></SuspenseWrapper>,
       },
       {
         path: '/settings',

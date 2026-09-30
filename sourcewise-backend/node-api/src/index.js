@@ -41,6 +41,7 @@ const studyPlanRoutes = require('./routes/study-plans.routes');
 const scheduleSlotRoutes = require('./routes/schedule-slots.routes');
 const eventRoutes = require('./routes/events.routes');
 const puzzleRoutes = require('./routes/puzzles.routes');
+const compilerRoutes = require('./routes/compiler.routes');
 
 const app = express();
 const PORT = process.env.PORT || 4000;
@@ -108,7 +109,7 @@ app.get('/health', async (req, res) => {
     timestamp: new Date().toISOString(),
     version: '11.0.0',
     uptime: Math.round(process.uptime()),
-    features: ['auth', 'sources', 'planner', 'tutor', 'progress', 'analytics', 'revision', 'mastery', 'dashboard', 'admin', 'credits', 'metrics', 'mood', 'calendar', 'study-plans', 'schedule', 'events'],
+    features: ['auth', 'sources', 'planner', 'tutor', 'progress', 'analytics', 'revision', 'mastery', 'dashboard', 'admin', 'credits', 'metrics', 'mood', 'calendar', 'study-plans', 'schedule', 'events', 'puzzles', 'compiler'],
     checks,
   });
 });
@@ -134,6 +135,7 @@ app.use('/study-plans', dataLimiter, studyPlanRoutes);
 app.use('/schedule', dataLimiter, scheduleSlotRoutes);
 app.use('/events', eventRoutes);
 app.use('/puzzles', dataLimiter, puzzleRoutes);
+app.use('/compiler', dataLimiter, compilerRoutes);
 
 // ─── 404 Handler ──────────────────────────────────────────────────────────────
 app.use((req, res) => {

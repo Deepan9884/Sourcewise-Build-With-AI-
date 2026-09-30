@@ -41,7 +41,10 @@ async def ingest_document(
     # Extract → Chunk → Embed → Store
     pages = extractor.extract_text(file_bytes, file.filename)
     if not pages:
-        raise HTTPException(status_code=422, detail="Could not extract any text from the file.")
+        raise HTTPException(
+            status_code=422,
+            detail="Could not extract text. This PDF appears to be a scanned image with no digital text layer. Please use an OCR-processed PDF or export text."
+        )
 
     chunks = chunker.chunk_pages(pages, source_id=source_id, source_name=source_name)
     if not chunks:

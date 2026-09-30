@@ -4,7 +4,8 @@ import { motion } from 'framer-motion'
 import { useAuthStore } from '../../store/authStore'
 import {
   Home, BookCopy, MessageSquare, Trophy, Calendar, Settings, Compass,
-  LogOut, User as UserIcon, ChevronLeft, ChevronRight, Puzzle
+  LogOut, User as UserIcon, ChevronLeft, ChevronRight, Puzzle, CalendarDays, Code2,
+  GraduationCap
 } from 'lucide-react'
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:4000'
@@ -79,6 +80,23 @@ const NAV_SECTIONS = [
     badge: null,
     matcher: (pathname) => pathname.startsWith('/plan') || pathname.startsWith('/planner') || pathname.startsWith('/insights'),
   },
+  // 5. Learning
+  {
+    name: 'Learning',
+    path: '/learning',
+    icon: GraduationCap,
+    group: 'core',
+    accent: {
+      color: '#7C3AED',
+      activeBg: 'bg-[#F1E9FF]',
+      activeText: 'text-[#5B21B6]',
+      activeBar: 'bg-[#7C3AED]',
+      hoverBg: 'hover:bg-[#F7F3FF]',
+      iconActive: 'text-[#7C3AED]',
+    },
+    badge: null,
+    matcher: (pathname) => pathname.startsWith('/learning'),
+  },
 
   // Growth & Planning Group (Track the work)
   {
@@ -98,9 +116,9 @@ const NAV_SECTIONS = [
     matcher: (pathname) => pathname.startsWith('/puzzles'),
   },
   {
-    name: 'Arena / Quests',
-    path: '/arena',
-    icon: Trophy,
+    name: 'Events',
+    path: '/events',
+    icon: CalendarDays,
     group: 'growth',
     accent: {
       color: '#10B981',
@@ -110,8 +128,24 @@ const NAV_SECTIONS = [
       hoverBg: 'hover:bg-[#ECFDF5]',
       iconActive: 'text-[#10B981]',
     },
-    badge: 'quests_count', // Live numbered badge
-    matcher: (pathname) => pathname.startsWith('/arena') || pathname.startsWith('/progress'),
+    badge: 'events_count', // Live numbered badge of logged events
+    matcher: (pathname) => pathname.startsWith('/events') || pathname.startsWith('/arena'),
+  },
+  {
+    name: 'DeepCode',
+    path: '/deepcode',
+    icon: Code2,
+    group: 'growth',
+    accent: {
+      color: '#6366F1',
+      activeBg: 'bg-[#EEF2FF]',
+      activeText: 'text-[#4338CA]',
+      activeBar: 'bg-[#6366F1]',
+      hoverBg: 'hover:bg-[#F5F7FF]',
+      iconActive: 'text-[#6366F1]',
+    },
+    badge: 'deepcode_badge',
+    matcher: (pathname) => pathname.startsWith('/deepcode') || pathname.startsWith('/compiler'),
   },
 
   // System Group
@@ -141,6 +175,7 @@ export default function MainLayout() {
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false)
   const [hoveredItem, setHoveredItem] = useState(null)
   const [activeQuestsCount, setActiveQuestsCount] = useState(4)
+  const [eventsCount, setEventsCount] = useState(3)
   const [railStreak, setRailStreak] = useState(null)
 
   // Sync available quests count from daily quests localStorage
@@ -155,6 +190,16 @@ export default function MainLayout() {
       }
     } catch (e) {
       // Default to 4
+    }
+
+    try {
+      const savedEvents = localStorage.getItem('sourcewise_student_events')
+      if (savedEvents) {
+        const evts = JSON.parse(savedEvents)
+        if (Array.isArray(evts)) setEventsCount(evts.length)
+      }
+    } catch (e) {
+      // Default to 3
     }
   }, [location.pathname])
 
@@ -210,6 +255,16 @@ export default function MainLayout() {
               strokeWidth={isActive ? 2.3 : 1.9}
             />
 
+            {/* Live Badge: Student Events Count */}
+            {item.badge === 'events_count' && eventsCount > 0 && (
+              <span 
+                className="absolute -top-1.5 -right-2 min-w-[17px] h-[17px] px-1 bg-[#10B981] text-white text-[10px] font-extrabold rounded-full flex items-center justify-center ring-2 ring-white shadow-xs"
+                title={`${eventsCount} events logged`}
+              >
+                {eventsCount}
+              </span>
+            )}
+
             {/* Live Badge: Arena Available Quests */}
             {item.badge === 'quests_count' && activeQuestsCount > 0 && (
               <span 
@@ -225,6 +280,14 @@ export default function MainLayout() {
               <span className="absolute -top-1 -right-1 flex h-2.5 w-2.5">
                 <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#E8845F] opacity-75" />
                 <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-[#E8845F] ring-2 ring-white" />
+              </span>
+            )}
+
+            {/* Live Badge: DeepCode Live Pulse Dot */}
+            {item.badge === 'deepcode_badge' && (
+              <span className="absolute -top-1 -right-1 flex h-2.5 w-2.5">
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#6366F1] opacity-75" />
+                <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-[#6366F1] ring-2 ring-white" />
               </span>
             )}
           </div>
@@ -436,7 +499,7 @@ export default function MainLayout() {
       </div>
 
       {/* Main Page Content */}
-      <main className="flex-1 p-6 lg:p-8 overflow-auto relative z-10">
+      <main className="flex-1 p-6 lg:p-8 overflow-auto relative">
         <Outlet />
       </main>
     </div>

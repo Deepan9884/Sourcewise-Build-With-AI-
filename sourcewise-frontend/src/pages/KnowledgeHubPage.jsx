@@ -4,7 +4,8 @@ import { useDropzone } from 'react-dropzone'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
   FileUp, Trash2, Loader2, AlertCircle, MessageCircle,
-  FlaskConical, Link2, Database, Layers, Brain
+  FlaskConical, Link2, Database, Layers, Brain,
+  FileText, Check, Plus, Sparkles
 } from 'lucide-react'
 import { useSourceStore } from '../store/sourceStore'
 import { useAuthStore } from '../store/authStore'
@@ -15,7 +16,36 @@ import GlobalChatPanel from '../components/knowledge/GlobalChatPanel'
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:4000'
 
-const TYPE_ICON = { pdf: '📄', docx: '📝', txt: '📃' }
+function formatFileSize(bytes) {
+  if (!bytes || bytes <= 0) return null
+  const k = 1024
+  const sizes = ['B', 'KB', 'MB', 'GB']
+  const i = Math.floor(Math.log(bytes) / Math.log(k))
+  return `${parseFloat((bytes / Math.pow(k, i)).toFixed(1))} ${sizes[i]}`
+}
+
+function getFileTypeMeta(type) {
+  const ext = (type || 'pdf').toLowerCase()
+  if (ext === 'pdf') {
+    return {
+      label: 'PDF',
+      badgeClass: 'bg-rose-50 text-rose-600 border-rose-200/80',
+      iconClass: 'text-rose-600',
+    }
+  }
+  if (ext === 'docx' || ext === 'doc') {
+    return {
+      label: 'DOCX',
+      badgeClass: 'bg-blue-50 text-blue-600 border-blue-200/80',
+      iconClass: 'text-blue-600',
+    }
+  }
+  return {
+    label: ext.toUpperCase() || 'TXT',
+    badgeClass: 'bg-amber-50 text-amber-700 border-amber-200/80',
+    iconClass: 'text-amber-700',
+  }
+}
 
 const containerVariants = {
   hidden: { opacity: 0 },
@@ -338,11 +368,14 @@ export default function KnowledgeHubPage() {
           variants={containerVariants}
           initial="hidden"
           animate="show"
-          className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3.5"
+          className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4"
         >
           {uploadedSources.map((s) => {
             const isSel = selected.includes(s.id)
             const isActive = activeSourceIds.includes(s.id)
+            const typeMeta = getFileTypeMeta(s.type)
+            const fileSize = formatFileSize(s.size)
+
             return (
               <motion.div
                 key={s.id}
@@ -350,117 +383,165 @@ export default function KnowledgeHubPage() {
                 variants={cardVariants}
                 initial="hidden"
                 animate="show"
-                whileHover={{ y: -4, transition: { duration: 0.2 } }}
+                whileHover={{ y: -3, transition: { duration: 0.2 } }}
                 data-testid={`source-panel-${s.id}`}
-                className={`p-4 rounded-2xl bg-white border transition-all duration-200 ${
+                className={`relative flex flex-col justify-between p-4.5 rounded-2xl bg-white border transition-all duration-200 group overflow-hidden ${
                   isSel
-                    ? 'border-coral ring-2 ring-coral/20 shadow-card bg-gradient-to-b from-white to-coral-soft/5'
+                    ? 'border-coral ring-2 ring-coral/25 shadow-card bg-gradient-to-b from-white via-white to-coral-soft/10'
                     : isActive
-                      ? 'border-teal/40 shadow-xs ring-1 ring-teal/10'
+                      ? 'border-teal/50 shadow-xs ring-1 ring-teal/20'
                       : 'border-line shadow-xs hover:border-coral/40 hover:shadow-card'
                 }`}
               >
-                <div className="flex items-start gap-3">
-                  <div className="pt-0.5">
-                    <input
-                      type="checkbox"
-                      checked={isSel}
-                      onChange={() => toggleSelect(s.id)}
+                {/* Subtle top indicator for active AI context or selection */}
+                {isActive && (
+                  <div className="absolute top-0 left-0 right-0 h-0.5 bg-gradient-to-r from-teal via-teal/70 to-teal/20" />
+                )}
+
+                {/* Card Top Section: Selection + Icon + Title + Delete */}
+                <div>
+                  <div className="flex items-start gap-3">
+                    {/* Custom Accessible Checkbox */}
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        toggleSelect(s.id)
+                      }}
                       aria-label={`Select ${s.name}`}
-                      className="w-4 h-4 rounded text-coral focus:ring-coral/30 border-line accent-[#E8845F] cursor-pointer transition-transform hover:scale-110"
-                    />
-                  </div>
+                      title={isSel ? 'Deselect source' : 'Select for multi-source actions'}
+                      className={`w-5 h-5 rounded-md border flex items-center justify-center transition-all cursor-pointer shrink-0 mt-0.5 ${
+                        isSel
+                          ? 'bg-coral border-coral text-white shadow-2xs'
+                          : 'border-stone-300 hover:border-coral bg-white group-hover:border-stone-400'
+                      }`}
+                    >
+                      {isSel && <Check className="w-3.5 h-3.5 stroke-[3]" />}
+                    </button>
 
-                  <button
-                    onClick={() => setOpenSource(s)}
-                    className="flex-1 min-w-0 text-left group"
-                  >
-                    <div className="flex items-center gap-2">
-                      <span className="text-xl shrink-0 group-hover:scale-110 transition-transform duration-200">
-                        {TYPE_ICON[s.type] || '📄'}
-                      </span>
-                      <span
-                        className="block font-bold text-ink text-sm truncate group-hover:text-coral-deep transition-colors"
-                        title={s.name}
-                      >
-                        {s.name}
-                      </span>
-                    </div>
+                    {/* Document Header & Details Clickable Target */}
+                    <div
+                      onClick={() => setOpenSource(s)}
+                      className="flex-1 min-w-0 cursor-pointer group/title"
+                    >
+                      <div className="flex items-start gap-2.5">
+                        {/* File Format Badge */}
+                        <div
+                          className={`w-9 h-9 rounded-xl border flex items-center justify-center shrink-0 shadow-2xs transition-transform duration-200 group-hover/title:scale-105 ${typeMeta.badgeClass}`}
+                        >
+                          <FileText className={`w-4 h-4 ${typeMeta.iconClass}`} />
+                        </div>
 
-                    <div className="flex items-center gap-2 mt-1.5">
-                      <span className="text-xs text-faint font-medium">
-                        {s.type?.toUpperCase()} · {s.chunksIndexed ?? s.chunks_indexed ?? 0} chunks
-                      </span>
-                    </div>
+                        {/* Title & Metadata */}
+                        <div className="min-w-0 flex-1">
+                          <h3
+                            className="font-bold text-ink text-sm leading-snug line-clamp-2 group-hover/title:text-coral transition-colors"
+                            title={s.name}
+                          >
+                            {s.name}
+                          </h3>
 
-                    <div className="mt-2">
-                      {s.status === 'ready' ? (
-                        <span className="inline-flex items-center gap-1.5 text-xs font-bold text-teal bg-teal-soft/70 px-2.5 py-0.5 rounded-full">
-                          <span className="relative flex h-1.5 w-1.5">
-                            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-teal opacity-75" />
-                            <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-teal" />
+                          <div className="flex flex-wrap items-center gap-1.5 mt-1.5">
+                            <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-extrabold uppercase tracking-wide bg-stone-100 text-stone-600">
+                              {typeMeta.label}
+                            </span>
+                            <span className="inline-flex items-center gap-1 text-[11px] text-faint">
+                              <Layers className="w-3 h-3 text-stone-400" />
+                              {s.chunksIndexed ?? s.chunks_indexed ?? 0} chunks
+                            </span>
+                            {fileSize && (
+                              <>
+                                <span className="text-stone-300 text-xs">·</span>
+                                <span className="text-[11px] text-faint">{fileSize}</span>
+                              </>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Status Tag */}
+                      <div className="mt-3">
+                        {s.status === 'ready' ? (
+                          <span className="inline-flex items-center gap-1.5 text-[11px] font-semibold text-teal bg-teal-soft/80 border border-teal/20 px-2.5 py-0.5 rounded-full shadow-2xs">
+                            <span className="relative flex h-1.5 w-1.5">
+                              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-teal opacity-75" />
+                              <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-teal" />
+                            </span>
+                            Ready for AI
                           </span>
-                          ready
-                        </span>
-                      ) : s.status === 'error' ? (
-                        <span className="inline-flex items-center gap-1.5 text-xs font-bold text-red-600 bg-red-50 px-2.5 py-0.5 rounded-full">
-                          <AlertCircle className="w-3 h-3" />
-                          error
-                        </span>
-                      ) : (
-                        <span className="inline-flex items-center gap-1.5 text-xs font-bold text-amberbrand bg-amberbrand-soft px-2.5 py-0.5 rounded-full">
-                          <Loader2 className="w-3 h-3 animate-spin" />
-                          {s.status}
-                        </span>
-                      )}
+                        ) : s.status === 'error' ? (
+                          <span className="inline-flex items-center gap-1.5 text-[11px] font-semibold text-rose-700 bg-rose-50 border border-rose-200/70 px-2.5 py-0.5 rounded-full shadow-2xs">
+                            <AlertCircle className="w-3.5 h-3.5 text-rose-500" />
+                            Indexing failed
+                          </span>
+                        ) : (
+                          <span className="inline-flex items-center gap-1.5 text-[11px] font-semibold text-amberbrand bg-amberbrand-soft border border-amberbrand/20 px-2.5 py-0.5 rounded-full shadow-2xs">
+                            <Loader2 className="w-3 h-3 animate-spin text-amberbrand" />
+                            {s.status === 'uploading' ? 'Uploading…' : 'Processing…'}
+                          </span>
+                        )}
+                      </div>
                     </div>
-                  </button>
 
-                  <motion.button
-                    type="button"
-                    whileHover={{ scale: 1.15 }}
-                    whileTap={{ scale: 0.9 }}
-                    onClick={(e) => handleDelete(s, e)}
-                    aria-label={`Delete ${s.name}`}
-                    title={`Delete ${s.name}`}
-                    className="p-1.5 text-faint hover:text-red-500 rounded-lg hover:bg-red-50 transition-colors shrink-0 relative z-10 cursor-pointer"
-                  >
-                    <Trash2 className="w-4 h-4 pointer-events-none" />
-                  </motion.button>
+                    {/* Delete action */}
+                    <motion.button
+                      type="button"
+                      whileHover={{ scale: 1.1 }}
+                      whileTap={{ scale: 0.92 }}
+                      onClick={(e) => handleDelete(s, e)}
+                      aria-label={`Delete ${s.name}`}
+                      title={`Delete ${s.name}`}
+                      className="p-1.5 text-stone-400 hover:text-rose-500 rounded-lg hover:bg-rose-50 transition-colors shrink-0 cursor-pointer"
+                    >
+                      <Trash2 className="w-4 h-4 pointer-events-none" />
+                    </motion.button>
+                  </div>
                 </div>
 
-                <div className="flex items-center gap-1.5 mt-3.5 pt-3 border-t border-line/60">
+                {/* Bottom Action Toolbar */}
+                <div className="flex items-center gap-2 mt-4 pt-3 border-t border-line/70">
                   <motion.button
                     whileHover={{ scale: 1.02 }}
-                    whileTap={{ scale: 0.97 }}
-                    onClick={() => { setOpenSource(s); }}
-                    className="flex-1 h-8 rounded-xl bg-coral-soft text-coral-deep text-xs font-bold flex items-center justify-center gap-1.5 hover:bg-coral hover:text-white transition-colors shadow-2xs"
+                    whileTap={{ scale: 0.98 }}
+                    onClick={() => setOpenSource(s)}
+                    className="flex-1 h-9 px-3 rounded-xl bg-ink hover:bg-stone-800 text-white text-xs font-semibold flex items-center justify-center gap-1.5 shadow-2xs transition-colors cursor-pointer"
                   >
-                    <MessageCircle className="w-3.5 h-3.5" /> Open
+                    <Sparkles className="w-3.5 h-3.5 text-coral" />
+                    <span>Open Studio</span>
                   </motion.button>
 
                   <motion.button
-                    whileHover={{ scale: 1.03 }}
-                    whileTap={{ scale: 0.97 }}
+                    whileHover={{ scale: 1.02 }}
+                    whileTap={{ scale: 0.98 }}
                     onClick={() => toggleActiveSource(s.id)}
-                    aria-label={`${isActive ? 'Deactivate' : 'Activate'} ${s.name} for AI`}
-                    title="Include in AI context"
-                    className={`h-8 px-3 rounded-xl text-xs font-bold border transition-all ${
+                    aria-label={`${isActive ? 'Remove from' : 'Add to'} AI context`}
+                    title={isActive ? 'Active in AI Chat context (click to remove)' : 'Include in AI Chat context'}
+                    className={`h-9 px-3 rounded-xl text-xs font-semibold border transition-all flex items-center gap-1.5 shadow-2xs cursor-pointer ${
                       isActive
-                        ? 'bg-teal text-white border-teal shadow-2xs'
-                        : 'border-line text-faint bg-white hover:border-teal hover:text-teal'
+                        ? 'bg-teal-50 text-teal-700 border-teal-200 hover:bg-teal-100'
+                        : 'border-line text-body bg-white hover:border-teal/50 hover:text-teal'
                     }`}
                   >
-                    {isActive ? 'Active' : 'Use'}
+                    {isActive ? (
+                      <>
+                        <span className="w-1.5 h-1.5 rounded-full bg-teal animate-pulse" />
+                        <span>In AI</span>
+                      </>
+                    ) : (
+                      <>
+                        <Plus className="w-3.5 h-3.5 text-faint" />
+                        <span>Add to AI</span>
+                      </>
+                    )}
                   </motion.button>
 
                   <motion.button
-                    whileHover={{ rotate: 12, scale: 1.08 }}
-                    whileTap={{ scale: 0.92 }}
+                    whileHover={{ rotate: 8, scale: 1.05 }}
+                    whileTap={{ scale: 0.95 }}
                     onClick={() => setOpenSource(s)}
-                    aria-label={`Quiz on ${s.name}`}
-                    title="Quick quiz (in detail panel)"
-                    className="h-8 w-8 rounded-xl border border-line text-faint hover:border-coral hover:text-coral-deep hover:bg-coral-soft/50 flex items-center justify-center transition-colors shadow-2xs"
+                    aria-label={`Quiz and study on ${s.name}`}
+                    title="Practice & Quiz (in detail panel)"
+                    className="h-9 w-9 rounded-xl border border-line bg-stone-50/80 hover:bg-coral-soft hover:border-coral/40 text-faint hover:text-coral-deep flex items-center justify-center transition-colors shadow-2xs shrink-0 cursor-pointer"
                   >
                     <FlaskConical className="w-3.5 h-3.5" />
                   </motion.button>

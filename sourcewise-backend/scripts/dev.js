@@ -31,9 +31,9 @@ function resolvePythonBin() {
   if (process.platform === 'win32') {
     const appData = process.env.APPDATA || '';
     const candidates = [
+      path.join(aiDir, '.venv', 'Scripts', 'python.exe'),
       path.join(appData, 'uv', 'python', 'cpython-3.11-windows-x86_64-none', 'python.exe'),
       path.join(appData, 'uv', 'python', 'cpython-3.11.15-windows-x86_64-none', 'python.exe'),
-      path.join(aiDir, '.venv', 'Scripts', 'python.exe'),
       'python',
     ];
     for (const cand of candidates) {

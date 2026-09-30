@@ -10,6 +10,7 @@ Supports 6 puzzle types:
   cloze        — Fill in blanked terms in real source passages
 """
 
+import asyncio
 import json
 import random
 import string
@@ -17,6 +18,9 @@ from typing import List, Dict, Any, Optional
 from app.agents.base import BaseAgent, AgentContext, AgentResult
 from app.agents.registry import registry
 from app.services import vector_store, llm as llm_service
+from app.utils.logging import get_logger
+
+logger = get_logger("sourcewise.puzzle_agent")
 
 
 # ─── Grid directions for word search ──────────────────────────────────────────
@@ -72,6 +76,17 @@ class PuzzleAgent(BaseAgent):
 
         return await fn(context, topic=topic, count=count, difficulty=difficulty)
 
+    async def _safe_llm_chat(self, prompt: str, chunks: list, timeout: float = 12.0) -> Optional[str]:
+        """Query LLM with strict timeout and exception handling. Falls back instantly if LLM is slow, down, or misconfigured."""
+        try:
+            return await asyncio.wait_for(
+                llm_service.chat(question=prompt, context_chunks=chunks or [], history=[]),
+                timeout=timeout
+            )
+        except Exception as e:
+            logger.warning(f"Puzzle LLM generation timed out or failed ({timeout}s): {e}. Using fallback puzzle data.")
+            return None
+
     # ──────────────────────────────────────────────────────────────────────────
     # Word Search
     # ──────────────────────────────────────────────────────────────────────────
@@ -98,7 +113,7 @@ Source text:
 
 JSON array:"""
 
-        raw = await llm_service.chat(question=prompt, context_chunks=chunks or [], history=[])
+        raw = await self._safe_llm_chat(prompt, chunks, timeout=12.0)
         words = self._parse_json(raw, [])
 
         # Fallback demo data
@@ -208,7 +223,7 @@ Source:
 
 JSON:"""
 
-        raw = await llm_service.chat(question=prompt, context_chunks=chunks or [], history=[])
+        raw = await self._safe_llm_chat(prompt, chunks, timeout=12.0)
         pairs = self._parse_json(raw, [])
         if not pairs or len(pairs) < 4:
             pairs = self._fallback_pairs(topic, n)
@@ -254,7 +269,7 @@ Source:
 
 JSON:"""
 
-        raw = await llm_service.chat(question=prompt, context_chunks=chunks or [], history=[])
+        raw = await self._safe_llm_chat(prompt, chunks, timeout=12.0)
         items = self._parse_json(raw, [])
         if not items or len(items) < 4:
             items = self._fallback_rapid_fire(topic, n)
@@ -328,7 +343,7 @@ Source:
 
 JSON:"""
 
-        raw = await llm_service.chat(question=prompt, context_chunks=chunks or [], history=[])
+        raw = await self._safe_llm_chat(prompt, chunks, timeout=12.0)
         items = self._parse_json(raw, [])
         if not items or len(items) < 4:
             items = self._fallback_anagrams(topic, n)
@@ -400,7 +415,7 @@ Passage:
 
 JSON:"""
 
-        raw = await llm_service.chat(question=prompt, context_chunks=chunks or [], history=[])
+        raw = await self._safe_llm_chat(prompt, chunks, timeout=12.0)
         data = self._parse_json(raw, {})
 
         if not data or not data.get("blanks"):

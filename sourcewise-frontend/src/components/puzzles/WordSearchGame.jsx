@@ -85,23 +85,23 @@ export default function WordSearchGame({ puzzleData, onComplete }) {
   const highlightColor = (r, c) => highlightedCells.get(`${r},${c}`)
 
   const getCellStyle = (r, c) => {
-    if (isFlashed(r, c)) return 'bg-cyan-400 text-black scale-110 shadow-[0_0_15px_rgba(34,211,238,0.8)] z-10'
-    if (isActive(r, c)) return 'bg-cyan-500/40 text-cyan-200 border-cyan-400/50 shadow-[0_0_10px_rgba(34,211,238,0.2)] scale-105 z-10'
-    if (highlightColor(r, c)) return 'bg-cyan-900/50 text-cyan-300 font-black'
-    return 'bg-zinc-950 text-zinc-600 hover:bg-zinc-800/80 hover:text-zinc-300'
+    if (isFlashed(r, c)) return 'bg-cyan-500 text-white font-black scale-110 shadow-lg z-10'
+    if (isActive(r, c)) return 'bg-cyan-100 text-cyan-900 border-2 border-cyan-500 shadow-sm scale-105 z-10 font-bold'
+    if (highlightColor(r, c)) return 'bg-cyan-600 text-white font-black'
+    return 'bg-[#FAF7F2] text-[#2D2A26] hover:bg-cyan-50 hover:text-cyan-800'
   }
 
   const cellPx = Math.max(20, Math.min(32, 400 / grid_size))
   const fontSize = cellPx < 24 ? 'text-[10px]' : (cellPx < 28 ? 'text-xs' : 'text-sm')
 
   return (
-    <div className="flex flex-col md:flex-row gap-8 w-full max-w-4xl mx-auto items-start font-mono">
+    <div className="flex flex-col md:flex-row gap-8 w-full max-w-4xl mx-auto items-start">
       <div
         ref={containerRef}
         onMouseLeave={handleMouseUp}
-        className="mx-auto bg-zinc-900 p-3 md:p-4 rounded-xl border border-zinc-800 shadow-[0_0_20px_rgba(0,0,0,0.5)] touch-none flex-shrink-0"
+        className="mx-auto bg-white p-3 md:p-5 rounded-2xl border-2 border-[#E0D7CE] shadow-sm touch-none flex-shrink-0"
       >
-        <div className="flex flex-col border border-zinc-800/50 rounded overflow-hidden">
+        <div className="flex flex-col border border-[#E5DDD3] rounded-xl overflow-hidden font-mono">
           {grid.map((row, r) => (
             <div key={r} className="flex">
               {row.map((letter, c) => (
@@ -110,7 +110,7 @@ export default function WordSearchGame({ puzzleData, onComplete }) {
                   onMouseDown={() => handleMouseDown(r, c)}
                   onMouseEnter={() => handleMouseEnter(r, c)}
                   onMouseUp={handleMouseUp}
-                  className={`flex items-center justify-center cursor-crosshair font-bold border-r border-b border-zinc-800/40 transition-all duration-100 ${getCellStyle(r, c)} ${fontSize}`}
+                  className={`flex items-center justify-center cursor-crosshair font-bold border-r border-b border-[#EDE6DC] transition-all duration-100 ${getCellStyle(r, c)} ${fontSize}`}
                   style={{ width: cellPx, height: cellPx, userSelect: 'none' }}
                 >
                   {letter}
@@ -121,11 +121,11 @@ export default function WordSearchGame({ puzzleData, onComplete }) {
         </div>
       </div>
 
-      <div className="flex-1 min-w-[200px] w-full flex flex-col h-full bg-zinc-900/50 rounded-xl border border-zinc-800 p-4 shadow-lg">
-        <div className="flex items-center gap-2 mb-4 pb-4 border-b border-zinc-800">
-          <Search className="w-4 h-4 text-cyan-400" />
-          <span className="text-xs font-bold text-zinc-300 uppercase tracking-widest">Targets ({words.length})</span>
-          <span className="ml-auto text-xs font-black text-cyan-400 bg-cyan-950 px-2 py-0.5 rounded border border-cyan-800">
+      <div className="flex-1 min-w-[200px] w-full flex flex-col h-full bg-white rounded-2xl border border-[#EDE7E1] p-5 shadow-xs font-sans">
+        <div className="flex items-center gap-2 mb-4 pb-4 border-b border-[#EDE7E1]">
+          <Search className="w-4 h-4 text-cyan-600" />
+          <span className="text-xs font-semibold text-[#1E1B16] uppercase tracking-wider">Words to Find ({words.length})</span>
+          <span className="ml-auto text-xs font-bold text-cyan-800 bg-cyan-50 px-2.5 py-1 rounded-md border border-cyan-200">
             {foundWords.size}/{words.length}
           </span>
         </div>
@@ -135,25 +135,25 @@ export default function WordSearchGame({ puzzleData, onComplete }) {
             return (
               <motion.div
                 key={w.word}
-                animate={{ opacity: found ? 0.4 : 1, scale: found ? 0.98 : 1 }}
-                className={`flex items-center gap-2 px-3 py-2 rounded-lg border transition-all text-xs ${found ? 'border-cyan-500/30 bg-cyan-900/20' : 'border-zinc-800 bg-zinc-950'}`}
+                animate={{ opacity: found ? 0.6 : 1, scale: found ? 0.98 : 1 }}
+                className={`flex items-center gap-2 px-3 py-2.5 rounded-xl border transition-all text-xs font-semibold ${found ? 'border-cyan-200 bg-cyan-50 text-cyan-800 line-through' : 'border-[#EDE7E1] bg-[#FAF8F5] text-[#2D2A26] hover:border-cyan-300'}`}
               >
-                {found && <CheckCircle2 className="w-3.5 h-3.5 text-cyan-500 shrink-0" />}
-                <span className={`font-mono font-bold tracking-wider ${found ? 'line-through text-cyan-500' : 'text-zinc-300'}`}>{w.word}</span>
+                {found && <CheckCircle2 className="w-4 h-4 text-cyan-600 shrink-0" />}
+                <span className={`tracking-wide ${found ? 'text-cyan-800' : 'text-[#2D2A26]'}`}>{w.word}</span>
               </motion.div>
             )
           })}
         </div>
-        <div className="mt-4 pt-4 border-t border-zinc-800">
-          <div className="h-1.5 bg-zinc-800 rounded-full overflow-hidden">
+        <div className="mt-4 pt-4 border-t border-[#EDE7E1]">
+          <div className="h-2 bg-[#EAE4DC] border border-[#DFD6CD] rounded-full overflow-hidden shadow-inner">
             <motion.div
-              className="h-full bg-cyan-500 shadow-[0_0_10px_rgba(6,182,212,0.8)]"
+              className="h-full bg-gradient-to-r from-cyan-600 to-teal-500 shadow-sm"
               animate={{ width: `${(foundWords.size / Math.max(words.length, 1)) * 100}%` }}
               transition={{ duration: 0.4 }}
             />
           </div>
-          <p className="text-[10px] text-zinc-500 mt-2 text-center uppercase tracking-widest font-bold">
-            {foundWords.size === words.length ? 'EXTRACTION COMPLETE' : `${words.length - foundWords.size} REMAINING`}
+          <p className="text-xs text-[#7A7167] mt-2.5 text-center font-medium font-sans">
+            {foundWords.size === words.length ? 'All words found!' : `${words.length - foundWords.size} remaining`}
           </p>
         </div>
       </div>
@@ -162,10 +162,10 @@ export default function WordSearchGame({ puzzleData, onComplete }) {
         {popup && (
           <motion.div
             initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 10 }}
-            className="fixed bottom-8 left-1/2 -translate-x-1/2 bg-zinc-900 border border-zinc-700 text-zinc-100 px-5 py-4 rounded-xl shadow-[0_0_40px_rgba(0,0,0,0.8)] max-w-sm w-full text-center z-[70]"
+            className="fixed bottom-8 left-1/2 -translate-x-1/2 bg-white border-2 border-cyan-500 text-[#1E1B16] px-5 py-4 rounded-2xl shadow-2xl max-w-sm w-full text-center z-[110]"
           >
-            <p className="font-black tracking-widest uppercase text-cyan-400 text-sm mb-1">DATA EXTRACTED: {popup.word}</p>
-            <p className="text-xs text-zinc-400 font-mono leading-relaxed">{popup.definition}</p>
+            <p className="font-bold text-cyan-800 text-sm mb-1 font-sans">Word Found: {popup.word}</p>
+            <p className="text-xs text-[#554E46] font-sans leading-relaxed">{popup.definition}</p>
           </motion.div>
         )}
       </AnimatePresence>

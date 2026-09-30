@@ -25,12 +25,58 @@ def extract_text(file_bytes: bytes, filename: str) -> list[dict]:
 
 def _extract_pdf(file_bytes: bytes) -> list[dict]:
     pages = []
-    with pdfplumber.open(io.BytesIO(file_bytes)) as pdf:
-        for i, page in enumerate(pdf.pages, start=1):
-            text = page.extract_text() or ""
-            text = text.strip()
-            if text:
-                pages.append({"page": i, "text": text})
+    # 1. Primary: pdfplumber text extraction
+    try:
+        with pdfplumber.open(io.BytesIO(file_bytes)) as pdf:
+            for i, page in enumerate(pdf.pages, start=1):
+                text = (page.extract_text() or "").strip()
+                if text:
+                    pages.append({"page": i, "text": text})
+    except Exception:
+        pass
+
+    # 2. Secondary fallback: pypdf (handles certain font encodings that pdfplumber misses)
+    if not pages:
+        try:
+            import pypdf
+            reader = pypdf.PdfReader(io.BytesIO(file_bytes))
+            for i, p in enumerate(reader.pages, start=1):
+                text = (p.extract_text() or "").strip()
+                if text:
+                    pages.append({"page": i, "text": text})
+        except Exception:
+            pass
+
+    # 3. Tertiary fallback: RapidOCR for scanned/image-only PDFs (safe page cap to avoid browser timeout)
+    if not pages:
+        pages = _ocr_pdf_pages(file_bytes)
+
+    return pages
+
+
+def _ocr_pdf_pages(file_bytes: bytes, max_pages: int = 5) -> list[dict]:
+    """Extract text from scanned PDF pages using local RapidOCR."""
+    pages = []
+    try:
+        from rapidocr_onnxruntime import RapidOCR
+        import numpy as np
+
+        engine = RapidOCR()
+        with pdfplumber.open(io.BytesIO(file_bytes)) as pdf:
+            limit = min(len(pdf.pages), max_pages)
+            for i in range(limit):
+                try:
+                    im = pdf.pages[i].to_image(resolution=80).original
+                    img_np = np.array(im)
+                    ocr_res, _ = engine(img_np)
+                    if ocr_res:
+                        txt = "\n".join([line[1] for line in ocr_res if line and len(line) > 1]).strip()
+                        if txt and len(txt) >= 20:
+                            pages.append({"page": i + 1, "text": txt})
+                except Exception:
+                    continue
+    except Exception:
+        pass
     return pages
 
 

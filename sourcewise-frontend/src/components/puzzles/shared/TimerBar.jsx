@@ -24,9 +24,9 @@ export default function TimerBar({ duration = 60, onExpire, paused = false }) {
   }, [paused, onExpire])
 
   const pct = (remaining / duration) * 100
-  // Neon colors: cyan -> amber -> red
-  const barColor = pct > 50 ? '#06b6d4' : pct > 25 ? '#f59e0b' : '#ef4444'
-  const glow = pct > 50 ? 'rgba(6,182,212,0.8)' : pct > 25 ? 'rgba(245,158,11,0.8)' : 'rgba(239,68,68,1)'
+  // Vibrant game colors: teal -> amber -> rose
+  const barColor = pct > 50 ? '#0D9488' : pct > 25 ? '#D97706' : '#E11D48'
+  const glow = pct > 50 ? 'rgba(13,148,136,0.3)' : pct > 25 ? 'rgba(217,119,6,0.3)' : 'rgba(225,29,72,0.4)'
   
   const mins = Math.floor(remaining / 60)
   const secs = remaining % 60
@@ -34,14 +34,14 @@ export default function TimerBar({ duration = 60, onExpire, paused = false }) {
   return (
     <div className="flex items-center gap-3 w-full">
       <span
-        className={`text-sm font-black tabular-nums font-mono w-12 text-right transition-colors ${pct <= 25 ? 'text-red-500 animate-pulse' : 'text-zinc-300'}`}
+        className={`text-sm font-black tabular-nums font-mono w-12 text-right transition-colors ${pct <= 25 ? 'text-rose-600 animate-pulse font-extrabold' : 'text-[#1E1B16]'}`}
       >
         {mins > 0 ? `${mins}:${String(secs).padStart(2, '0')}` : `0:${String(remaining).padStart(2, '0')}`}
       </span>
-      <div className="flex-1 h-1.5 bg-zinc-900 border border-zinc-800 rounded-full overflow-hidden">
+      <div className="flex-1 h-2 bg-[#EAE4DC] border border-[#DFD6CD] rounded-full overflow-hidden shadow-inner">
         <motion.div
           className="h-full rounded-full"
-          style={{ backgroundColor: barColor, boxShadow: `0 0 10px ${glow}` }}
+          style={{ backgroundColor: barColor, boxShadow: `0 0 8px ${glow}` }}
           animate={{ width: `${pct}%` }}
           transition={{ duration: 1, ease: 'linear' }}
         />

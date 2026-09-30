@@ -60,20 +60,20 @@ export default function RapidFireGame({ puzzleData, onComplete }) {
   if (!q) return null
 
   const getOptionStyle = (idx) => {
-    if (selected === null && !expired) return 'border-zinc-800 bg-zinc-950 text-zinc-300 hover:border-orange-500/50 hover:bg-zinc-900 cursor-pointer shadow-none'
-    if (idx === q.correct_index) return 'border-orange-500/50 bg-orange-500/20 text-orange-400 font-bold shadow-[0_0_15px_rgba(249,115,22,0.3)]'
-    if (idx === selected && !isCorrect) return 'border-red-500 bg-red-500/10 text-red-400'
-    return 'border-zinc-800 bg-zinc-950/50 text-zinc-600'
+    if (selected === null && !expired) return 'border-[#EDE7E1] bg-white text-[#1E1B16] hover:border-orange-400 hover:bg-orange-50/40 cursor-pointer shadow-xs'
+    if (idx === q.correct_index) return 'border-2 border-emerald-500 bg-emerald-50 text-emerald-900 font-bold shadow-md ring-2 ring-emerald-200'
+    if (idx === selected && !isCorrect) return 'border-2 border-rose-500 bg-rose-50 text-rose-700 font-bold'
+    return 'border-[#EDE7E1] bg-[#FAF8F5] text-[#8A8177]'
   }
 
   return (
-    <div className="w-full max-w-xl mx-auto flex flex-col gap-6">
+    <div className="w-full max-w-xl mx-auto flex flex-col gap-6 font-sans">
       {/* Header: progress + combo */}
-      <div className="flex items-center justify-between border-b border-zinc-800 pb-3">
-        <span className="text-[10px] font-black text-zinc-500 uppercase tracking-widest font-mono">
-          SEQUENCE {current + 1}/{questions.length}
+      <div className="flex items-center justify-between border-b border-[#EDE7E1] pb-3">
+        <span className="text-xs font-semibold text-[#7A7167]">
+          Question {current + 1} of {questions.length}
         </span>
-        <div className="flex items-center gap-4">
+        <div className="flex items-center gap-3">
           <AnimatePresence>
             {combo >= 3 && (
               <motion.div
@@ -81,14 +81,14 @@ export default function RapidFireGame({ puzzleData, onComplete }) {
                 initial={{ scale: 0.5, opacity: 0 }}
                 animate={{ scale: 1, opacity: 1 }}
                 exit={{ scale: 0.5, opacity: 0 }}
-                className="flex items-center gap-2 px-3 py-1 bg-orange-500/10 border border-orange-500/30 rounded shadow-[0_0_15px_rgba(249,115,22,0.2)]"
+                className="flex items-center gap-1.5 px-2.5 py-1 bg-orange-100 border border-orange-300 rounded-lg shadow-xs"
               >
-                <Flame className="w-4 h-4 text-orange-500 animate-pulse" />
-                <span className="text-[10px] font-black text-orange-400 uppercase tracking-[0.2em] font-mono">x{comboMultiplier} COMBO</span>
+                <Flame className="w-3.5 h-3.5 text-orange-600 animate-pulse" />
+                <span className="text-xs font-bold text-orange-800">{comboMultiplier}x Streak</span>
               </motion.div>
             )}
           </AnimatePresence>
-          <span className="text-[10px] font-black text-amber-400 uppercase tracking-[0.2em] font-mono">PTS: {score}</span>
+          <span className="text-xs font-bold text-amber-700 bg-amber-50 px-2.5 py-1 rounded-lg border border-amber-200">{score} pts</span>
         </div>
       </div>
 
@@ -100,22 +100,22 @@ export default function RapidFireGame({ puzzleData, onComplete }) {
         key={current}
         initial={{ opacity: 0, y: 15 }}
         animate={{ opacity: 1, y: 0 }}
-        className="bg-[#0c0a09] border border-orange-900/30 text-zinc-100 rounded-xl px-8 py-12 text-center shadow-[0_0_30px_rgba(249,115,22,0.05)] relative overflow-hidden"
+        className="bg-white border-2 border-orange-200 text-[#1E1B16] rounded-2xl px-8 py-8 text-center shadow-xs relative overflow-hidden"
       >
-        <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-orange-500/0 via-orange-500/30 to-orange-500/0" />
-        <div className="flex items-center justify-center gap-2 mb-4 opacity-50">
-          <Zap className="w-4 h-4 text-orange-500" />
-          <span className="text-[10px] font-black uppercase tracking-[0.3em] text-orange-500">Rapid Fire Protocol</span>
+        <div className="absolute top-0 left-0 right-0 h-1.5 bg-gradient-to-r from-orange-400 via-amber-400 to-orange-400" />
+        <div className="flex items-center justify-center gap-1.5 mb-3">
+          <Zap className="w-4 h-4 text-orange-600" />
+          <span className="text-xs font-bold uppercase tracking-wider text-orange-700">Speed Recall</span>
         </div>
-        <p className="text-3xl font-black font-mono tracking-widest uppercase text-transparent bg-clip-text bg-gradient-to-b from-zinc-100 to-zinc-400 leading-tight">
+        <p className="text-2xl md:text-3xl font-bold text-[#1E1B16] leading-snug">
           {q.term}
         </p>
-        <p className="text-[10px] text-zinc-500 mt-4 uppercase tracking-[0.2em] font-bold font-mono">{q.concept}</p>
+        <p className="text-xs text-[#7A7167] mt-2 font-medium">{q.concept}</p>
       </motion.div>
 
       {expired && selected === -1 && (
-        <p className="text-red-500 text-xs text-center font-bold uppercase tracking-widest flex items-center justify-center gap-2">
-          <ShieldAlert className="w-4 h-4" /> TIMEOUT DETECTED
+        <p className="text-rose-600 text-xs text-center font-semibold flex items-center justify-center gap-2">
+          <ShieldAlert className="w-4 h-4" /> Time's up!
         </p>
       )}
 
@@ -127,13 +127,13 @@ export default function RapidFireGame({ puzzleData, onComplete }) {
             onClick={() => handleSelect(idx)}
             animate={selected === idx && !isCorrect ? { x: [-4, 4, -4, 4, 0] } : {}}
             transition={{ duration: 0.3 }}
-            className={`px-5 py-5 rounded-lg border text-sm font-medium text-left transition-all relative overflow-hidden ${getOptionStyle(idx)}`}
+            className={`px-5 py-4 rounded-xl border text-sm font-medium text-left transition-all relative overflow-hidden ${getOptionStyle(idx)}`}
           >
-            {idx === selected && isCorrect && <div className="absolute inset-0 bg-orange-500/5" />}
-            <span className="text-[10px] font-black text-zinc-600 mb-2 block uppercase tracking-widest font-mono">
-              OPTION {String.fromCharCode(65 + idx)}
+            {idx === selected && isCorrect && <div className="absolute inset-0 bg-emerald-500/10" />}
+            <span className="text-[11px] font-semibold text-[#8A8177] mb-1.5 block">
+              Option {String.fromCharCode(65 + idx)}
             </span>
-            <span className="relative z-10 block font-mono">{opt}</span>
+            <span className="relative z-10 block text-sm text-[#1E1B16] leading-relaxed">{opt}</span>
           </motion.button>
         ))}
       </div>
@@ -142,7 +142,7 @@ export default function RapidFireGame({ puzzleData, onComplete }) {
       <div className="flex justify-center mt-2">
         <div className="flex gap-2">
           {results.map((r, i) => (
-            <div key={i} className={`w-1.5 h-1.5 rounded-full shadow-[0_0_5px_currentColor] ${r ? 'bg-orange-500 text-orange-500' : 'bg-red-500 text-red-500'}`} />
+            <div key={i} className={`w-2 h-2 rounded-full ${r ? 'bg-emerald-500 ring-2 ring-emerald-200' : 'bg-rose-500 ring-2 ring-rose-200'}`} />
           ))}
         </div>
       </div>

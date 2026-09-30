@@ -46,7 +46,7 @@ router.post('/generate', async (req, res) => {
         count: count || 10,
         user_id: req.user._id,
       },
-      { headers: aiHeaders(), timeout: 30000 }
+      { headers: aiHeaders(), timeout: 60000 }
     );
 
     logger.info('puzzles.generate', { puzzle_type, topic, user_id: req.user._id });
