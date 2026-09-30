@@ -184,3 +184,11 @@ Date: 2026-09-29
 - Step 3 (Visual / E2E): Built frontend production bundle (0 errors, 2.60s). Ran node-api Jest test suite (17/17 suites, 121/121 tests pass). Playwright landing suite 9/9 passed (35.9s).
 - Step 4/5 (Commit & Push): Committed changes (6f8c330), updated journey.md, pushed cleanly to origin/main.
 - Files: compilerService.js, tutor.py, personality_engine.py, tutor_chain.py, AIReportViewer.jsx, MainLayout.jsx, compilerFallbacks.js, AIWorkspacePage.jsx, DashboardPage.jsx, PuzzleArenePage.jsx, SettingsPage.jsx, sourceStore.js, workspaceStore.js, chat.tsx, tutorStore.ts, journey.md
+
+### 2026-09-30 — configure Vercel deployment, serverless api entry, and production headers
+- Step 1 (Pull/Sync): `git pull origin main` pulled 3 commits (e8047cd, 3837333, f488d2a) cleanly fast-forwarding local branch to latest origin/main.
+- Step 2: Added root monorepo Vercel configuration (`vercel.json`, `package.json`, `.vercelignore`, and `VERCEL_DEPLOYMENT_GUIDE.md`). Created Vercel serverless entry `sourcewise-backend/node-api/api/index.js` and `vercel.json` with dynamic CORS support for `*.vercel.app` and `FRONTEND_ORIGIN` in `node-api/src/index.js`. Added caching and security headers to frontend and dashboard `vercel.json`. Cleaned up SettingsPage appearance tab.
+- Step 3 (Build & Test): Frontend built cleanly (2.54s). Dashboard built cleanly (1.48s) and passed Vitest. Node API passed all 17 Jest test suites (121/121 tests pass).
+- Step 4/5 (Commit & Push): Committed changes (`e01b496`), updated journey.md, pushed cleanly to origin/main.
+- Files: .vercelignore, VERCEL_DEPLOYMENT_GUIDE.md, package.json, vercel.json, sourcewise-backend/node-api/api/index.js, sourcewise-backend/node-api/src/index.js, sourcewise-backend/node-api/vercel.json, sourcewise-dashboard/package-lock.json, sourcewise-dashboard/vercel.json, sourcewise-frontend/.env.example, sourcewise-frontend/src/pages/SettingsPage.jsx, sourcewise-frontend/vercel.json, journey.md
+
