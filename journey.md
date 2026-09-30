@@ -143,3 +143,8 @@ Date: 2026-09-29
 - Did: synced active credentials into node-api/.env and created python-ai/.env; augmented node-api/src/index.js to resolve dotenv across working directories.
 - Test: backend /health status: healthy, database: ok. Auth /auth/login returns 401 on bad credentials instead of connection drop. Headed Playwright landing tests 8/8 passed in 21.2s.
 - Files: node-api/src/index.js, journey.md
+
+### 2026-09-30 — SOP enforcement + visual test 10/10
+- Did: SOP 5-step exec for SOP-adoption prompt. Step1 pull already up-to-date. Step2 prepended full SOP block to journey.md top (mandatory rule). Committed: c17c8d6 docs: prepend SOP 5-step protocol to journey.md top per mandatory rule.
+- Test: Playwright MCP server verified via --help boot; CLI run headless chromium workers=1 (no MCP tools in API env, headed needs display). landing.spec 8/8 pass (6 passed + 2 flaky-retry pass, 2.8m, vite slow goto timeout) + knowledge-upload.spec 2/2 pass 18.8s = 10/10 100%. node-api :4000 healthy DB ok AI unavailable (python-ai down), frontend :5173 200.
+- Files: journey.md
