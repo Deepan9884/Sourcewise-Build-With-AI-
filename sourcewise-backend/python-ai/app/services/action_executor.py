@@ -38,6 +38,7 @@ class ActionExecutor:
         source_ids: List[str],
         user_id: str = "demo_user",
         history: Optional[List[Dict]] = None,
+        personal_context: Optional[Dict[str, Any]] = None,
     ) -> ActionResult:
         """
         Execute the parsed intent and return results.
@@ -47,6 +48,7 @@ class ActionExecutor:
             source_ids: Selected source document IDs
             user_id: Current user ID
             history: Conversation history
+            personal_context: Live user personal state (tasks, schedule, mood, pacing)
             
         Returns:
             ActionResult with type, data, and AI message
@@ -56,6 +58,21 @@ class ActionExecutor:
         
         try:
             match intent.action:
+                case ActionType.LIST_TASKS:
+                    return await self._list_tasks(intent, personal_context, user_id)
+                
+                case ActionType.RECOMMEND_STUDY:
+                    return await self._recommend_study(intent, personal_context, user_id)
+                
+                case ActionType.COMPLETE_TASK:
+                    return await self._complete_task(intent, personal_context, user_id)
+                
+                case ActionType.PACING_STATUS:
+                    return await self._pacing_status(intent, personal_context, user_id)
+                
+                case ActionType.GET_SCHEDULE:
+                    return await self._get_schedule(intent, personal_context, user_id)
+                
                 case ActionType.CREATE_QUIZ:
                     return await self._create_quiz(intent, source_ids, user_id)
                 
@@ -90,7 +107,7 @@ class ActionExecutor:
                     return await self._analyze_source(intent, source_ids, user_id)
                 
                 case ActionType.CHAT | _:
-                    return await self._chat(intent, source_ids, user_id, history)
+                    return await self._chat(intent, source_ids, user_id, history, personal_context)
                     
         except Exception as e:
             print(f"[ActionExecutor] Error executing {intent.action}: {e}")
@@ -107,14 +124,14 @@ class ActionExecutor:
         topic = intent.topic or "general knowledge"
         count = intent.count or 5
         
-        # Get chunks from sources
+        # Get chunks from sources (optimized top_k for faster response)
         chunks = vector_store.query_chunks(
             question=f"quiz on {topic}",
             source_ids=source_ids,
-            top_k=10,
+            top_k=5,
         )
         
-        if not chunks:
+        if not chunks and not source_ids and not topic:
             return ActionResult(
                 type="chat",
                 message="Please select sources first to generate a quiz.",
@@ -214,14 +231,14 @@ Create exactly {count} questions. Be direct and factual."""
         topic = intent.topic or "key concepts"
         count = intent.count or 10
         
-        # Get chunks from sources
+        # Get chunks from sources (optimized top_k for faster response)
         chunks = vector_store.query_chunks(
             question=f"flashcards about {topic}",
             source_ids=source_ids,
-            top_k=10,
+            top_k=5,
         )
         
-        if not chunks:
+        if not chunks and not source_ids and not topic:
             return ActionResult(
                 type="chat",
                 message="Please select sources first to generate flashcards.",
@@ -853,33 +870,287 @@ Provide:
             message=message,
         )
     
-    async def _chat(
-        self, intent: ParsedIntent, source_ids: List[str], user_id: str,
-        history: Optional[List[Dict]] = None
+    async def _list_tasks(
+        self, intent: ParsedIntent, personal_context: Optional[Dict[str, Any]], user_id: str
     ) -> ActionResult:
-        """General chat using RAG"""
-        from app.services.rag_chain import answer as rag_answer
-        
-        question = intent.question or "Hello, can you help me study?"
-        
-        answer_text, citations = await rag_answer(
-            question=question,
-            source_ids=source_ids,
-            history=history or [],
+        """List user's pending and today's tasks with rich markdown formatting and action data"""
+        ctx = personal_context or {}
+        user_info = ctx.get("user") or {}
+        user_name = user_info.get("name") or "Scholar"
+        today_date = ctx.get("today_date") or ""
+        day_of_week = ctx.get("day_of_week") or "Today"
+
+        today_tasks = ctx.get("today_tasks") or []
+        pending_today = [t for t in today_tasks if not t.get("is_completed") and t.get("status") != "completed"]
+        completed_today = [t for t in today_tasks if t.get("is_completed") or t.get("status") == "completed"]
+        overdue_tasks = ctx.get("overdue_tasks") or []
+        all_pending = pending_today + overdue_tasks
+
+        if not today_tasks and not overdue_tasks:
+            active_plans = ctx.get("active_plans") or []
+            subjects = ctx.get("subjects") or []
+
+            message = f"### 📋 Tasks Overview for {user_name} ({day_of_week})\n\n"
+            message += "You don't have any study tasks scheduled for today yet!\n\n"
+            if subjects:
+                message += "**Your enrolled subjects:**\n"
+                for s in subjects[:4]:
+                    exam_note = f" (Exam: {s.get('exam_date')})" if s.get('exam_date') else ""
+                    message += f"- **{s.get('name')}**{exam_note}\n"
+                message += "\n💡 **Next Step:** Head over to **My Plan** to generate your daily timetable or tell me which subject you'd like to study today!"
+            else:
+                message += "💡 **Next Step:** Upload your course materials in **Knowledge Hub** or create a **Study Plan** to generate an automated study timetable."
+
+            return ActionResult(
+                type="tasks",
+                data={
+                    "tasks": [],
+                    "today_count": 0,
+                    "pending_count": 0,
+                    "completed_count": 0,
+                    "overdue_count": 0,
+                },
+                message=message,
+            )
+
+        # Build response with pending tasks
+        message_parts = []
+        message_parts.append(f"### 📋 Today's Study Tasks for {user_name}")
+        message_parts.append(f"*{day_of_week}, {today_date}* • **{len(pending_today)} pending** today ({len(completed_today)} completed)\n")
+
+        if pending_today:
+            message_parts.append("#### ⏳ Pending Tasks Today:")
+            for idx, task in enumerate(pending_today, 1):
+                time_range = f"{task.get('start_time', '')} - {task.get('end_time', '')}" if task.get('start_time') else f"{task.get('duration_minutes', 45)} mins"
+                act_type = task.get("activity_type") or task.get("slot_type") or "study"
+                message_parts.append(f"{idx}. **[{task.get('subject', 'General')}]** `{time_range}`\n   • **Topic:** {task.get('topic', 'Study session')}\n   • *Type:* {act_type.capitalize()}")
+
+        if overdue_tasks:
+            message_parts.append("\n#### ⚠️ Overdue from Previous Days:")
+            for task in overdue_tasks[:4]:
+                message_parts.append(f"- **[{task.get('subject', 'General')}]** {task.get('topic')} *(Scheduled: {task.get('date')})*")
+
+        if completed_today:
+            message_parts.append("\n#### ✅ Completed Today:")
+            for task in completed_today:
+                message_parts.append(f"- ~~**[{task.get('subject', 'General')}]** {task.get('topic')}~~")
+
+        # Recommendation
+        if pending_today:
+            first_task = pending_today[0]
+            message_parts.append(f"\n💡 **Recommendation:** Start with **{first_task.get('subject')} - {first_task.get('topic')}**. Say *\"Mark {first_task.get('topic')} as done\"* when finished or ask me to tutor you on it!")
+        elif overdue_tasks:
+            message_parts.append(f"\n💡 **Recommendation:** Tackle your overdue session in **{overdue_tasks[0].get('subject')}** to keep your streak intact!")
+        else:
+            message_parts.append("\n🎉 **All tasks completed for today!** You're completely on pace. Take a well-deserved break or start a light active-recall sprint.")
+
+        full_message = "\n".join(message_parts)
+
+        return ActionResult(
+            type="tasks",
+            data={
+                "action": "list_tasks",
+                "tasks": all_pending,
+                "pending_tasks": pending_today,
+                "completed_tasks": completed_today,
+                "overdue_tasks": overdue_tasks,
+                "today_total": len(today_tasks),
+                "pending_count": len(all_pending),
+                "completed_count": len(completed_today),
+                "next_task": pending_today[0] if pending_today else None,
+            },
+            message=full_message,
         )
-        
-        # Build message with citations
-        message = answer_text
-        if citations:
-            message += "\n\n**Sources:**\n"
-            for cite in citations:
-                message += f"- [{cite['id']}] {cite['source_name']} (p.{cite['page']})\n"
-        
+
+    async def _recommend_study(
+        self, intent: ParsedIntent, personal_context: Optional[Dict[str, Any]], user_id: str
+    ) -> ActionResult:
+        """Recommend what the user should study next based on their schedule and pacing"""
+        ctx = personal_context or {}
+        today_tasks = ctx.get("today_tasks") or []
+        pending_today = [t for t in today_tasks if not t.get("is_completed") and t.get("status") != "completed"]
+        overdue_tasks = ctx.get("overdue_tasks") or []
+        subjects = ctx.get("subjects") or []
+        mood = ctx.get("mood") or {}
+        energy = mood.get("energy_level", 7)
+
+        if pending_today:
+            target = pending_today[0]
+            energy_tip = "Since your energy is high, dive right into practice questions!" if energy >= 7 else "Take it one step at a time with a relaxed 20-minute read."
+            message = f"🎯 **Recommended Next Task:**\n\n"
+            message += f"**[{target.get('subject', 'Study')}]** {target.get('topic', 'Focus Session')}\n"
+            message += f"- Duration: **{target.get('duration_minutes', 45)} minutes**\n"
+            message += f"- Activity: **{target.get('activity_type', 'practice').capitalize()}**\n\n"
+            message += f"💡 {energy_tip}\n\nWould you like me to explain the core concepts of **{target.get('topic')}** first?"
+            return ActionResult(type="recommendation", data={"task": target}, message=message)
+
+        if overdue_tasks:
+            target = overdue_tasks[0]
+            message = f"⚠️ **Catch-Up Priority:**\n\nYou have an overdue session from {target.get('date')}:\n\n"
+            message += f"**[{target.get('subject')}] {target.get('topic')}** ({target.get('duration_minutes', 45)}m)\n\n"
+            message += "Completing this will protect your streak and keep your exam pacing on target!"
+            return ActionResult(type="recommendation", data={"task": target}, message=message)
+
+        if subjects:
+            highest_urgency = subjects[0]
+            message = f"🌟 You're all caught up on scheduled tasks! If you'd like to get ahead, I recommend reviewing **{highest_urgency.get('name')}**."
+            return ActionResult(type="recommendation", data={"subject": highest_urgency}, message=message)
+
+        return ActionResult(
+            type="recommendation",
+            message="You don't have any pending study tasks right now! You can upload notes to Knowledge Hub or create a study plan to get daily task recommendations.",
+        )
+
+    async def _complete_task(
+        self, intent: ParsedIntent, personal_context: Optional[Dict[str, Any]], user_id: str
+    ) -> ActionResult:
+        """Mark a task or slot as completed"""
+        ctx = personal_context or {}
+        today_tasks = ctx.get("today_tasks") or []
+        overdue_tasks = ctx.get("overdue_tasks") or []
+        all_tasks = today_tasks + overdue_tasks
+        topic_target = (intent.topic or "").lower().strip()
+
+        matched_slot = None
+        if topic_target:
+            for t in all_tasks:
+                slot_topic = (t.get("topic") or "").lower()
+                slot_subj = (t.get("subject") or "").lower()
+                if topic_target in slot_topic or topic_target in slot_subj or slot_topic in topic_target:
+                    matched_slot = t
+                    break
+
+        if not matched_slot and all_tasks:
+            pending = [t for t in all_tasks if not t.get("is_completed")]
+            if len(pending) == 1 or not topic_target:
+                matched_slot = pending[0] if pending else None
+
+        if matched_slot:
+            slot_id = matched_slot.get("id")
+            slot_topic = matched_slot.get("topic") or "Study Task"
+            slot_subj = matched_slot.get("subject") or "General"
+
+            message = f"🎉 **Task Completed!**\n\nI've marked **[{slot_subj}] {slot_topic}** as finished in your study schedule.\n\nGreat focus! Would you like to review what you just learned or move on to the next task?"
+            return ActionResult(
+                type="task_completed",
+                data={
+                    "action": "complete_task",
+                    "slot_id": slot_id,
+                    "topic": slot_topic,
+                    "subject": slot_subj,
+                },
+                message=message,
+            )
+
         return ActionResult(
             type="chat",
-            data={
-                "answer": answer_text,
-                "citations": citations,
-            },
-            message=message,
+            message="I couldn't identify which specific task you wanted to complete. Please mention the topic or subject name (for example: *\"Mark physics revision as done\"*).",
+        )
+
+    async def _pacing_status(
+        self, intent: ParsedIntent, personal_context: Optional[Dict[str, Any]], user_id: str
+    ) -> ActionResult:
+        """Report on user's exam pacing and study progress"""
+        ctx = personal_context or {}
+        pacing = ctx.get("pacing") or {}
+        subjects = ctx.get("subjects") or []
+        active_plans = ctx.get("active_plans") or []
+
+        pct = pacing.get("pacePct", 85)
+        plan_name = active_plans[0].get("name") if active_plans else "General Study Plan"
+
+        status_emoji = "🟢" if pct >= 90 else "🟡" if pct >= 70 else "🔴"
+        status_text = "Ahead of schedule!" if pct >= 100 else "On track!" if pct >= 80 else "Slightly behind schedule."
+
+        message = f"### 📊 Study Pacing & Exam Countdown ({status_emoji} {status_text})\n\n"
+        message += f"**Current Plan:** {plan_name}\n"
+        message += f"**Overall Pacing:** **{pct}%** of expected study hours completed.\n\n"
+
+        if subjects:
+            message += "**Subject Status:**\n"
+            for s in subjects[:5]:
+                exam_date = s.get("exam_date") or "TBD"
+                mastery = s.get("mastery", 0)
+                message += f"- **{s.get('name')}**: {mastery}% mastery (Target: {s.get('target_mastery', 80)}% • Exam: {exam_date})\n"
+
+        message += "\nKeep consistent with today's scheduled blocks to maintain optimal retention!"
+        return ActionResult(type="pacing", data={"pacing": pacing, "subjects": subjects}, message=message)
+
+    async def _get_schedule(
+        self, intent: ParsedIntent, personal_context: Optional[Dict[str, Any]], user_id: str
+    ) -> ActionResult:
+        """Alias for listing schedule slots and timetable"""
+        return await self._list_tasks(intent, personal_context, user_id)
+
+    async def _chat(
+        self, intent: ParsedIntent, source_ids: List[str], user_id: str,
+        history: Optional[List[Dict]] = None,
+        personal_context: Optional[Dict[str, Any]] = None,
+    ) -> ActionResult:
+        """General personal chat using RAG when sources are present, or personal study copilot when not"""
+        question = intent.question or "Hello, can you help me study?"
+
+        # If source_ids are explicitly provided, attempt RAG
+        if source_ids:
+            try:
+                from app.services.rag_chain import answer as rag_answer
+                answer_text, citations = await rag_answer(
+                    question=question,
+                    source_ids=source_ids,
+                    history=history or [],
+                )
+                if answer_text and "couldn't find" not in answer_text.lower():
+                    message = answer_text
+                    if citations:
+                        message += "\n\n**Sources:**\n"
+                        for cite in citations:
+                            message += f"- [{cite['id']}] {cite['source_name']} (p.{cite['page']})\n"
+                    return ActionResult(
+                        type="chat",
+                        data={"answer": answer_text, "citations": citations},
+                        message=message,
+                    )
+            except Exception as e:
+                print(f"[ActionExecutor] RAG attempt error: {e}")
+
+        # Personal AI Assistant direct response with personal context awareness
+        ctx = personal_context or {}
+        user_info = ctx.get("user") or {}
+        user_name = user_info.get("name") or "Scholar"
+        today_date = ctx.get("today_date") or ""
+        day_of_week = ctx.get("day_of_week") or ""
+        tasks_sum = ctx.get("tasks_summary") or {}
+        subjects_list = [s.get("name") for s in ctx.get("subjects") or [] if s.get("name")]
+
+        system_prompt = f"""You are SourceWise Personal AI, an intelligent, empathetic personal study mentor and copilot for {user_name}.
+Current Date: {day_of_week}, {today_date}
+Student Profile:
+- Enrolled subjects: {', '.join(subjects_list) if subjects_list else 'Self-directed study'}
+- Today's pending tasks: {tasks_sum.get('pending_count', 0)}
+- Completed tasks today: {tasks_sum.get('completed_count', 0)}
+
+Instructions:
+1. Always act as the student's personal study companion (not just an isolated search engine).
+2. If asked about tasks, schedules, or study advice, use their personal context directly.
+3. If asked an academic question or concept (e.g. "what is photosynthesis", "explain calculus"), provide a clear, thorough explanation using active recall and clear analogies without demanding documents.
+4. Keep the tone warm, motivating, concise, and academic."""
+
+        messages = [
+            {"role": "system", "content": system_prompt},
+        ]
+        if history:
+            for m in history[-6:]:
+                messages.append({"role": m.get("role", "user"), "content": m.get("content", "")})
+        messages.append({"role": "user", "content": question})
+
+        try:
+            from app.services.llm import raw_chat
+            answer_text = await raw_chat(messages, temperature=0.3)
+        except Exception as e:
+            answer_text = f"I'm here as your personal study companion! You currently have {tasks_sum.get('pending_count', 0)} tasks pending today. How can I help you study?"
+
+        return ActionResult(
+            type="chat",
+            data={"answer": answer_text, "citations": []},
+            message=answer_text,
         )

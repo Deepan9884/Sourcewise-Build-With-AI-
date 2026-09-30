@@ -62,6 +62,31 @@ def _build_enriched_context(chunks: list[dict]) -> str:
     return "\n".join(parts)
 
 
+import re
+
+def _is_greeting_or_chitchat(question: str) -> bool:
+    """Detect if question is a greeting, polite check, or general intro rather than a doc search query."""
+    q = question.strip().lower()
+    q = re.sub(r"[!?.~]+$", "", q).strip()
+    greeting_patterns = [
+        r"^(hi|hello|hey|greetings|howdy|sup|hola|yo)$",
+        r"^(hi|hello|hey|good morning|good afternoon|good evening)( there)?$",
+        r"^(who are you|what can you do|what are your capabilities|can you help me|help me study|how are you)$",
+        r"^(start|begin|let'?s study|ready)$",
+    ]
+    return any(re.match(pat, q, re.IGNORECASE) for pat in greeting_patterns)
+
+GREETING_RESPONSE = (
+    "Hello! \U0001f44b I'm your SourceWise study assistant.\n\n"
+    "I'm ready to help you study your materials! You can:\n"
+    "- **Ask questions** about your uploaded documents\n"
+    "- **Generate practice quizzes** or **flashcards**\n"
+    "- **Get concept explanations** or **summaries**\n"
+    "- **Check your study plan and pending tasks**\n\n"
+    "What would you like to work on today?"
+)
+
+
 async def answer(
     question: str,
     source_ids: list[str],
@@ -85,6 +110,14 @@ async def answer_with_usage(
     usage: {provider, model, prompt_tokens, completion_tokens, total_tokens,
             context_chunks, compression_applied, compression_ratio, ...}
     """
+    # 0. Check for friendly greeting / chitchat
+    if _is_greeting_or_chitchat(question):
+        return (
+            GREETING_RESPONSE,
+            [],
+            {"provider": settings.LLM_PROVIDER, "prompt_tokens": 0, "completion_tokens": 0, "total_tokens": 0, "context_chunks": 0},
+        )
+
     # 1. Query expansion for better retrieval
     queries = await _expand_query(question)
 
@@ -103,39 +136,31 @@ async def answer_with_usage(
     unique_chunks.sort(key=lambda x: x["score"], reverse=True)
     top_chunks = unique_chunks[:settings.RERANK_TOP_K]
 
+    advisory_prefix = ""
     if not top_chunks:
-        return (
-            "I couldn't find any relevant information in your selected sources. "
-            "Please make sure you have uploaded and selected the correct documents.",
-            [],
-            {"provider": settings.LLM_PROVIDER, "prompt_tokens": 0, "completion_tokens": 0, "total_tokens": 0, "context_chunks": 0},
-        )
+        advisory_prefix = "*(Note: No direct matches found in your selected documents. Here is an answer based on general knowledge:)*\n\n"
+        context_chunks = []
+        comp_stats = {"compression_applied": False, "compression_ratio": 1.0, "compressed_tokens": 0}
+    else:
+        best_score = top_chunks[0]["score"]
+        if best_score < settings.MIN_RELEVANCE_THRESHOLD:
+            advisory_prefix = f"*(Note: Limited direct match in selected documents [relevance: {best_score:.0%}]. Here is a comprehensive answer:)*\n\n"
 
-    # 4. Check confidence threshold
-    best_score = top_chunks[0]["score"]
-    if best_score < settings.MIN_RELEVANCE_THRESHOLD:
-        return (
-            f"I found some related content, but I'm not confident it directly answers your question "
-            f"(relevance score: {best_score:.0%}). Here's what I found that's closest:\n\n"
-            f"Try rephrasing your question or selecting different sources for better results.",
-            [],
-            {"provider": settings.LLM_PROVIDER, "prompt_tokens": 0, "completion_tokens": 0, "total_tokens": 0, "context_chunks": len(top_chunks)},
+        # 5. Compress context to reduce tokens sent to Gemini/Grok
+        compressed, comp_stats = compress_chunks(
+            top_chunks,
+            max_chunks=settings.MAX_CONTEXT_CHUNKS,
+            max_chunk_tokens=settings.MAX_CHUNK_TOKENS,
+            min_score=settings.MIN_RELEVANCE_THRESHOLD,
         )
-
-    # 5. Compress context to reduce tokens sent to Gemini/Grok
-    compressed, comp_stats = compress_chunks(
-        top_chunks,
-        max_chunks=settings.MAX_CONTEXT_CHUNKS,
-        max_chunk_tokens=settings.MAX_CHUNK_TOKENS,
-        min_score=settings.MIN_RELEVANCE_THRESHOLD,
-    )
-    context_chunks = compressed or top_chunks[:settings.MAX_CONTEXT_CHUNKS]
+        context_chunks = compressed or top_chunks[:settings.MAX_CONTEXT_CHUNKS]
 
     answer_text, usage = await llm_service.chat_with_usage(
         question=question,
         context_chunks=context_chunks,
         history=history or [],
     )
+    answer_text = advisory_prefix + answer_text
     usage["context_chunks"] = len(context_chunks)
     usage["compression_applied"] = comp_stats["compression_applied"]
     usage["compression_ratio"] = comp_stats["compression_ratio"]
@@ -180,6 +205,17 @@ async def stream_answer_with_usage(
     history: list[dict] = None,
 ) -> AsyncIterator[dict]:
     """Streaming RAG pass with usage event before done."""
+    # 0. Check for friendly greeting / chitchat
+    if _is_greeting_or_chitchat(question):
+        yield {"type": "citations", "data": []}
+        yield {"type": "token", "data": GREETING_RESPONSE}
+        yield {
+            "type": "usage",
+            "data": {"provider": settings.LLM_PROVIDER, "prompt_tokens": 0, "completion_tokens": 0, "total_tokens": 0, "context_chunks": 0},
+        }
+        yield {"type": "done"}
+        return
+
     # 1. Query expansion
     queries = await _expand_query(question)
 
@@ -197,24 +233,30 @@ async def stream_answer_with_usage(
     unique_chunks.sort(key=lambda x: x["score"], reverse=True)
     top_chunks = unique_chunks[:settings.RERANK_TOP_K]
 
+    advisory_prefix = ""
     if not top_chunks:
+        yield {"type": "citations", "data": []}
         yield {
             "type": "token",
-            "data": "I couldn't find any relevant information in your selected sources. "
-                    "Please make sure you have uploaded and selected the correct documents.",
+            "data": "*(Note: No direct matches found in your selected documents. Here is an answer based on general knowledge:)*\n\n",
         }
+        try:
+            async for event in llm_service.stream_chat_with_usage(
+                question=question,
+                context_chunks=[],
+                history=history or [],
+            ):
+                yield event
+        except Exception as e:
+            yield {"type": "error", "data": str(e)}
+            return
         yield {"type": "done"}
         return
 
     # 3. Check confidence
     best_score = top_chunks[0]["score"]
     if best_score < settings.MIN_RELEVANCE_THRESHOLD:
-        yield {
-            "type": "token",
-            "data": f"I found some related content, but I'm not confident it directly answers your question (relevance: {best_score:.0%}). Try rephrasing or selecting different sources.",
-        }
-        yield {"type": "done"}
-        return
+        advisory_prefix = f"*(Note: Limited direct match in selected documents [relevance: {best_score:.0%}]. Here is a comprehensive answer:)*\n\n"
 
     # 4. Compress context
     compressed, comp_stats = compress_chunks(
@@ -238,6 +280,8 @@ async def stream_answer_with_usage(
         for i, c in enumerate(context_chunks[:5])
     ]
     yield {"type": "citations", "data": citations}
+    if advisory_prefix:
+        yield {"type": "token", "data": advisory_prefix}
 
     # 6. Stream tokens from provider (token-budgeted)
     try:

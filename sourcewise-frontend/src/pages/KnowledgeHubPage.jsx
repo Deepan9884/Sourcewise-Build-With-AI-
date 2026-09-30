@@ -5,14 +5,14 @@ import { motion, AnimatePresence } from 'framer-motion'
 import {
   FileUp, Trash2, Loader2, AlertCircle, MessageCircle,
   FlaskConical, Link2, Database, Layers, Brain,
-  FileText, Check, Plus, Sparkles
+  FileText, Check, Plus, BookOpen
 } from 'lucide-react'
 import { useSourceStore } from '../store/sourceStore'
 import { useAuthStore } from '../store/authStore'
+import { useChatStore } from '../store/chatStore'
 import { ingestDocument, deleteSourceVectors } from '../lib/chatApi'
 import { synthesizeCrossSource } from '../lib/agentApi'
 import SourceSlideOver from '../components/knowledge/SourceSlideOver'
-import GlobalChatPanel from '../components/knowledge/GlobalChatPanel'
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:4000'
 
@@ -78,12 +78,11 @@ export default function KnowledgeHubPage() {
   const navigate = useNavigate()
   const { uploadedSources, activeSourceIds, addSource, removeSource, toggleActiveSource, updateSourceStatus } = useSourceStore()
   const { user, accessToken } = useAuthStore()
+  const { openChat } = useChatStore()
 
   const [uploadError, setUploadError] = useState(null)
   const [openSource, setOpenSource] = useState(null)
   const [selected, setSelected] = useState([])
-  const [chatOpen, setChatOpen] = useState(false)
-  const [chatSeed, setChatSeed] = useState('')
   const [synthResult, setSynthResult] = useState(null)
   const [synthWorking, setSynthWorking] = useState(false)
 
@@ -108,9 +107,7 @@ export default function KnowledgeHubPage() {
   useEffect(() => {
     const st = location.state
     if (st?.subject || st?.topic) {
-      // eslint-disable-next-line react-hooks/set-state-in-effect
-      setChatSeed(`Let's study ${st.topic || st.subject}${st.subject && st.topic ? ` (${st.subject})` : ''}.`)
-      setChatOpen(true)
+      openChat(`Let's study ${st.topic || st.subject}${st.subject && st.topic ? ` (${st.subject})` : ''}.`)
       navigate(location.pathname, { replace: true })
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -247,7 +244,7 @@ export default function KnowledgeHubPage() {
           <motion.button
             whileHover={{ y: -2, scale: 1.02 }}
             whileTap={{ scale: 0.98 }}
-            onClick={() => setChatOpen(true)}
+            onClick={() => openChat()}
             className="sw-btn-secondary !h-10 !text-[13px] relative shadow-2xs"
           >
             <MessageCircle className="w-3.5 h-3.5 text-coral" /> Chat {chatIds.length ? `(${chatIds.length})` : ''}
@@ -385,154 +382,124 @@ export default function KnowledgeHubPage() {
                 animate="show"
                 whileHover={{ y: -3, transition: { duration: 0.2 } }}
                 data-testid={`source-panel-${s.id}`}
-                className={`relative flex flex-col justify-between p-4.5 rounded-2xl bg-white border transition-all duration-200 group overflow-hidden ${
+                className={`relative flex flex-col justify-between p-5 rounded-2xl transition-all duration-200 group overflow-hidden border ${
                   isSel
-                    ? 'border-coral ring-2 ring-coral/25 shadow-card bg-gradient-to-b from-white via-white to-coral-soft/10'
+                    ? 'border-coral ring-2 ring-coral/20 bg-gradient-to-b from-white via-white to-coral-soft/20 shadow-card'
                     : isActive
-                      ? 'border-teal/50 shadow-xs ring-1 ring-teal/20'
-                      : 'border-line shadow-xs hover:border-coral/40 hover:shadow-card'
+                      ? 'border-teal/40 ring-1 ring-teal/20 bg-gradient-to-b from-white via-white to-teal-soft/10 shadow-[0_4px_16px_-4px_rgba(15,118,110,0.1)]'
+                      : 'bg-white border-line/90 shadow-2xs hover:border-stone-300 hover:shadow-card'
                 }`}
               >
-                {/* Subtle top indicator for active AI context or selection */}
+                {/* Active in AI top glowing indicator bar */}
                 {isActive && (
-                  <div className="absolute top-0 left-0 right-0 h-0.5 bg-gradient-to-r from-teal via-teal/70 to-teal/20" />
+                  <div className="absolute top-0 inset-x-0 h-[2px] bg-gradient-to-r from-teal via-teal/70 to-teal/20" />
                 )}
 
-                {/* Card Top Section: Selection + Icon + Title + Delete */}
+                {/* Top Section */}
                 <div>
-                  <div className="flex items-start gap-3">
-                    {/* Custom Accessible Checkbox */}
-                    <button
-                      type="button"
-                      onClick={(e) => {
-                        e.stopPropagation()
-                        toggleSelect(s.id)
-                      }}
-                      aria-label={`Select ${s.name}`}
-                      title={isSel ? 'Deselect source' : 'Select for multi-source actions'}
-                      className={`w-5 h-5 rounded-md border flex items-center justify-center transition-all cursor-pointer shrink-0 mt-0.5 ${
-                        isSel
-                          ? 'bg-coral border-coral text-white shadow-2xs'
-                          : 'border-stone-300 hover:border-coral bg-white group-hover:border-stone-400'
-                      }`}
-                    >
-                      {isSel && <Check className="w-3.5 h-3.5 stroke-[3]" />}
-                    </button>
-
-                    {/* Document Header & Details Clickable Target */}
+                  {/* Top Bar: Icon on Left | Status Pill & Actions on Right */}
+                  <div className="flex items-center justify-between gap-2.5">
+                    {/* File Icon Badge */}
                     <div
                       onClick={() => setOpenSource(s)}
-                      className="flex-1 min-w-0 cursor-pointer group/title"
+                      className={`w-10 h-10 rounded-xl border flex items-center justify-center shrink-0 shadow-2xs cursor-pointer transition-transform duration-200 group-hover:scale-105 ${typeMeta.badgeClass}`}
                     >
-                      <div className="flex items-start gap-2.5">
-                        {/* File Format Badge */}
-                        <div
-                          className={`w-9 h-9 rounded-xl border flex items-center justify-center shrink-0 shadow-2xs transition-transform duration-200 group-hover/title:scale-105 ${typeMeta.badgeClass}`}
-                        >
-                          <FileText className={`w-4 h-4 ${typeMeta.iconClass}`} />
-                        </div>
-
-                        {/* Title & Metadata */}
-                        <div className="min-w-0 flex-1">
-                          <h3
-                            className="font-bold text-ink text-sm leading-snug line-clamp-2 group-hover/title:text-coral transition-colors"
-                            title={s.name}
-                          >
-                            {s.name}
-                          </h3>
-
-                          <div className="flex flex-wrap items-center gap-1.5 mt-1.5">
-                            <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-extrabold uppercase tracking-wide bg-stone-100 text-stone-600">
-                              {typeMeta.label}
-                            </span>
-                            <span className="inline-flex items-center gap-1 text-[11px] text-faint">
-                              <Layers className="w-3 h-3 text-stone-400" />
-                              {s.chunksIndexed ?? s.chunks_indexed ?? 0} chunks
-                            </span>
-                            {fileSize && (
-                              <>
-                                <span className="text-stone-300 text-xs">·</span>
-                                <span className="text-[11px] text-faint">{fileSize}</span>
-                              </>
-                            )}
-                          </div>
-                        </div>
-                      </div>
-
-                      {/* Status Tag */}
-                      <div className="mt-3">
-                        {s.status === 'ready' ? (
-                          <span className="inline-flex items-center gap-1.5 text-[11px] font-semibold text-teal bg-teal-soft/80 border border-teal/20 px-2.5 py-0.5 rounded-full shadow-2xs">
-                            <span className="relative flex h-1.5 w-1.5">
-                              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-teal opacity-75" />
-                              <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-teal" />
-                            </span>
-                            Ready for AI
-                          </span>
-                        ) : s.status === 'error' ? (
-                          <span className="inline-flex items-center gap-1.5 text-[11px] font-semibold text-rose-700 bg-rose-50 border border-rose-200/70 px-2.5 py-0.5 rounded-full shadow-2xs">
-                            <AlertCircle className="w-3.5 h-3.5 text-rose-500" />
-                            Indexing failed
-                          </span>
-                        ) : (
-                          <span className="inline-flex items-center gap-1.5 text-[11px] font-semibold text-amberbrand bg-amberbrand-soft border border-amberbrand/20 px-2.5 py-0.5 rounded-full shadow-2xs">
-                            <Loader2 className="w-3 h-3 animate-spin text-amberbrand" />
-                            {s.status === 'uploading' ? 'Uploading…' : 'Processing…'}
-                          </span>
-                        )}
-                      </div>
+                      <FileText className={`w-5 h-5 ${typeMeta.iconClass}`} />
                     </div>
 
-                    {/* Delete action */}
-                    <motion.button
-                      type="button"
-                      whileHover={{ scale: 1.1 }}
-                      whileTap={{ scale: 0.92 }}
-                      onClick={(e) => handleDelete(s, e)}
-                      aria-label={`Delete ${s.name}`}
-                      title={`Delete ${s.name}`}
-                      className="p-1.5 text-stone-400 hover:text-rose-500 rounded-lg hover:bg-rose-50 transition-colors shrink-0 cursor-pointer"
+                    {/* Header Controls Cluster: Status Tag + Checkbox + Delete */}
+                    <div className="flex items-center gap-1.5 shrink-0">
+                      {/* Status Tag */}
+                      {s.status === 'ready' ? (
+                        <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-teal bg-teal-soft/70 border border-teal/20 px-2 py-0.5 rounded-full">
+                          <span className="w-1.5 h-1.5 rounded-full bg-teal animate-pulse" />
+                          Ready
+                        </span>
+                      ) : s.status === 'error' ? (
+                        <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-rose-700 bg-rose-50 border border-rose-200/80 px-2 py-0.5 rounded-full">
+                          <AlertCircle className="w-3 h-3 text-rose-500" />
+                          Failed
+                        </span>
+                      ) : (
+                        <span className="inline-flex items-center gap-1.5 text-[11px] font-semibold text-amberbrand bg-amberbrand-soft border border-amberbrand/20 px-2.5 py-0.5 rounded-full animate-pulse">
+                          <Loader2 className="w-3 h-3 animate-spin text-amberbrand" />
+                          {s.status === 'uploading' ? 'Uploading…' : 'Processing…'}
+                        </span>
+                      )}
+
+                      {/* Custom Accessible Checkbox */}
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          toggleSelect(s.id)
+                        }}
+                        aria-label={`Select ${s.name}`}
+                        title={isSel ? 'Deselect source' : 'Select for multi-source actions'}
+                        className={`w-6 h-6 rounded-lg border flex items-center justify-center transition-all cursor-pointer ${
+                          isSel
+                            ? 'bg-coral border-coral text-white shadow-2xs'
+                            : 'border-stone-200 hover:border-coral bg-stone-50/70 hover:bg-white text-transparent'
+                        }`}
+                      >
+                        <Check className={`w-3.5 h-3.5 stroke-[2.5] transition-opacity ${isSel ? 'opacity-100' : 'opacity-0'}`} />
+                      </button>
+
+                      {/* Delete action */}
+                      <motion.button
+                        type="button"
+                        whileHover={{ scale: 1.1 }}
+                        whileTap={{ scale: 0.92 }}
+                        onClick={(e) => handleDelete(s, e)}
+                        aria-label={`Delete ${s.name}`}
+                        title={`Delete ${s.name}`}
+                        className="p-1 text-stone-400 hover:text-rose-500 rounded-lg hover:bg-rose-50 transition-colors cursor-pointer"
+                      >
+                        <Trash2 className="w-4 h-4 pointer-events-none" />
+                      </motion.button>
+                    </div>
+                  </div>
+
+                  {/* Document Title & Metadata */}
+                  <div
+                    onClick={() => setOpenSource(s)}
+                    className="mt-3.5 cursor-pointer group/title"
+                  >
+                    <h3
+                      className="font-semibold text-ink text-sm leading-snug line-clamp-2 group-hover/title:text-coral transition-colors tracking-tight"
+                      title={s.name}
                     >
-                      <Trash2 className="w-4 h-4 pointer-events-none" />
-                    </motion.button>
+                      {s.name}
+                    </h3>
+
+                    <div className="flex flex-wrap items-center gap-1.5 mt-2">
+                      <span className="inline-flex items-center px-1.5 py-0.5 rounded-md text-[10px] font-bold uppercase tracking-wider bg-stone-100 text-stone-600 border border-stone-200/50">
+                        {typeMeta.label}
+                      </span>
+                      <span className="inline-flex items-center gap-1 text-[11px] text-faint font-medium">
+                        <Layers className="w-3 h-3 text-stone-400" />
+                        {s.chunksIndexed ?? s.chunks_indexed ?? 0} chunks
+                      </span>
+                      {fileSize && (
+                        <>
+                          <span className="text-stone-300 text-xs">·</span>
+                          <span className="text-[11px] text-faint font-medium">{fileSize}</span>
+                        </>
+                      )}
+                    </div>
                   </div>
                 </div>
 
                 {/* Bottom Action Toolbar */}
-                <div className="flex items-center gap-2 mt-4 pt-3 border-t border-line/70">
+                <div className="flex items-center gap-2 mt-4 pt-3.5 border-t border-line/80">
                   <motion.button
-                    whileHover={{ scale: 1.02 }}
+                    whileHover={{ scale: 1.01 }}
                     whileTap={{ scale: 0.98 }}
                     onClick={() => setOpenSource(s)}
-                    className="flex-1 h-9 px-3 rounded-xl bg-ink hover:bg-stone-800 text-white text-xs font-semibold flex items-center justify-center gap-1.5 shadow-2xs transition-colors cursor-pointer"
+                    className="flex-1 h-9 px-4 rounded-xl bg-coral hover:bg-coral-dark text-white text-xs font-semibold flex items-center justify-center gap-1.5 shadow-2xs hover:shadow-warm transition-all cursor-pointer"
                   >
-                    <Sparkles className="w-3.5 h-3.5 text-coral" />
+                    <BookOpen className="w-3.5 h-3.5 text-white/90" />
                     <span>Open Studio</span>
-                  </motion.button>
-
-                  <motion.button
-                    whileHover={{ scale: 1.02 }}
-                    whileTap={{ scale: 0.98 }}
-                    onClick={() => toggleActiveSource(s.id)}
-                    aria-label={`${isActive ? 'Remove from' : 'Add to'} AI context`}
-                    title={isActive ? 'Active in AI Chat context (click to remove)' : 'Include in AI Chat context'}
-                    className={`h-9 px-3 rounded-xl text-xs font-semibold border transition-all flex items-center gap-1.5 shadow-2xs cursor-pointer ${
-                      isActive
-                        ? 'bg-teal-50 text-teal-700 border-teal-200 hover:bg-teal-100'
-                        : 'border-line text-body bg-white hover:border-teal/50 hover:text-teal'
-                    }`}
-                  >
-                    {isActive ? (
-                      <>
-                        <span className="w-1.5 h-1.5 rounded-full bg-teal animate-pulse" />
-                        <span>In AI</span>
-                      </>
-                    ) : (
-                      <>
-                        <Plus className="w-3.5 h-3.5 text-faint" />
-                        <span>Add to AI</span>
-                      </>
-                    )}
                   </motion.button>
 
                   <motion.button
@@ -541,7 +508,7 @@ export default function KnowledgeHubPage() {
                     onClick={() => setOpenSource(s)}
                     aria-label={`Quiz and study on ${s.name}`}
                     title="Practice & Quiz (in detail panel)"
-                    className="h-9 w-9 rounded-xl border border-line bg-stone-50/80 hover:bg-coral-soft hover:border-coral/40 text-faint hover:text-coral-deep flex items-center justify-center transition-colors shadow-2xs shrink-0 cursor-pointer"
+                    className="h-9 w-9 rounded-xl border border-stone-200 bg-stone-50/70 hover:bg-coral-soft/60 hover:border-coral/40 text-stone-500 hover:text-coral-deep flex items-center justify-center transition-all shadow-2xs shrink-0 cursor-pointer"
                   >
                     <FlaskConical className="w-3.5 h-3.5" />
                   </motion.button>
@@ -560,20 +527,11 @@ export default function KnowledgeHubPage() {
             onClose={() => setOpenSource(null)}
             onOpenChat={(src) => {
               if (!activeSourceIds.includes(src.id)) toggleActiveSource(src.id)
-              setChatSeed(`Let's work on "${src.name}".`)
-              setChatOpen(true)
+              openChat(`Let's work on "${src.name}".`)
             }}
           />
         )}
       </AnimatePresence>
-
-      <GlobalChatPanel
-        open={chatOpen}
-        onClose={() => { setChatOpen(false); setChatSeed('') }}
-        sourceIds={chatIds}
-        contextLabel={chatIds.length ? `${chatIds.length} source${chatIds.length === 1 ? '' : 's'} in context` : 'No sources selected'}
-        seed={chatSeed}
-      />
     </div>
   )
 }

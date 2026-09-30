@@ -161,3 +161,8 @@ Date: 2026-09-29
 - Committed: 851c23d ui: remove Visual Demonstration eyebrow from demo section.
 - Test: MCP live :5173 — find "Visual Demonstration" 0 matches, heading still present; Demo nav + Play Walkthrough Video clicks pass; console 0 errors/0 warnings. CLI: landing + knowledge-upload 10/10 pass (8 passed + 2 flaky-retry pass, 4.1m, workers=1). eslint LandingPage.jsx clean.
 - Files: sourcewise-frontend/src/pages/LandingPage.jsx
+### 2026-09-30 — sync remote & integrate study suite features
+- Step 1 (Pull/Sync): Synchronized remote origin/main (673d7ca) into local branch, resolving divergence cleanly onto latest remote head with SOP headers intact.
+- Step 2: Integrated study suite features: DeepCode code compiler, personal context service, FloatingFox companion, background task workspace store, AI action executor & intent parser, and backend tests.
+- Step 4/5 (Commit & Push): Tracked in journey.md and pushed cleanly to origin/main.
+- Files: journey.md

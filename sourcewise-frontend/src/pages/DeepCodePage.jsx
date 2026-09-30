@@ -1,26 +1,27 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   Play,
-  Sparkles,
+  Bot,
   Columns2,
   Rows2,
   Code2,
   CheckCircle2,
   AlertTriangle,
-  RotateCcw,
-  Layers,
   ChevronDown,
+  Check,
 } from 'lucide-react';
 import CodeEditor from '../components/compiler/CodeEditor';
 import TerminalOutput from '../components/compiler/TerminalOutput';
+import LanguageIcon from '../components/compiler/LanguageIcon';
 import { executeCode, getLanguages, getAIAssist } from '../lib/compilerApi';
+import { inspectCodeOffline } from '../lib/compilerFallbacks';
 
 export default function DeepCodePage() {
   const [languages, setLanguages] = useState({});
-  const [templates, setTemplates] = useState({});
   const [selectedLanguage, setSelectedLanguage] = useState('python');
-  const [selectedTemplate, setSelectedTemplate] = useState('default');
+  const [isLangOpen, setIsLangOpen] = useState(false);
+  const langMenuRef = useRef(null);
   const [code, setCode] = useState('');
   const [stdin, setStdin] = useState('');
   const [outputResult, setOutputResult] = useState(null);
@@ -29,6 +30,26 @@ export default function DeepCodePage() {
   const [aiAnalysis, setAiAnalysis] = useState('');
   const [splitLayout, setSplitLayout] = useState('horizontal'); // 'horizontal' (side-by-side) or 'vertical' (stacked)
   const [toastMsg, setToastMsg] = useState(null);
+
+  // Close dropdown on click outside or escape key
+  useEffect(() => {
+    function handleClickOutside(event) {
+      if (langMenuRef.current && !langMenuRef.current.contains(event.target)) {
+        setIsLangOpen(false);
+      }
+    }
+    function handleKeyDown(event) {
+      if (event.key === 'Escape') {
+        setIsLangOpen(false);
+      }
+    }
+    document.addEventListener('mousedown', handleClickOutside);
+    document.addEventListener('keydown', handleKeyDown);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+      document.removeEventListener('keydown', handleKeyDown);
+    };
+  }, []);
 
   // Show transient toast
   const showToast = (msg, type = 'info') => {
@@ -43,7 +64,6 @@ export default function DeepCodePage() {
         const data = await getLanguages();
         if (data?.languages) {
           setLanguages(data.languages);
-          setTemplates(data.templates || {});
 
           // Initial code setup from local storage or defaults
           const savedCode = localStorage.getItem(`deepcode_code_python`);
@@ -58,10 +78,9 @@ export default function DeepCodePage() {
     initLanguages();
   }, []);
 
-  // When language changes: load saved code or default template for that language
+  // When language changes: load saved code or default code for that language
   const handleLanguageChange = (langKey) => {
     setSelectedLanguage(langKey);
-    setSelectedTemplate('default');
 
     const saved = localStorage.getItem(`deepcode_code_${langKey}`);
     const defaultTemplate = languages[langKey]?.defaultCode || '';
@@ -86,29 +105,11 @@ export default function DeepCodePage() {
     localStorage.setItem(`deepcode_stdin_${selectedLanguage}`, newStdin);
   };
 
-  // Apply template preset
-  const handleTemplateSelect = (templateKey) => {
-    setSelectedTemplate(templateKey);
-    if (templateKey === 'default') {
-      const defaultTemplate = languages[selectedLanguage]?.defaultCode || '';
-      handleCodeChange(defaultTemplate);
-      return;
-    }
-
-    const tpl = templates[templateKey];
-    if (tpl && tpl[selectedLanguage]) {
-      handleCodeChange(tpl[selectedLanguage]);
-      showToast(`Loaded ${tpl.name}`, 'success');
-    } else {
-      showToast(`Preset not available in ${selectedLanguage}`, 'info');
-    }
-  };
-
   // Reset to default language code
   const handleResetCode = () => {
     const defaultTemplate = languages[selectedLanguage]?.defaultCode || '';
     handleCodeChange(defaultTemplate);
-    showToast('Code reset to starter template', 'info');
+    showToast('Code reset to default', 'info');
   };
 
   // Execute Code action
@@ -151,8 +152,8 @@ export default function DeepCodePage() {
   // AI Assist trigger
   const handleAiAction = async (action) => {
     setAiLoading(true);
+    const errOut = [outputResult?.compiler_error, outputResult?.stderr].filter(Boolean).join('\n');
     try {
-      const errOut = [outputResult?.compiler_error, outputResult?.stderr].filter(Boolean).join('\n');
       const res = await getAIAssist({
         action,
         language: selectedLanguage,
@@ -162,8 +163,15 @@ export default function DeepCodePage() {
       setAiAnalysis(res.analysis);
       showToast(`AI ${action} completed`, 'success');
     } catch (err) {
-      setAiAnalysis(`AI Inspector error: ${err.message}`);
-      showToast('AI analysis request failed', 'error');
+      // Resilient fallback: Run local diagnostic inspector if network or server fails
+      const fallbackReport = inspectCodeOffline({
+        action,
+        language: selectedLanguage,
+        code,
+        error_output: errOut,
+      });
+      setAiAnalysis(fallbackReport);
+      showToast('Diagnostic completed (Fast/Offline mode)', 'info');
     } finally {
       setAiLoading(false);
     }
@@ -217,7 +225,7 @@ export default function DeepCodePage() {
       </AnimatePresence>
 
       {/* Top Banner & Control Deck */}
-      <div className="bg-white/80 backdrop-blur-xl border border-[#EDE7E1] rounded-3xl p-4 shadow-sm flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+      <div className="relative z-30 bg-white/80 backdrop-blur-xl border border-[#EDE7E1] rounded-3xl p-4 shadow-sm flex flex-col lg:flex-row lg:items-center justify-between gap-4">
         {/* Left: Branding & Language Selector */}
         <div className="flex flex-wrap items-center gap-3">
           <div className="flex items-center space-x-2.5 pr-2">
@@ -239,37 +247,76 @@ export default function DeepCodePage() {
             </div>
           </div>
 
-          {/* Language Selector Dropdown */}
-          <div className="relative">
-            <select
-              value={selectedLanguage}
-              onChange={(e) => handleLanguageChange(e.target.value)}
-              className="appearance-none pl-3.5 pr-9 py-2 bg-[#F9F7F5] hover:bg-[#F2ECE6] border border-[#E4DDD6] rounded-xl text-xs font-semibold text-[#2C2520] outline-none focus:ring-2 focus:ring-indigo-500/20 cursor-pointer transition-colors shadow-2xs"
+          {/* Custom Professional Language Selector Dropdown */}
+          <div className="relative z-40" ref={langMenuRef}>
+            <button
+              type="button"
+              onClick={() => setIsLangOpen(!isLangOpen)}
+              className="flex items-center space-x-2.5 pl-3.5 pr-3 py-2 bg-[#F9F7F5] hover:bg-[#F2ECE6] border border-[#E4DDD6] rounded-xl text-xs font-semibold text-[#2C2520] outline-none focus:ring-2 focus:ring-indigo-500/20 cursor-pointer transition-colors shadow-2xs"
+              aria-haspopup="listbox"
+              aria-expanded={isLangOpen}
             >
-              {Object.values(languages).map((lang) => (
-                <option key={lang.id} value={lang.id}>
-                  {lang.icon} {lang.name} ({lang.version})
-                </option>
-              ))}
-            </select>
-            <ChevronDown className="w-3.5 h-3.5 text-gray-500 absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none" />
-          </div>
+              <LanguageIcon lang={selectedLanguage} className="w-4 h-4 shrink-0" />
+              <span>{activeLangConfig.name}</span>
+              <span className="text-[11px] text-[#7C726A] font-normal hidden sm:inline">
+                ({activeLangConfig.version})
+              </span>
+              <ChevronDown
+                className={`w-3.5 h-3.5 text-gray-500 transition-transform duration-200 ${
+                  isLangOpen ? 'rotate-180' : ''
+                }`}
+              />
+            </button>
 
-          {/* Algorithm Template Dropdown */}
-          <div className="relative hidden sm:block">
-            <select
-              value={selectedTemplate}
-              onChange={(e) => handleTemplateSelect(e.target.value)}
-              className="appearance-none pl-3.5 pr-8 py-2 bg-[#F9F7F5] hover:bg-[#F2ECE6] border border-[#E4DDD6] rounded-xl text-xs font-medium text-[#4A433D] outline-none focus:ring-2 focus:ring-indigo-500/20 cursor-pointer transition-colors"
-            >
-              <option value="default">Starter Template</option>
-              {Object.entries(templates).map(([key, tpl]) => (
-                <option key={key} value={key}>
-                  Preset: {tpl.name}
-                </option>
-              ))}
-            </select>
-            <ChevronDown className="w-3.5 h-3.5 text-gray-500 absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none" />
+            <AnimatePresence>
+              {isLangOpen && (
+                <motion.div
+                  initial={{ opacity: 0, y: 6, scale: 0.98 }}
+                  animate={{ opacity: 1, y: 0, scale: 1 }}
+                  exit={{ opacity: 0, y: 4, scale: 0.98 }}
+                  transition={{ duration: 0.15 }}
+                  className="absolute left-0 top-full mt-2 w-72 bg-white border border-[#EDE7E1] rounded-2xl shadow-2xl p-1.5 z-50 ring-1 ring-black/10"
+                  role="listbox"
+                >
+                  <div className="px-2.5 py-1.5 text-[10px] font-bold text-[#8C827A] uppercase tracking-wider font-sans">
+                    Select Language
+                  </div>
+                  <div className="max-h-80 overflow-y-auto space-y-0.5 overscroll-contain">
+                    {Object.values(languages).map((lang) => {
+                      const isSelected = lang.id === selectedLanguage;
+                      return (
+                        <button
+                          key={lang.id}
+                          type="button"
+                          onClick={() => {
+                            handleLanguageChange(lang.id);
+                            setIsLangOpen(false);
+                          }}
+                          className={`w-full flex items-center justify-between px-2.5 py-2 rounded-xl text-xs transition-colors font-sans ${
+                            isSelected
+                              ? 'bg-[#F4EFEA] text-[#1E1B16] font-bold'
+                              : 'text-[#4A433D] hover:bg-[#FAF7F4] hover:text-[#1E1B16]'
+                          }`}
+                          role="option"
+                          aria-selected={isSelected}
+                        >
+                          <div className="flex items-center space-x-2.5 min-w-0">
+                            <LanguageIcon lang={lang.id} className="w-4 h-4 shrink-0" />
+                            <span className="truncate">{lang.name}</span>
+                            <span className="text-[11px] text-[#8C827A] font-normal shrink-0">
+                              ({lang.version})
+                            </span>
+                          </div>
+                          {isSelected && (
+                            <Check className="w-3.5 h-3.5 text-[#C05A35] shrink-0 ml-2" />
+                          )}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
           </div>
         </div>
 
@@ -307,7 +354,7 @@ export default function DeepCodePage() {
             disabled={aiLoading}
             className="flex items-center space-x-1.5 px-3 py-2 bg-gradient-to-r from-amber-50 to-orange-50 hover:from-amber-100 hover:to-orange-100 border border-amber-200 text-amber-900 rounded-xl text-xs font-bold transition-all shadow-2xs group"
           >
-            <Sparkles className="w-3.5 h-3.5 text-amber-600 group-hover:scale-110 transition-transform" />
+            <Bot className="w-3.5 h-3.5 text-amber-600 group-hover:scale-110 transition-transform" />
             <span>AI Copilot</span>
           </button>
 
@@ -328,7 +375,7 @@ export default function DeepCodePage() {
 
       {/* Main Coding Workspace (Split View) */}
       <div
-        className={`grid gap-4 ${
+        className={`relative z-10 grid gap-4 ${
           splitLayout === 'horizontal'
             ? 'grid-cols-1 lg:grid-cols-12 items-start'
             : 'grid-cols-1'
@@ -358,6 +405,7 @@ export default function DeepCodePage() {
             aiLoading={aiLoading}
             onAiAction={handleAiAction}
             onClearOutput={() => setOutputResult(null)}
+            onApplyCode={handleCodeChange}
             className={splitLayout === 'horizontal' ? 'h-[620px]' : 'h-[440px]'}
           />
         </div>

@@ -10,6 +10,7 @@ const { authenticate } = require('../middleware/auth');
 const { tokenBudget } = require('../middleware/tokenBudget');
 const creditService = require('../services/creditService');
 const tokenService = require('../services/tokenService');
+const personalContextService = require('../services/personalContextService');
 const { v4: uuidv4 } = (() => { try { return require('uuid'); } catch (e) { return { v4: () => `${Date.now()}-${Math.random().toString(36).slice(2)}` }; } })();
 
 const PYTHON_AI_URL = process.env.PYTHON_AI_URL || 'http://localhost:8000';
@@ -787,12 +788,23 @@ router.post('/agent', authenticate, tokenBudget({ endpoint: 'tutor/agent' }), as
       if (budget.reserved) await creditService.releaseReservation(userId, budget.reserved);
       return res.status(400).json({ error: 'message is required' });
     }
+    let personalContext = {};
+    try {
+      personalContext = await personalContextService.getUserPersonalContext(userId);
+    } catch (e) {
+      console.warn('[TutorRoutes] Failed to fetch personal context:', e.message);
+    }
+
     const payload = {
       message: String(text),
       source_ids: source_ids || sourceIds || [],
       user_id: String(userId),
       conversation_history: conversation_history || history || [],
-      ...(context ? { context } : {}),
+      personal_context: personalContext,
+      context: {
+        ...(context || {}),
+        personal_context: personalContext,
+      },
     };
     let aiRes;
     try {
@@ -828,12 +840,50 @@ router.post('/agent', authenticate, tokenBudget({ endpoint: 'tutor/agent' }), as
         provider: activeProvider, model: activeModel, promptTokens, completionTokens,
       });
     } catch (e) { console.error('[TutorRoutes] agent accounting failed:', e.message); }
+
+    // If agent decided to complete a task, execute it in DB
+    if (aiRes.data?.data?.slot_id && (aiRes.data?.type === 'task_completed' || aiRes.data?.intent?.action === 'complete_task')) {
+      try {
+        const completedSlot = await personalContextService.completeTask(userId, aiRes.data.data.slot_id);
+        if (aiRes.data.data) aiRes.data.data.completed_slot = completedSlot;
+      } catch (err) {
+        console.error('[TutorRoutes] complete task error:', err.message);
+      }
+    }
+
+    // Attach fresh personal context for frontend state updates
+    if (aiRes.data && typeof aiRes.data === 'object') {
+      aiRes.data.personal_context = personalContext;
+    }
+
     res.json(aiRes.data);
   } catch (error) {
     try {
       if (budget.reserved) await creditService.releaseReservation(req.user?.userId || req.user?.id, budget.reserved);
     } catch (_) { /* ignore */ }
     res.status(500).json({ error: error.message || 'Agent proxy failed' });
+  }
+});
+
+// ── GET /tutor/personal-briefing - Fetch real-time personal context & tasks ───
+router.get('/personal-briefing', authenticate, async (req, res) => {
+  try {
+    const userId = req.user.userId || req.user.id;
+    const context = await personalContextService.getUserPersonalContext(userId);
+    res.json(context);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// ── POST /tutor/tasks/:id/complete - Quick task completion via personal AI ─
+router.post('/tasks/:id/complete', authenticate, async (req, res) => {
+  try {
+    const userId = req.user.userId || req.user.id;
+    const slot = await personalContextService.completeTask(userId, req.params.id, req.body);
+    res.json(slot);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
   }
 });
 

@@ -2,7 +2,7 @@ import { useState } from 'react';
 import {
   Terminal,
   CornerDownLeft,
-  Sparkles,
+  Bot,
   Copy,
   Check,
   Trash2,
@@ -11,11 +11,12 @@ import {
   Clock,
   Loader2,
   Cpu,
-  Wand2,
+  Lightbulb,
   Bug,
   Zap,
   FlaskConical,
 } from 'lucide-react';
+import AIReportViewer from './AIReportViewer';
 
 export default function TerminalOutput({
   outputResult,
@@ -27,6 +28,7 @@ export default function TerminalOutput({
   aiLoading,
   onAiAction,
   onClearOutput,
+  onApplyCode,
   className = '',
 }) {
   const [activeTab, setActiveTab] = useState('output');
@@ -57,7 +59,7 @@ export default function TerminalOutput({
       className={`flex flex-col bg-white border border-[#EDE7E1] rounded-3xl overflow-hidden shadow-xs ring-1 ring-black/5 ${className}`}
     >
       {/* Tab Navigation Header (Light Theme) */}
-      <div className="flex items-center justify-between px-3 py-2.5 bg-[#FAF7F4] border-b border-[#EBE4DC] select-none">
+      <div className="flex items-center justify-between px-3 py-2.5 bg-[#FAF7F4] border-b border-[#EBE4DC] select-none font-sans">
         <div className="flex items-center space-x-1.5">
           {/* Output / Console Tab */}
           <button
@@ -104,7 +106,7 @@ export default function TerminalOutput({
                 : 'text-[#6B6158] hover:text-[#1E1B16] hover:bg-[#EFEAE4]'
             }`}
           >
-            <Sparkles className="w-3.5 h-3.5 text-[#E8845F] animate-pulse" />
+            <Bot className="w-3.5 h-3.5 text-[#E8845F]" />
             <span>AI Copilot</span>
           </button>
         </div>
@@ -135,7 +137,7 @@ export default function TerminalOutput({
       </div>
 
       {/* Tab Content Body (Light Theme) */}
-      <div className="flex-1 p-4 overflow-auto min-h-[240px] font-mono text-xs text-[#2C2520] bg-white">
+      <div className="flex-1 p-4 overflow-auto min-h-[240px] font-sans text-xs text-[#2C2520] bg-white">
         {/* 1. OUTPUT / TERMINAL TAB */}
         {activeTab === 'output' && (
           <div className="space-y-3">
@@ -258,6 +260,11 @@ export default function TerminalOutput({
               placeholder="e.g.&#10;5&#10;10 20 30 40 50&#10;Target value: 30"
               rows={8}
               className="w-full p-3.5 bg-[#FAF8F5] border border-[#EBE4DC] rounded-2xl text-[#1E1B16] font-mono text-xs outline-none focus:border-[#C05A35] focus:bg-white focus:ring-2 focus:ring-[#C05A35]/10 resize-y transition-all"
+              style={{
+                fontVariantLigatures: 'none',
+                fontFeatureSettings: '"liga" 0, "calt" 0, "dlig" 0',
+                WebkitFontFeatureSettings: '"liga" 0, "calt" 0, "dlig" 0',
+              }}
             />
 
             <div className="flex flex-wrap items-center gap-2 pt-1">
@@ -295,7 +302,7 @@ export default function TerminalOutput({
                 className="flex flex-col items-center p-3 bg-[#FAF8F5] hover:bg-[#F2ECE6] border border-[#EBE4DC] hover:border-[#D6CEC5] rounded-2xl text-center transition-all group disabled:opacity-50 shadow-2xs"
               >
                 <div className="w-8 h-8 rounded-xl bg-[#FDEEE6] flex items-center justify-center mb-1.5 group-hover:scale-105 transition-transform">
-                  <Wand2 className="w-4 h-4 text-[#C05A35]" />
+                  <Lightbulb className="w-4 h-4 text-[#C05A35]" />
                 </div>
                 <span className="text-xs font-bold text-[#1E1B16]">Explain Code</span>
                 <span className="text-[10px] text-[#8C827A]">Logic & Big-O</span>
@@ -346,12 +353,12 @@ export default function TerminalOutput({
                 <p className="text-xs text-[#8C827A]">Analyzing algorithmic patterns, syntax trees & time complexity</p>
               </div>
             ) : aiAnalysis ? (
-              <div className="p-4 bg-[#FAF8F5] border border-[#EBE4DC] rounded-2xl leading-relaxed whitespace-pre-wrap text-[#1E1B16] font-sans text-xs shadow-2xs">
-                {aiAnalysis}
+              <div className="p-4 sm:p-5 bg-[#FAF8F5] border border-[#EBE4DC] rounded-2xl shadow-2xs overflow-hidden">
+                <AIReportViewer content={aiAnalysis} onApplyCode={onApplyCode} />
               </div>
             ) : (
               <div className="p-8 bg-[#FAF8F5] border border-[#EBE4DC] rounded-2xl text-center space-y-2">
-                <Sparkles className="w-6 h-6 text-[#E8845F] mx-auto" />
+                <Bot className="w-6 h-6 text-[#E8845F] mx-auto" />
                 <p className="text-xs font-medium text-[#5C534B]">
                   Select an action above to receive instantaneous AI mentorship, time-complexity analysis, and bug diagnostics.
                 </p>

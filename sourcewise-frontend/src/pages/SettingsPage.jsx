@@ -56,7 +56,6 @@ export default function SettingsPage() {
   const [fieldOfStudy, setFieldOfStudy] = useState('Computer Science')
   const [weeklyHours, setWeeklyHours] = useState(14)
   const [studyRhythm, setStudyRhythm] = useState('night_owl')
-  const [avatarType, setAvatarType] = useState('mascot')
 
   // --- 2. AI Companion State ---
   const [aiPersona, setAiPersona] = useState('kitsune')
@@ -108,7 +107,6 @@ export default function SettingsPage() {
             if (data.profile.fieldOfStudy) setFieldOfStudy(data.profile.fieldOfStudy)
             if (data.profile.weeklyHours) setWeeklyHours(data.profile.weeklyHours)
             if (data.profile.studyRhythm) setStudyRhythm(data.profile.studyRhythm)
-            if (data.profile.avatarType) setAvatarType(data.profile.avatarType)
           }
           if (data.bio) setBio(data.bio)
 
@@ -229,7 +227,6 @@ export default function SettingsPage() {
           fieldOfStudy,
           weeklyHours,
           studyRhythm,
-          avatarType,
         },
         ai: {
           persona: aiPersona,
@@ -506,40 +503,6 @@ export default function SettingsPage() {
                 </div>
               </div>
 
-              {/* Avatar Selector */}
-              <div>
-                <label className="block text-xs font-bold uppercase tracking-wider text-[#6B625C] mb-3">
-                  Companion Avatar Representation
-                </label>
-                <div className="grid grid-cols-3 gap-3">
-                  {[
-                    { id: 'mascot', label: 'Kitsune Mascot', icon: '🦊', desc: 'Active Study Fox' },
-                    { id: 'initials', label: 'User Monogram', icon: name ? name.charAt(0).toUpperCase() : 'S', desc: 'Clean Initials' },
-                    { id: 'scholar', label: 'Midnight Scholar', icon: '🎓', desc: 'Focus Persona' },
-                  ].map((av) => (
-                    <button
-                      key={av.id}
-                      type="button"
-                      onClick={() => setAvatarType(av.id)}
-                      className={`p-3.5 rounded-2xl border text-center transition-all cursor-pointer flex flex-col items-center gap-1.5 ${
-                        avatarType === av.id
-                          ? 'bg-[#FDEEE6] border-[#E8845F] text-[#C05A35] shadow-xs'
-                          : 'bg-white border-[#EDE7E1] text-[#2C2520] hover:bg-[#FAF6F2]'
-                      }`}
-                    >
-                      <div className="w-10 h-10 rounded-xl bg-white border border-[#EDE7E1] flex items-center justify-center text-lg font-bold shadow-xs">
-                        {av.id === 'mascot' ? (
-                          <img src="/logo-mark.png" alt="Mascot" className="w-7 h-7 object-contain" />
-                        ) : (
-                          <span>{av.icon}</span>
-                        )}
-                      </div>
-                      <span className="text-xs font-bold leading-tight mt-1">{av.label}</span>
-                      <span className="text-[10px] text-[#7C726A]">{av.desc}</span>
-                    </button>
-                  ))}
-                </div>
-              </div>
 
               {/* Basic Fields */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -1301,16 +1264,6 @@ export default function SettingsPage() {
                   </button>
                 </div>
 
-                {/* Local Privacy Guarantee */}
-                <div className="p-4 rounded-2xl bg-[#E0F2F0]/60 border border-[rgba(15,118,110,0.3)] space-y-2">
-                  <p className="text-xs font-bold text-[#0F766E] flex items-center gap-1.5">
-                    <Shield className="w-4 h-4" /> Local AI & Zero External Telemetry
-                  </p>
-                  <p className="text-xs text-[#0F766E]/90 leading-relaxed">
-                    SourceWise runs all LLM inference via your local Ollama instance and on-disk ChromaDB vector store.
-                    Your lecture materials, PDFs, and conversation threads are never sold or used for external model training.
-                  </p>
-                </div>
               </GlowCard>
 
             </div>

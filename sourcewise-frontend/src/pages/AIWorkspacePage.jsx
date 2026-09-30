@@ -3,12 +3,13 @@ import { useParams, useNavigate, useLocation } from 'react-router-dom'
 import { 
   Send, Loader2, Brain, MessageSquare, FileText, 
   HelpCircle, BookOpen, Copy, Check, ChevronRight, ChevronLeft,
-  Award, AlertCircle, Sparkles, RefreshCw, Download, 
+  Award, AlertCircle, RefreshCw, Download, 
   CheckCircle2, SlidersHorizontal, ArrowRight, RotateCcw,
-  GraduationCap, Layers, Compass, CheckSquare, Square
+  GraduationCap, Layers, Compass, CheckSquare, Square, Key, Sparkles
 } from 'lucide-react'
 import { useSourceStore } from '../store/sourceStore'
 import { useAuthStore } from '../store/authStore'
+import { useWorkspaceStore } from '../store/workspaceStore'
 import { streamChat } from '../lib/chatApi'
 import { sendAgentMessage } from '../lib/agentApi'
 import { GlowCard } from '../components/ui/glow-card'
@@ -16,7 +17,7 @@ import { GlowCard } from '../components/ui/glow-card'
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:4000'
 
 const MODES = {
-  chat: { id: 'chat', label: 'Chat', icon: MessageSquare, description: 'Ask questions and converse with your documents' },
+  chat: { id: 'chat', label: 'Chat', icon: MessageSquare, description: 'Personal study companion & task assistant' },
   quiz: { id: 'quiz', label: 'Quiz', icon: HelpCircle, description: 'Test your understanding with practice quizzes' },
   flashcards: { id: 'flashcards', label: 'Flashcards', icon: BookOpen, description: 'Memorize terms & concepts with flashcards' },
   tutor: { id: 'tutor', label: 'Tutor', icon: GraduationCap, description: 'Personalized interactive tutoring on your material' },
@@ -234,49 +235,82 @@ export default function AIWorkspacePage() {
   const { uploadedSources, activeSourceIds, toggleActiveSource } = useSourceStore()
   const { user, accessToken } = useAuthStore()
   
-  const [activeMode, setActiveMode] = useState(urlMode || 'chat')
-  const [selectedMaterialIds, setSelectedMaterialIds] = useState([])
-  
-  // Generation / Loading / Error states
-  const [isGenerating, setIsGenerating] = useState(false)
-  const [error, setError] = useState(null)
-  
-  // Chat state
+  const workspaceStore = useWorkspaceStore()
+  const {
+    activeMode, setActiveMode,
+    selectedMaterialIds, setSelectedMaterialIds,
+    isGenerating: isGeneratingMap,
+    notifications,
+    clearNotification,
+    quiz, setQuizOption, setQuizAnswer, setCurrentQuizIndex, submitQuiz, resetQuiz, startQuizGeneration,
+    flashcards: flashcardsState, setFlashcardOption, setCurrentCardIndex, toggleCardFlip, setFlashcardRating, resetFlashcards, startFlashcardGeneration,
+    notes: notesState, setNotesOption, clearNotes, startNotesGeneration,
+    tutor: tutorState, setTutorOption,
+    chatMessages, setChatMessages, addChatMessage,
+  } = workspaceStore
+
+  // Quiz aliases
+  const quizQuestions = quiz.questions
+  const currentQuizIndex = quiz.currentIndex
+  const quizAnswers = quiz.answers
+  const quizCompleted = quiz.completed
+  const quizCount = quiz.count
+  const setQuizCount = (v) => setQuizOption('count', v)
+  const quizDifficulty = quiz.difficulty
+  const setQuizDifficulty = (v) => setQuizOption('difficulty', v)
+  const quizType = quiz.type
+  const setQuizType = (v) => setQuizOption('type', v)
+  const quizTopic = quiz.topic
+  const setQuizTopic = (v) => setQuizOption('topic', v)
+  const setQuizQuestions = (v) => setQuizOption('questions', typeof v === 'function' ? v(quiz.questions) : v)
+
+  // Flashcards aliases
+  const flashcards = flashcardsState.cards
+  const currentCardIndex = flashcardsState.currentIndex
+  const isFlipped = flashcardsState.isFlipped
+  const setIsFlipped = (v) => setFlashcardOption('isFlipped', typeof v === 'function' ? v(flashcardsState.isFlipped) : v)
+  const flashcardRating = flashcardsState.rating
+  const flashcardCount = flashcardsState.count
+  const setFlashcardCount = (v) => setFlashcardOption('count', v)
+  const flashcardFocus = flashcardsState.focus
+  const setFlashcardFocus = (v) => setFlashcardOption('focus', v)
+  const flashcardTopic = flashcardsState.topic
+  const setFlashcardTopic = (v) => setFlashcardOption('topic', v)
+  const setFlashcards = (v) => setFlashcardOption('cards', typeof v === 'function' ? v(flashcardsState.cards) : v)
+
+  // Notes aliases
+  const generatedContent = notesState.content
+  const setGeneratedContent = (v) => setNotesOption('content', typeof v === 'function' ? v(notesState.content) : v)
+  const notesStyle = notesState.style
+  const setNotesStyle = (v) => setNotesOption('style', v)
+  const notesDepth = notesState.depth
+  const setNotesDepth = (v) => setNotesOption('depth', v)
+  const notesTopic = notesState.topic
+  const setNotesTopic = (v) => setNotesOption('topic', v)
+
+  // Tutor aliases
+  const isTutorSessionActive = tutorState.isSessionActive
+  const setIsTutorSessionActive = (v) => setTutorOption('isSessionActive', typeof v === 'function' ? v(tutorState.isSessionActive) : v)
+  const tutorStyle = tutorState.style
+  const setTutorStyle = (v) => setTutorOption('style', v)
+  const tutorTopic = tutorState.topic
+  const setTutorTopic = (v) => setTutorOption('topic', v)
+
+  // Chat local UI state
+  const messages = chatMessages
+  const setMessages = setChatMessages
   const [input, setInput] = useState('')
-  const [messages, setMessages] = useState([])
   const [showChatSourceSelector, setShowChatSourceSelector] = useState(false)
-
-  // Quiz state & options
-  const [quizQuestions, setQuizQuestions] = useState([])
-  const [currentQuizIndex, setCurrentQuizIndex] = useState(0)
-  const [quizAnswers, setQuizAnswers] = useState({})
-  const [quizCompleted, setQuizCompleted] = useState(false)
-  const [quizCount, setQuizCount] = useState(5)
-  const [quizDifficulty, setQuizDifficulty] = useState('medium')
-  const [quizType, setQuizType] = useState('multiple choice')
-  const [quizTopic, setQuizTopic] = useState('')
-
-  // Flashcards state & options
-  const [flashcards, setFlashcards] = useState([])
-  const [currentCardIndex, setCurrentCardIndex] = useState(0)
-  const [isFlipped, setIsFlipped] = useState(false)
-  const [flashcardRating, setFlashcardRating] = useState(null)
-  const [flashcardCount, setFlashcardCount] = useState(10)
-  const [flashcardFocus, setFlashcardFocus] = useState('key terms and definitions')
-  const [flashcardTopic, setFlashcardTopic] = useState('')
-
-  // Notes state & options
-  const [generatedContent, setGeneratedContent] = useState(null)
+  const [chatGenerating, setChatGenerating] = useState(false)
   const [copied, setCopied] = useState(false)
-  const [notesStyle, setNotesStyle] = useState('Comprehensive Study Notes')
-  const [notesDepth, setNotesDepth] = useState('Balanced')
-  const [notesTopic, setNotesTopic] = useState('')
+  const [error, setError] = useState(null)
 
-  // Tutor state & options
-  const [isTutorSessionActive, setIsTutorSessionActive] = useState(false)
-  const [tutorStyle, setTutorStyle] = useState('Socratic Coach')
-  const [tutorTopic, setTutorTopic] = useState('')
-  
+  // Active generating indicator for UI buttons and spinners
+  const isGenerating = Boolean(isGeneratingMap[activeMode]) || (activeMode === 'chat' && chatGenerating)
+  const setIsGenerating = (val) => {
+    if (activeMode === 'chat') setChatGenerating(val)
+  }
+
   const messagesEndRef = useRef(null)
   const inputRef = useRef(null)
 
@@ -284,8 +318,9 @@ export default function AIWorkspacePage() {
   useEffect(() => {
     if (urlMode && MODES[urlMode]) {
       setActiveMode(urlMode)
+      clearNotification(urlMode)
     }
-  }, [urlMode])
+  }, [urlMode, setActiveMode, clearNotification])
 
   // Hydrate sources from backend if store is empty
   const fetchSources = useCallback(async () => {
@@ -333,14 +368,22 @@ export default function AIWorkspacePage() {
     }
   }, [activeSourceIds, uploadedSources, location.state])
 
-  // Prepopulate initial prompts or topics from location state
+  // Prepopulate initial prompts or topics from location state, with auto-send support
   useEffect(() => {
     if (location.state?.initialPrompt) {
-      setInput(location.state.initialPrompt)
-      setQuizTopic(location.state.initialPrompt)
-      setFlashcardTopic(location.state.initialPrompt)
-      setNotesTopic(location.state.initialPrompt)
-      setTutorTopic(location.state.initialPrompt)
+      const prompt = location.state.initialPrompt
+      setInput(prompt)
+      setQuizTopic(prompt)
+      setFlashcardTopic(prompt)
+      setNotesTopic(prompt)
+      setTutorTopic(prompt)
+
+      if (location.state.autoSend) {
+        const timer = setTimeout(() => {
+          handleSendMessage(prompt)
+        }, 120)
+        return () => clearTimeout(timer)
+      }
     }
   }, [location.state])
 
@@ -352,6 +395,7 @@ export default function AIWorkspacePage() {
   // Handle switching tabs
   const handleModeChange = (mode) => {
     setActiveMode(mode)
+    clearNotification(mode)
     navigate(`/workspace/${mode}`, { replace: true })
     setError(null)
   }
@@ -435,165 +479,70 @@ export default function AIWorkspacePage() {
     return questions
   }
 
-  // 1. Generate Quiz
+  // 1. Generate Quiz (Runs in background store, never stops when leaving)
   const handleGenerateQuiz = async () => {
     if (selectedMaterialIds.length === 0) {
       setError("Please select at least one material uploaded in Knowledge Hub.")
       return
     }
 
-    setIsGenerating(true)
     setError(null)
-    const topicDesc = quizTopic.trim() ? `focusing on "${quizTopic.trim()}"` : "covering the most important concepts"
-    const prompt = `Create a ${quizCount}-question ${quizDifficulty} ${quizType} quiz ${topicDesc} based strictly on the selected study material.
-Return 4 options for each question (A, B, C, D), specify the correct answer, and provide a clear explanation.`
-
     try {
-      const response = await sendAgentMessage({
-        message: prompt,
+      await startQuizGeneration({
         sourceIds: selectedMaterialIds,
         userId: user?.id || 'anonymous',
-        history: [],
-        context: { action: 'create_quiz', count: quizCount, difficulty: quizDifficulty, topic: quizTopic }
+        count: quizCount,
+        difficulty: quizDifficulty,
+        type: quizType,
+        topic: quizTopic,
+        token: accessToken
       })
-
-      let rawQuestions = []
-      if (response?.data?.questions && Array.isArray(response.data.questions)) {
-        rawQuestions = response.data.questions
-      } else if (Array.isArray(response?.data)) {
-        rawQuestions = response.data
-      } else {
-        rawQuestions = parseQuizText(response.message || response.data || '')
-      }
-
-      const normalized = rawQuestions.map((q, idx) => ({
-        id: idx,
-        question: q.question || q.q || `Question ${idx + 1}`,
-        options: Array.isArray(q.options) && q.options.length >= 2 ? q.options : ['True', 'False'],
-        correct: typeof q.answer === 'number' ? q.answer : (typeof q.correct === 'number' ? q.correct : 0),
-        explanation: q.explanation || 'Refer to your study material for details.',
-        concept: q.topic || q.concept || 'General Knowledge'
-      }))
-
-      if (normalized.length === 0) {
-        throw new Error("Could not parse quiz questions from the generated content. Please try again.")
-      }
-
-      setQuizQuestions(normalized)
-      setCurrentQuizIndex(0)
-      setQuizAnswers({})
-      setQuizCompleted(false)
-      trackContentGeneration('quiz_generated')
     } catch (err) {
       setError(err.message || "Failed to generate quiz. Please verify that your AI service is active.")
-    } finally {
-      setIsGenerating(false)
     }
   }
 
-  // Fallback text parser for flashcards
-  const parseFlashcardsText = (text) => {
-    if (!text || typeof text !== 'string') return []
-    const cards = []
-    const blocks = text.split(/---|---|\n\n(?=FRONT:|\bCard\s*\d+:)/i)
-    for (const block of blocks) {
-      const frontMatch = block.match(/(?:FRONT|Term|Question):\s*(.+?)(?=\n(?:BACK|Answer|Definition):|$)/is)
-      const backMatch = block.match(/(?:BACK|Answer|Definition):\s*(.+?)(?=\n---|$)/is)
-      if (frontMatch && backMatch) {
-        cards.push({
-          front: frontMatch[1].trim(),
-          back: backMatch[1].trim()
-        })
-      }
-    }
-    return cards
-  }
-
-  // 2. Generate Flashcards
+  // 2. Generate Flashcards (Runs in background store, never stops when leaving)
   const handleGenerateFlashcards = async () => {
     if (selectedMaterialIds.length === 0) {
       setError("Please select at least one material uploaded in Knowledge Hub.")
       return
     }
 
-    setIsGenerating(true)
     setError(null)
-    const topicDesc = flashcardTopic.trim() ? `on "${flashcardTopic.trim()}"` : "from the selected documents"
-    const prompt = `Create ${flashcardCount} flashcards ${topicDesc} focusing on ${flashcardFocus} based on the uploaded material.
-Format each card with:
-FRONT: [Question, key term, or concept]
-BACK: [Clear definition, explanation, or answer]
----`
-
     try {
-      const response = await sendAgentMessage({
-        message: prompt,
+      await startFlashcardGeneration({
         sourceIds: selectedMaterialIds,
         userId: user?.id || 'anonymous',
-        history: [],
-        context: { action: 'create_flashcards', count: flashcardCount, focus: flashcardFocus, topic: flashcardTopic }
+        count: flashcardCount,
+        focus: flashcardFocus,
+        topic: flashcardTopic,
+        token: accessToken
       })
-
-      let rawCards = response?.data?.cards || (Array.isArray(response?.data) ? response.data : [])
-      if (!rawCards || rawCards.length === 0) {
-        rawCards = parseFlashcardsText(response.message || response.data || '')
-      }
-
-      const normalized = rawCards.map((c, idx) => ({
-        id: idx,
-        front: c.front || c.term || c.question || '',
-        back: c.back || c.definition || c.answer || ''
-      })).filter(c => c.front && c.back)
-
-      if (normalized.length === 0) {
-        throw new Error("Unable to extract flashcards from response. Please try again.")
-      }
-
-      setFlashcards(normalized)
-      setCurrentCardIndex(0)
-      setIsFlipped(false)
-      setFlashcardRating(null)
-      trackContentGeneration('flashcards_generated')
     } catch (err) {
       setError(err.message || "Failed to generate flashcards. Please check your backend connection.")
-    } finally {
-      setIsGenerating(false)
     }
   }
 
-  // 3. Generate Notes
+  // 3. Generate Notes (Runs in background store, never stops when leaving)
   const handleGenerateNotes = async () => {
     if (selectedMaterialIds.length === 0) {
       setError("Please select at least one material uploaded in Knowledge Hub.")
       return
     }
 
-    setIsGenerating(true)
     setError(null)
-    const topicDesc = notesTopic.trim() ? `focusing on "${notesTopic.trim()}"` : "covering the material thoroughly"
-    const prompt = `Generate ${notesStyle} (${notesDepth} level) ${topicDesc} based on the selected uploaded study material.
-Structure the notes with clear markdown headings, bullet points, key definitions, formulas or frameworks, and an executive summary of key exam takeaways.`
-
     try {
-      const response = await sendAgentMessage({
-        message: prompt,
+      await startNotesGeneration({
         sourceIds: selectedMaterialIds,
         userId: user?.id || 'anonymous',
-        history: [],
-        context: { action: 'create_notes', style: notesStyle, depth: notesDepth, topic: notesTopic }
+        style: notesStyle,
+        depth: notesDepth,
+        topic: notesTopic,
+        token: accessToken
       })
-
-      const content = response?.data?.notes || response?.data?.guide || response?.data?.summary || response?.message || response?.data
-      if (!content) {
-        throw new Error("No notes content returned. Please try again.")
-      }
-
-      setGeneratedContent(typeof content === 'string' ? content : JSON.stringify(content, null, 2))
-      trackContentGeneration('notes_generated')
     } catch (err) {
       setError(err.message || "Failed to generate notes. Please check that python-ai is running.")
-    } finally {
-      setIsGenerating(false)
     }
   }
 
@@ -632,26 +581,73 @@ Begin our session by giving a warm 2-sentence welcome, introducing the first fun
     }
   }
 
+  // Inline task completion handler
+  const handleCompleteTaskInline = async (slotId) => {
+    if (!slotId || !accessToken) return
+    try {
+      await fetch(`${API_URL}/tutor/tasks/${slotId}/complete`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${accessToken}`,
+        },
+        body: JSON.stringify({ actualDuration: 45 }),
+      })
+      // Update local message tasks to completed
+      setMessages(prev => prev.map(m => {
+        if (!m.tasks) return m
+        return {
+          ...m,
+          tasks: m.tasks.map(t => (t.id === slotId ? { ...t, status: 'completed', is_completed: true } : t))
+        }
+      }))
+    } catch (err) {
+      console.error('[AIWorkspace] Complete task error:', err)
+    }
+  }
+
   // ════════════════════════════════════════════════════════════════════════════
   // INTERACTIVE CHAT & TUTOR MESSAGE SENDER
   // ════════════════════════════════════════════════════════════════════════════
-  const handleSendMessage = async () => {
-    if (!input.trim() || isGenerating) return
-    const userMessage = input.trim()
-    setInput('')
+  const handleSendMessage = async (textOverride = null) => {
+    const rawText = textOverride !== null ? textOverride : input
+    if (!rawText.trim() || isGenerating) return
+    const userMessage = rawText.trim()
+    if (textOverride === null) setInput('')
     setMessages(prev => [...prev, { role: 'user', content: userMessage }])
     setIsGenerating(true)
 
-    if (selectedMaterialIds.length === 0) {
-      setMessages(prev => [...prev, { 
-        role: 'assistant', 
-        content: 'Please select at least one study material from the Knowledge Hub above.' 
-      }])
-      setIsGenerating(false)
-      return
-    }
+    // Check if query is greeting, personal productivity / task inquiry or if no sources selected
+    const isPersonalQuery = selectedMaterialIds.length === 0 || 
+      /^\s*(hi|hello|hey|howdy|sup|hola|yo|good\s+(morning|afternoon|evening)|who\s+are\s+you|what\s+can\s+you\s+do|help)(\s*!|\s*\.|\s*\?|\s*$)/i.test(userMessage) ||
+      /\b(task|tasks|pending|schedule|pace|pacing|what should i study|what to study|mark .* done|complete|today'?s?)\b/i.test(userMessage)
 
-    if (activeMode === 'chat') {
+    if (isPersonalQuery || activeMode === 'tutor') {
+      try {
+        const response = await sendAgentMessage({
+          message: userMessage,
+          sourceIds: selectedMaterialIds,
+          userId: user?.id || 'anonymous',
+          history: messages.slice(-6).map(m => ({ role: m.role, content: m.content })),
+          context: { mode: activeMode, style: tutorStyle }
+        })
+        const reply = response.message || response.data?.explanation || response.data?.answer || JSON.stringify(response.data)
+        const tasks = response.data?.tasks || (response.data?.action === 'list_tasks' ? response.data?.pending_tasks : null) || []
+        
+        setMessages(prev => [...prev, { 
+          role: 'assistant', 
+          content: reply, 
+          citations: response.data?.citations || [],
+          tasks: tasks,
+          actionType: response.type
+        }])
+      } catch (err) {
+        setMessages(prev => [...prev, { role: 'assistant', content: `Error: ${err.message}` }])
+      } finally {
+        setIsGenerating(false)
+      }
+    } else {
+      // Document RAG chat with streaming
       let assistantMessage = { role: 'assistant', content: '', citations: [] }
       setMessages(prev => [...prev, assistantMessage])
 
@@ -681,26 +677,6 @@ Begin our session by giving a warm 2-sentence welcome, introducing the first fun
           setIsGenerating(false)
         }
       })
-    } else if (activeMode === 'tutor') {
-      try {
-        const response = await sendAgentMessage({
-          message: userMessage,
-          sourceIds: selectedMaterialIds,
-          userId: user?.id || 'anonymous',
-          history: messages.slice(-6).map(m => ({ role: m.role, content: m.content })),
-          context: { mode: 'tutor', style: tutorStyle }
-        })
-        const reply = response.message || response.data?.explanation || JSON.stringify(response.data)
-        setMessages(prev => [...prev, { 
-          role: 'assistant', 
-          content: reply, 
-          citations: response.data?.citations || [] 
-        }])
-      } catch (err) {
-        setMessages(prev => [...prev, { role: 'assistant', content: `Error: ${err.message}` }])
-      } finally {
-        setIsGenerating(false)
-      }
     }
   }
 
@@ -900,6 +876,83 @@ Begin our session by giving a warm 2-sentence welcome, introducing the first fun
                 : 'bg-white border border-[#EDE7E1] text-[#1E1B16] shadow-xs'
             }`}>
               <div className="whitespace-pre-wrap leading-relaxed text-sm">{msg.content}</div>
+
+              {/* Interactive Personal AI Task Cards */}
+              {msg.tasks && msg.tasks.length > 0 && (
+                <div className="mt-4 pt-3 border-t border-[#EDE7E1] space-y-2">
+                  <div className="flex items-center justify-between text-xs font-semibold text-[#8A817B] uppercase tracking-wider">
+                    <span className="flex items-center gap-1.5">
+                      <CheckSquare className="w-3.5 h-3.5 text-[#E8845F]" />
+                      Tasks ({msg.tasks.filter(t => t.status !== 'completed' && !t.is_completed).length} pending)
+                    </span>
+                    <span className="text-[10px] font-normal normal-case text-[#B0A8A0]">Click to mark complete</span>
+                  </div>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 mt-2">
+                    {msg.tasks.map((task, tIdx) => {
+                      const isDone = task.status === 'completed' || task.is_completed
+                      return (
+                        <div
+                          key={task.id || tIdx}
+                          className={`p-3 rounded-xl border transition-all text-left flex flex-col justify-between ${
+                            isDone
+                              ? 'bg-[#F9F7F5] border-[#E5DFD9] opacity-60'
+                              : 'bg-white border-[#EDE7E1] hover:border-[#E8845F] hover:shadow-xs'
+                          }`}
+                        >
+                          <div>
+                            <div className="flex items-center justify-between gap-1.5 mb-1.5">
+                              <span className="text-[10px] font-medium px-2 py-0.5 rounded-full bg-[#F3EFEB] text-[#8A817B]">
+                                {task.subject || 'General'}
+                              </span>
+                              <span className="text-[11px] text-[#A8A199]">
+                                {task.duration ? `${task.duration}m` : ''} {task.time ? `• ${task.time}` : ''}
+                              </span>
+                            </div>
+                            <h4 className={`text-xs font-semibold text-[#1E1B16] line-clamp-2 ${isDone ? 'line-through text-[#8A817B]' : ''}`}>
+                              {task.title || task.topic || 'Study Session'}
+                            </h4>
+                          </div>
+                          <div className="mt-3 flex items-center justify-between pt-2 border-t border-[#F3EFEB]">
+                            <button
+                              type="button"
+                              disabled={isDone}
+                              onClick={() => handleCompleteTaskInline(task.id)}
+                              className={`flex items-center gap-1.5 text-xs font-medium px-2.5 py-1 rounded-lg transition-colors ${
+                                isDone
+                                  ? 'text-[#2D9D78] bg-[#E8F7F0] cursor-default'
+                                  : 'text-[#E8845F] bg-[#FFF8F5] hover:bg-[#FDEEE6]'
+                              }`}
+                            >
+                              {isDone ? (
+                                <>
+                                  <CheckCircle2 className="w-3.5 h-3.5" />
+                                  <span>Completed</span>
+                                </>
+                              ) : (
+                                <>
+                                  <Square className="w-3.5 h-3.5" />
+                                  <span>Mark Done</span>
+                                </>
+                              )}
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setInput(`Help me study ${task.title || task.topic || task.subject}`)
+                                inputRef.current?.focus()
+                              }}
+                              className="text-[11px] text-[#8A817B] hover:text-[#E8845F] font-medium"
+                            >
+                              Study this &rarr;
+                            </button>
+                          </div>
+                        </div>
+                      )
+                    })}
+                  </div>
+                </div>
+              )}
+
               {msg.citations && msg.citations.length > 0 && (
                 <div className="-mx-5 -mb-4 mt-4 px-5 py-3 bg-[#FAFAFA] border-t border-[#EDE7E1] rounded-b-2xl">
                   <p className="text-[11px] font-semibold text-[#8A817B] mb-1.5 uppercase tracking-wider">Source Grounding</p>
@@ -993,7 +1046,7 @@ Begin our session by giving a warm 2-sentence welcome, introducing the first fun
                   onClick={() => { setQuizQuestions([]); setQuizCompleted(false); setQuizAnswers({}); setCurrentQuizIndex(0) }}
                   className="sw-btn-primary !h-10 !px-5 !text-xs inline-flex items-center space-x-1.5"
                 >
-                  <Sparkles className="w-3.5 h-3.5" />
+                  <HelpCircle className="w-3.5 h-3.5" />
                   <span>Generate New Quiz</span>
                 </button>
               </div>
@@ -1124,6 +1177,23 @@ Begin our session by giving a warm 2-sentence welcome, introducing the first fun
             </div>
           )}
 
+          {isGeneratingMap.quiz && (
+            <div className="p-4 rounded-xl bg-[#FFF8F5] border border-[#E8845F]/30 text-xs text-[#1E1B16] flex items-center justify-between shadow-xs">
+              <div className="flex items-center space-x-3">
+                <Loader2 className="w-5 h-5 text-[#E8845F] animate-spin shrink-0" />
+                <div>
+                  <p className="font-bold text-sm text-[#C05A35]">Generating your Quiz in the background...</p>
+                  <p className="text-[11px] text-[#5B544E] mt-0.5">
+                    You can safely switch tabs or leave this page. We will notify you with a badge the moment it's ready!
+                  </p>
+                </div>
+              </div>
+              <span className="text-[10px] font-semibold uppercase px-2.5 py-1 rounded-full bg-[#FDEEE6] text-[#C05A35] shrink-0">
+                In Progress
+              </span>
+            </div>
+          )}
+
           {/* 1. Select Study Material from Knowledge Hub */}
           <MaterialSelector
             uploadedSources={uploadedSources}
@@ -1231,7 +1301,7 @@ Begin our session by giving a warm 2-sentence welcome, introducing the first fun
                 </>
               ) : (
                 <>
-                  <Sparkles className="w-4 h-4" />
+                  <HelpCircle className="w-4 h-4" />
                   <span>Generate Quiz from Selected Material</span>
                 </>
               )}
@@ -1391,6 +1461,23 @@ Begin our session by giving a warm 2-sentence welcome, introducing the first fun
             </div>
           )}
 
+          {isGeneratingMap.flashcards && (
+            <div className="p-4 rounded-xl bg-[#FFF8F5] border border-[#E8845F]/30 text-xs text-[#1E1B16] flex items-center justify-between shadow-xs">
+              <div className="flex items-center space-x-3">
+                <Loader2 className="w-5 h-5 text-[#E8845F] animate-spin shrink-0" />
+                <div>
+                  <p className="font-bold text-sm text-[#C05A35]">Creating your Flashcard deck in the background...</p>
+                  <p className="text-[11px] text-[#5B544E] mt-0.5">
+                    Feel free to navigate anywhere in SourceWise. You'll see a notification badge here once the deck is ready.
+                  </p>
+                </div>
+              </div>
+              <span className="text-[10px] font-semibold uppercase px-2.5 py-1 rounded-full bg-[#FDEEE6] text-[#C05A35] shrink-0">
+                In Progress
+              </span>
+            </div>
+          )}
+
           {/* 1. Material Selector */}
           <MaterialSelector
             uploadedSources={uploadedSources}
@@ -1475,7 +1562,7 @@ Begin our session by giving a warm 2-sentence welcome, introducing the first fun
                 </>
               ) : (
                 <>
-                  <Sparkles className="w-4 h-4" />
+                  <BookOpen className="w-4 h-4" />
                   <span>Generate Flashcards from Selected Material</span>
                 </>
               )}
@@ -1528,7 +1615,7 @@ Begin our session by giving a warm 2-sentence welcome, introducing the first fun
                   onClick={() => setGeneratedContent(null)}
                   className="sw-btn-primary !h-9 !px-3.5 !text-xs inline-flex items-center space-x-1.5"
                 >
-                  <Sparkles className="w-3.5 h-3.5" />
+                  <FileText className="w-3.5 h-3.5" />
                   <span>Generate New Notes</span>
                 </button>
               </div>
@@ -1561,6 +1648,23 @@ Begin our session by giving a warm 2-sentence welcome, introducing the first fun
             <div className="p-3.5 rounded-xl bg-red-50 border border-red-200 text-xs text-red-700 flex items-center space-x-2">
               <AlertCircle className="w-4 h-4 shrink-0 text-red-600" />
               <span>{error}</span>
+            </div>
+          )}
+
+          {isGeneratingMap.notes && (
+            <div className="p-4 rounded-xl bg-[#FFF8F5] border border-[#E8845F]/30 text-xs text-[#1E1B16] flex items-center justify-between shadow-xs">
+              <div className="flex items-center space-x-3">
+                <Loader2 className="w-5 h-5 text-[#E8845F] animate-spin shrink-0" />
+                <div>
+                  <p className="font-bold text-sm text-[#C05A35]">Compiling your Notes in the background...</p>
+                  <p className="text-[11px] text-[#5B544E] mt-0.5">
+                    Synthesis is running. You can navigate away and we'll alert you with a badge as soon as it completes.
+                  </p>
+                </div>
+              </div>
+              <span className="text-[10px] font-semibold uppercase px-2.5 py-1 rounded-full bg-[#FDEEE6] text-[#C05A35] shrink-0">
+                In Progress
+              </span>
             </div>
           )}
 
@@ -1648,7 +1752,7 @@ Begin our session by giving a warm 2-sentence welcome, introducing the first fun
                 </>
               ) : (
                 <>
-                  <Sparkles className="w-4 h-4" />
+                  <FileText className="w-4 h-4" />
                   <span>Generate Notes from Selected Material</span>
                 </>
               )}
@@ -1851,7 +1955,7 @@ Begin our session by giving a warm 2-sentence welcome, introducing the first fun
                 </>
               ) : (
                 <>
-                  <Sparkles className="w-4 h-4" />
+                  <GraduationCap className="w-4 h-4" />
                   <span>Start Tutoring Session on Selected Material</span>
                 </>
               )}
@@ -1905,8 +2009,18 @@ Begin our session by giving a warm 2-sentence welcome, introducing the first fun
                 }`}
               >
                 <Icon className={`w-4 h-4 shrink-0 ${isActive ? 'text-[#E8845F]' : 'text-[#8A817B]'}`} />
-                <div className="text-left flex-1 truncate">
-                  <p className="leading-none">{mode.label}</p>
+                <div className="text-left flex-1 truncate flex items-center justify-between gap-1.5">
+                  <p className="leading-none truncate">{mode.label}</p>
+                  {isGeneratingMap[mode.id] ? (
+                    <Loader2 className="w-3.5 h-3.5 animate-spin text-[#E8845F] shrink-0" title="Generating in background..." />
+                  ) : (notifications[mode.id] > 0) ? (
+                    <span 
+                      className="min-w-[18px] h-[18px] px-1 bg-[#10B981] text-white text-[10px] font-extrabold rounded-full flex items-center justify-center shrink-0 shadow-xs animate-bounce"
+                      title={`${notifications[mode.id]} new items ready`}
+                    >
+                      {notifications[mode.id]}
+                    </span>
+                  ) : null}
                 </div>
               </button>
             )

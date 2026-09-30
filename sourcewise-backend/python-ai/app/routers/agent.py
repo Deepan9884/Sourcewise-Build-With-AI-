@@ -9,7 +9,7 @@ from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
 from typing import Optional, List, Dict, Any
 import json
-from app.services.intent_parser import parse_intent, ParsedIntent
+from app.services.intent_parser import parse_intent, ParsedIntent, ActionType
 from app.services.action_executor import ActionExecutor
 
 
@@ -23,6 +23,7 @@ class AgentRequest(BaseModel):
     source_ids: List[str] = []
     user_id: str = "demo_user"
     conversation_history: List[Dict] = []
+    personal_context: Optional[Dict[str, Any]] = None
     context: Optional[Dict[str, Any]] = None  # Additional context (current page, etc.)
     
     class Config:
@@ -54,19 +55,42 @@ async def agent_chat(req: AgentRequest):
         raise HTTPException(status_code=400, detail="Message cannot be empty")
     
     try:
-        # 1. Parse user intent
-        intent = await parse_intent(
-            message=req.message,
-            source_ids=req.source_ids,
-            history=req.conversation_history,
-        )
+        # 1. Fast-path explicit action if provided in context
+        intent = None
+        action_from_ctx = req.context.get("action") if req.context else None
+        if action_from_ctx:
+            try:
+                action_enum = ActionType(action_from_ctx)
+                intent = ParsedIntent(
+                    action=action_enum,
+                    topic=req.context.get("topic") or None,
+                    count=req.context.get("count") or None,
+                    difficulty=req.context.get("difficulty") or "medium",
+                    focus=req.context.get("focus") or None,
+                    question=req.message,
+                    source_ids=req.source_ids,
+                )
+            except ValueError:
+                pass
+
+        if intent is None:
+            # Parse user intent with LLM / heuristic fast path
+            intent = await parse_intent(
+                message=req.message,
+                source_ids=req.source_ids,
+                history=req.conversation_history,
+            )
         
-        # 2. Execute the action
+        # 2. Extract personal context if available
+        personal_ctx = req.personal_context or (req.context.get("personal_context") if req.context else None)
+        
+        # 3. Execute the action
         result = await executor.execute(
             intent=intent,
             source_ids=req.source_ids,
             user_id=req.user_id,
             history=req.conversation_history,
+            personal_context=personal_ctx,
         )
         
         # 3. Build response

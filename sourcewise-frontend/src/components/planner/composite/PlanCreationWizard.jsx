@@ -11,7 +11,7 @@ import {
   Trash2,
   Plus,
   Loader2,
-  Sparkles,
+  Feather,
   Clock,
   Layers,
   FileCheck
@@ -741,7 +741,7 @@ export default function PlanCreationWizard({ onComplete, isGenerating = false })
                   disabled={isGenerating || !subjectName.trim() || !grandExamDate}
                   label="Inscribe Study Codex"
                 >
-                  {isGenerating ? <Loader2 className="w-6 h-6 animate-spin" /> : <Sparkles className="w-6 h-6" />}
+                  {isGenerating ? <Loader2 className="w-6 h-6 animate-spin" /> : <Feather className="w-6 h-6" />}
                 </WaxSeal>
                 <div>
                   <p className="text-sm font-bold text-[#1E1B16]">
@@ -790,7 +790,7 @@ export default function PlanCreationWizard({ onComplete, isGenerating = false })
               disabled={isGenerating || !subjectName.trim() || !grandExamDate}
               className="sw-btn-primary !h-10 !text-[13px] disabled:opacity-40"
             >
-              {isGenerating ? 'Inscribing…' : 'Generate AI Study Plan'} <Sparkles className="w-3.5 h-3.5" />
+              {isGenerating ? 'Inscribing…' : 'Generate AI Study Plan'} <Calendar className="w-3.5 h-3.5" />
             </button>
           )}
         </div>
