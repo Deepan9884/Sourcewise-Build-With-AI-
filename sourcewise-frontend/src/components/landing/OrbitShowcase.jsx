@@ -158,9 +158,6 @@ export default function OrbitShowcase() {
 
         {/* Section header */}
         <div className="relative text-center max-w-2xl mx-auto px-4 shrink-0">
-          <div className="inline-flex items-center gap-1.5 px-3 py-0.5 rounded-full bg-primary-fixed text-on-primary-fixed font-label-sm text-[11px] font-bold uppercase tracking-wider mb-1 shadow-2xs">
-            The Student Transformation
-          </div>
           <h2 className="font-headline-xl text-xl sm:text-2xl md:text-3xl text-on-surface font-bold tracking-tight">
             How SourceWise Transforms Your Studies
           </h2>

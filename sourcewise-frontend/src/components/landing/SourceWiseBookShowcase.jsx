@@ -317,10 +317,6 @@ export default function SourceWiseBookShowcase() {
 
         {/* Section Top Eyebrow & Headline */}
         <div className="text-center max-w-3xl mx-auto shrink-0 mb-1 sm:mb-2">
-          <div className="inline-flex items-center gap-2 px-4 py-1 rounded-full bg-primary-fixed/90 text-on-primary-fixed font-label-sm text-xs font-bold uppercase tracking-widest mb-1 shadow-xs border border-primary/20">
-            <span className="w-2 h-2 rounded-full bg-primary animate-pulse" />
-            The Ninefold Codex · 3D Interactive Tome
-          </div>
           <h2 className="font-display-hero text-2xl sm:text-3xl md:text-4xl lg:text-[38px] text-on-surface font-extrabold tracking-tight leading-tight">
             The SourceWise Volume of Intelligence
           </h2>

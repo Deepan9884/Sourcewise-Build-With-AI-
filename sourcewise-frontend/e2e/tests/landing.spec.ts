@@ -50,11 +50,12 @@ test.describe('landing page', () => {
     expect(hBox && sBox ? sBox.y - (hBox.y + hBox.height) : 9999).toBeLessThanOrEqual(80);
   });
 
-  // 6. Journey section badge visible
-  test('student transformation badge visible', async ({ page }) => {
+  // 6. Journey eyebrow pill removed, heading remains
+  test('student transformation badge removed, heading remains', async ({ page }) => {
     await page.locator('nav').first().getByText('Journey').click();
     await page.waitForTimeout(1200);
-    await expect(page.getByText('The Student Transformation', { exact: false })).toBeVisible({ timeout: 10000 });
+    await expect(page.getByText('The Student Transformation', { exact: false })).toBeHidden({ timeout: 10000 });
+    await expect(page.getByText('How SourceWise Transforms Your Studies')).toBeVisible({ timeout: 10000 });
   });
 
   // 7. Login navigates to /login
@@ -67,5 +68,13 @@ test.describe('landing page', () => {
   test('Get Started Free navigates to /signup', async ({ page }) => {
     await page.getByRole('link', { name: 'Get Started Free' }).click();
     await expect(page).toHaveURL(/\/signup/, { timeout: 10000 });
+  });
+
+  // 9. Codex eyebrow pill removed, heading remains
+  test('codex eyebrow pill removed, heading remains', async ({ page }) => {
+    await page.locator('nav').first().getByText('Codex').click();
+    await page.waitForTimeout(1200);
+    await expect(page.getByText('The Ninefold Codex · 3D Interactive Tome', { exact: false })).toBeHidden({ timeout: 10000 });
+    await expect(page.getByText('The SourceWise Volume of Intelligence')).toBeVisible({ timeout: 10000 });
   });
 });
