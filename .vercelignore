@@ -1,0 +1,39 @@
+# Vercel Ignore File
+# Prevents unneeded services and large files from uploading to Vercel builds
+
+# Python AI & ChromaDB
+sourcewise-backend/python-ai/
+*.chroma
+*.sqlite3
+*.db
+.pytest_cache/
+
+# Mobile Client
+sourcewise-mobile/
+
+# Documentation & Raw Assets
+docs/
+*.pdf
+*.zip
+image *.png
+sign *.png
+stitch_*.zip
+
+# Tests, Coverage, & Reports
+coverage/
+playwright-report/
+test-results/
+e2e/
+__tests__/
+*.test.js
+*.test.ts
+
+# Monitoring & Docker
+monitoring/
+docker-compose.yml
+Dockerfile
+
+# Local development secrets
+.env
+.env.*
+!.env.example

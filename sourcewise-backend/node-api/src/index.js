@@ -48,18 +48,44 @@ const PORT = process.env.PORT || 4000;
 
 // ─── Security Middleware ───────────────────────────────────────────────────────
 app.use(helmet());
+
+const staticAllowedOrigins = [
+  'http://localhost:5173',
+  'http://localhost:5174',
+  'http://localhost:3000',
+  'http://127.0.0.1:5173',
+  'http://127.0.0.1:5174',
+  'http://127.0.0.1:3000',
+];
+
+if (process.env.FRONTEND_ORIGIN) {
+  const customOrigins = process.env.FRONTEND_ORIGIN.split(',').map(o => o.trim()).filter(Boolean);
+  staticAllowedOrigins.push(...customOrigins);
+}
+
 app.use(cors({
-  origin: [
-    process.env.FRONTEND_ORIGIN || 'http://localhost:3000',
-    'http://localhost:5173',
-    'http://localhost:5174',
-    'http://127.0.0.1:5173',
-    'http://127.0.0.1:5174',
-    'http://127.0.0.1:3000'
-  ],
+  origin: (origin, callback) => {
+    // Allow non-browser requests (mobile apps, curl, server-to-server)
+    if (!origin) return callback(null, true);
+
+    // Exact matches
+    if (staticAllowedOrigins.includes(origin)) return callback(null, true);
+
+    // Match *.vercel.app preview and deployment domains
+    try {
+      const url = new URL(origin);
+      if (url.hostname.endsWith('.vercel.app')) {
+        return callback(null, true);
+      }
+    } catch (e) {
+      // invalid URL format
+    }
+
+    return callback(null, false);
+  },
   credentials: true,
-  methods: ['GET', 'POST', 'PATCH', 'PUT', 'DELETE'],
-  allowedHeaders: ['Content-Type', 'Authorization'],
+  methods: ['GET', 'POST', 'PATCH', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Request-Id', 'X-Internal-Key'],
 }));
 
 // ─── Rate Limiting ─────────────────────────────────────────────────────────────
@@ -149,58 +175,60 @@ app.use((req, res) => {
 app.use(errorHandler);
 
 // ─── Start Server ─────────────────────────────────────────────────────────────
-app.listen(PORT, () => {
-  logger.info('server.start', { port: PORT, env: process.env.NODE_ENV || 'development', version: '11.0.0', missingEnvVars });
-  if (missingEnvVars.length > 0) {
-    logger.warn('server.missing_env', { missing: missingEnvVars });
-  }
-  
-  // Start replan evaluator (hourly) — pg_cron preferred in production DB,
-  // Node fallback here keeps single-instance deployments working.
-  const REPLAN_INTERVAL = 60 * 60 * 1000; // 1 hour
-  const runReplanEval = async () => {
-    try {
-      const replanning = require('./services/replanningService');
-      const results = await replanning.evaluateAllPlans();
-      if (results.length) {
-        logger.info('cron.replan', { actions: results.length });
-        try {
-          const push = require('./routes/events.routes').pushToUser;
-          for (const r of results) {
-            if (r.userId && !r.error) push(r.userId, { type: 'replan', data: r });
-          }
-        } catch (e) { /* SSE optional */ }
-      }
-    } catch (err) {
-      logger.error('cron.replan_failed', { err });
+if (require.main === module) {
+  app.listen(PORT, () => {
+    logger.info('server.start', { port: PORT, env: process.env.NODE_ENV || 'development', version: '11.0.0', missingEnvVars });
+    if (missingEnvVars.length > 0) {
+      logger.warn('server.missing_env', { missing: missingEnvVars });
     }
-  };
-  if (process.env.NODE_ENV === 'production' || process.env.ENABLE_REPLAN_CRON === 'true') {
-    setInterval(runReplanEval, REPLAN_INTERVAL);
-    logger.info('cron.replan_started', { intervalMs: REPLAN_INTERVAL });
-  }
-
-  // Start snapshot cron (every 6 hours in production)
-  if (process.env.NODE_ENV === 'production') {
-    const SNAPSHOT_INTERVAL = 6 * 60 * 60 * 1000; // 6 hours
-    setInterval(async () => {
+    
+    // Start replan evaluator (hourly) — pg_cron preferred in production DB,
+    // Node fallback here keeps single-instance deployments working.
+    const REPLAN_INTERVAL = 60 * 60 * 1000; // 1 hour
+    const runReplanEval = async () => {
       try {
-        const supabase = require('./utils/supabase');
-        const { data: users } = await supabase.from('users').select('id');
-        if (users) {
-          for (const user of users) {
-            // Generate weekly snapshot
-            await generateSnapshot(user.id, 'weekly');
-          }
-          console.log(`[Cron] Generated snapshots for ${users.length} users`);
+        const replanning = require('./services/replanningService');
+        const results = await replanning.evaluateAllPlans();
+        if (results.length) {
+          logger.info('cron.replan', { actions: results.length });
+          try {
+            const push = require('./routes/events.routes').pushToUser;
+            for (const r of results) {
+              if (r.userId && !r.error) push(r.userId, { type: 'replan', data: r });
+            }
+          } catch (e) { /* SSE optional */ }
         }
       } catch (err) {
-        logger.error('cron.snapshot_failed', { err });
+        logger.error('cron.replan_failed', { err });
       }
-    }, SNAPSHOT_INTERVAL);
-    logger.info('cron.snapshot_started', { intervalMs: SNAPSHOT_INTERVAL });
-  }
-});
+    };
+    if (process.env.NODE_ENV === 'production' || process.env.ENABLE_REPLAN_CRON === 'true') {
+      setInterval(runReplanEval, REPLAN_INTERVAL);
+      logger.info('cron.replan_started', { intervalMs: REPLAN_INTERVAL });
+    }
+
+    // Start snapshot cron (every 6 hours in production)
+    if (process.env.NODE_ENV === 'production') {
+      const SNAPSHOT_INTERVAL = 6 * 60 * 60 * 1000; // 6 hours
+      setInterval(async () => {
+        try {
+          const supabase = require('./utils/supabase');
+          const { data: users } = await supabase.from('users').select('id');
+          if (users) {
+            for (const user of users) {
+              // Generate weekly snapshot
+              await generateSnapshot(user.id, 'weekly');
+            }
+            console.log(`[Cron] Generated snapshots for ${users.length} users`);
+          }
+        } catch (err) {
+          logger.error('cron.snapshot_failed', { err });
+        }
+      }, SNAPSHOT_INTERVAL);
+      logger.info('cron.snapshot_started', { intervalMs: SNAPSHOT_INTERVAL });
+    }
+  });
+}
 
 async function generateSnapshot(userId, period) {
   const supabase = require('./utils/supabase');

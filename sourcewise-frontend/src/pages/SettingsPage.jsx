@@ -378,7 +378,8 @@ export default function SettingsPage() {
     { id: 'profile', label: 'Profile & Academic', icon: User, note: 'Identity & Goals' },
     { id: 'ai', label: 'AI Study Companion', icon: Brain, note: 'Friendly, Tutor, Mentor' },
     { id: 'notifications', label: 'Habits & Alerts', icon: Bell, note: 'Schedule & Chimes' },
-    { id: 'appearance', label: 'Appearance & Sound', icon: Palette, note: 'Theme & Font' },
+    // ARCHIVED:
+    // { id: 'appearance', label: 'Appearance & Sound', icon: Palette, note: 'Theme & Font' },
     { id: 'security', label: 'Security & Data', icon: Shield, note: 'Password & Export' },
   ]
 
@@ -896,8 +897,8 @@ export default function SettingsPage() {
             </GlowCard>
           )}
 
-          {/* TAB 4: APPEARANCE & DISPLAY */}
-          {activeTab === 'appearance' && (
+          {/* TAB 4: APPEARANCE & DISPLAY (ARCHIVED) */}
+          {false && activeTab === 'appearance' && (
             <GlowCard className="p-6 space-y-6" glowColor="amber" intensity="sm">
               <div className="border-b border-[#EDE7E1] pb-4 flex items-center justify-between">
                 <div className="flex items-center gap-2.5">
