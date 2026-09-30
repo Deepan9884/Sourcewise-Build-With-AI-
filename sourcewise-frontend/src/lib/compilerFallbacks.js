@@ -1,6 +1,6 @@
 /**
  * Client-Side Resilient Diagnostic & Mentorship Engine for DeepCode
- * Provides instant syntax, type, indentation, explanation, optimization, and test case generation.
+ * Clean, professional output without emojis or metadata noise.
  */
 
 export function inspectCodeOffline({ action = 'fix', language = 'python', code = '', error_output = '' }) {
@@ -120,32 +120,32 @@ ${issue.fix ? `* **Recommended Fix:** ${issue.fix}` : ''}`
         )
         .join('\n\n');
 
-      return `### 🔍 DeepCode Diagnostic Report
+      return `### DeepCode Diagnostic Report
 
-**Status:** ❌ **${detectedIssues.length} CRITICAL ERROR${detectedIssues.length > 1 ? 'S' : ''} DETECTED**
+**Status:** Critical Errors Detected (${detectedIssues.length} found)
 
 ---
 
-### 🛠 Detailed Error Breakdown
+### Detailed Error Breakdown
 
 ${breakdown}
 
 ---
 
-### ✅ Corrected Code
+### Corrected Code
 
 \`\`\`${isPython ? 'python' : lang}
 ${correctedCodeLines.join('\n')}
 \`\`\`
 
 ---
-💡 *Click **Apply Fix** above to automatically update your code in the editor, or press **Run Code (Ctrl+Enter)**.*`;
+*Tip: Click **Apply Fix** above to update your code in the editor, or press **Run Code (Ctrl+Enter)**.*`;
     }
 
     if (error_output) {
-      return `### 🔍 Compiler / Runtime Diagnostic
+      return `### Compiler / Runtime Diagnostic
 
-**Status:** ❌ **RUNTIME ERROR OBSERVED**
+**Status:** Runtime Error Observed
 
 \`\`\`
 ${error_output}
@@ -153,7 +153,7 @@ ${error_output}
 
 ---
 
-### 💡 Diagnostic Analysis
+### Diagnostic Analysis
 * **Error Context:** An active runtime exception or compiler error was caught during program execution.
 * **Troubleshooting Steps:**
   1. Verify variable types and input bounds before passing into functions.
@@ -161,65 +161,62 @@ ${error_output}
   3. Wrap external inputs in error-handling guards.`;
     }
 
-    return `### 🔍 DeepCode Bug Inspector
+    return `### DeepCode Bug Inspector
 
-**Status:** ✅ **NO SYNTAX FLAWS DETECTED**
+**Status:** No Syntax Flaws Detected
 
-- **Language:** \`${lang}\`
-- **Lines Analyzed:** ${lines.length} lines of code
-- **Syntax Integrity:** All compound headers, block delimiters, and brackets match successfully.
+- Analyzed ${lines.length} lines of code.
+- All compound headers, block delimiters, and brackets match successfully.
 
 ---
-💡 *Tip: Your code structure is clean. Press **Run Code (Ctrl+Enter)** or test with custom inputs in the **Standard Input** tab.*`;
+*Tip: Your code structure is clean. Press **Run Code (Ctrl+Enter)** or test with custom inputs in the **Standard Input** tab.*`;
   }
 
   // ─── ACTION: EXPLAIN CODE ───────────────────────────────────────────────────
   if (action === 'explain') {
-    return `### 💡 DeepCode Algorithmic Breakdown
+    return `### DeepCode Algorithmic Breakdown
 
-- **Target Language:** \`${lang}\`
-- **Total Code Length:** ${lines.length} lines
+- Analyzed ${lines.length} lines of code.
 
 ---
 
-### 🧠 Logic Walkthrough
+### Logic Walkthrough
 1. **Input & Initialization:** The program reads inputs and sets up state in working memory.
 2. **Control Flow & Branching:** Evaluates conditional conditions to determine execution path.
 3. **Output & Result:** Produces formatted output stream to stdout.
 
 ---
 
-### ⏱ Complexity Analysis
+### Complexity Analysis
 * **Time Complexity:** \`O(1)\` constant time for sequential operations, or proportional to loop bounds.
 * **Space Complexity:** \`O(1)\` auxiliary memory allocated in stack frame.
 
 ---
-💡 *Tip: You can press **Find & Fix Bugs** to run a deep diagnostic or **Optimize Code** for cleaner idioms.*`;
+*Tip: You can press **Find & Fix Bugs** to run a diagnostic or **Optimize Code** for cleaner idioms.*`;
   }
 
   // ─── ACTION: OPTIMIZE CODE ──────────────────────────────────────────────────
   if (action === 'optimize') {
-    return `### ⚡ DeepCode Code Optimizer
+    return `### DeepCode Code Optimizer
 
-- **Target Language:** \`${lang}\`
-- **Optimization Strategy:** Idiomatic efficiency, input validation, and defensive programming.
+- Optimization Strategy: Idiomatic efficiency, input validation, and defensive programming.
 
 ---
 
-### 🚀 Optimization Recommendations
+### Optimization Recommendations
 1. **Defensive Input Handling:** When converting inputs from \`stdin\`, wrap type casting in validation guards (e.g. \`try/except ValueError\` in Python).
 2. **String Interpolation:** Use modern formatting (such as Python \`f-strings\` or JS template literals \`\${...}\`) for cleaner readability and faster concatenation.
 3. **Early Returns & Guards:** Reduce nested branching by using guard clauses to exit early on invalid states.
 
 ---
-💡 *Tip: Check the **Generate Tests** tab to verify that edge-case inputs don't break your logic.*`;
+*Tip: Check the **Generate Tests** tab to verify that edge-case inputs don't break your logic.*`;
   }
 
   // ─── ACTION: GENERATE TESTS ─────────────────────────────────────────────────
   if (action === 'test_cases') {
-    return `### 🧪 DeepCode Test Suite Generator
+    return `### DeepCode Test Suite Generator
 
-Four diverse test cases formulated for your current \`${lang}\` program:
+Four diverse test cases formulated for your current program:
 
 ---
 
@@ -244,11 +241,10 @@ Four diverse test cases formulated for your current \`${lang}\` program:
 * **Purpose:** Validates negative numbers and edge boundaries.
 
 ---
-💡 *Tip: Paste these test values into the **Standard Input** tab to run and verify!*`;
+*Tip: Paste these test values into the **Standard Input** tab to run and verify.*`;
   }
 
-  return `### ⚡ DeepCode AI Inspector
+  return `### DeepCode AI Inspector
 
-**Language:** \`${lang}\` (${lines.length} lines)
 Ready to inspect, debug, optimize, and generate test cases for your program.`;
 }

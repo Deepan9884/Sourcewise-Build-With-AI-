@@ -5,20 +5,30 @@ import {
   CheckCircle2,
   AlertTriangle,
   AlertCircle,
-  Sparkles,
-  Lightbulb,
   Code2,
   ArrowRight,
   ShieldAlert,
 } from 'lucide-react';
 
 /**
+ * Strip all emojis to keep the presentation strictly clean & professional
+ */
+function stripEmojis(str) {
+  if (!str) return '';
+  return str
+    .replace(/[\u{1F300}-\u{1FAFF}\u{2600}-\u{27BF}\u{FE00}-\u{FE0F}]/gu, '')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+/**
  * Format inline markdown tokens: **bold**, `code`, *italic*
  */
 function renderInline(text) {
   if (!text) return '';
+  const cleaned = stripEmojis(text);
   // Split on bold, inline code, and italics
-  const tokens = text.split(/(\*\*.*?\*\*|`.*?`|\*.*?\*)/g);
+  const tokens = cleaned.split(/(\*\*.*?\*\*|`.*?`|\*.*?\*)/g);
 
   return tokens.map((part, i) => {
     if (part.startsWith('**') && part.endsWith('**') && part.length >= 4) {
@@ -153,6 +163,11 @@ export default function AIReportViewer({ content, onApplyCode }) {
       continue;
     }
 
+    // Completely omit Action and Language metadata rows
+    if (/^[-*]?\s*(\*\*)?(action|language|target language):/i.test(trimmed)) {
+      continue;
+    }
+
     // Horizontal Rule
     if (trimmed === '---' || trimmed === '***' || trimmed === '___') {
       elements.push({ type: 'divider' });
@@ -161,36 +176,48 @@ export default function AIReportViewer({ content, onApplyCode }) {
 
     // Headings
     if (trimmed.startsWith('### ')) {
-      elements.push({ type: 'h3', text: trimmed.slice(4) });
+      const headingText = stripEmojis(trimmed.slice(4));
+      if (headingText) {
+        elements.push({ type: 'h3', text: headingText });
+      }
       continue;
     }
     if (trimmed.startsWith('#### ')) {
-      elements.push({ type: 'h4', text: trimmed.slice(5) });
+      const headingText = stripEmojis(trimmed.slice(5));
+      if (headingText) {
+        elements.push({ type: 'h4', text: headingText });
+      }
       continue;
     }
     if (trimmed.startsWith('## ')) {
-      elements.push({ type: 'h2', text: trimmed.slice(3) });
+      const headingText = stripEmojis(trimmed.slice(3));
+      if (headingText) {
+        elements.push({ type: 'h2', text: headingText });
+      }
       continue;
     }
     if (trimmed.startsWith('# ')) {
-      elements.push({ type: 'h1', text: trimmed.slice(2) });
+      const headingText = stripEmojis(trimmed.slice(2));
+      if (headingText) {
+        elements.push({ type: 'h1', text: headingText });
+      }
       continue;
     }
 
     // Callout / Pro-Tip Box
-    if (trimmed.startsWith('💡') || trimmed.startsWith('⚡') || trimmed.startsWith('> ')) {
+    if (trimmed.startsWith('Tip:') || trimmed.startsWith('*Tip:') || trimmed.startsWith('💡') || trimmed.startsWith('⚡') || trimmed.startsWith('> ')) {
       elements.push({
         type: 'callout',
-        text: trimmed.replace(/^💡\s*|^⚡\s*|^>\s*/, ''),
+        text: stripEmojis(trimmed.replace(/^(\*Tip:|\bTip:|💡|⚡|>)\s*/i, '')),
       });
       continue;
     }
 
     // Error bullet / warning
-    if (trimmed.startsWith('- ❌') || trimmed.startsWith('* ❌')) {
+    if (trimmed.startsWith('- ❌') || trimmed.startsWith('* ❌') || trimmed.startsWith('- **Line') || trimmed.startsWith('* **Line')) {
       elements.push({
         type: 'error_item',
-        text: trimmed.replace(/^[-*]\s*❌\s*/, ''),
+        text: stripEmojis(trimmed.replace(/^[-*]\s*(❌)?\s*/, '')),
       });
       continue;
     }
@@ -199,7 +226,7 @@ export default function AIReportViewer({ content, onApplyCode }) {
     if (trimmed.startsWith('- ') || trimmed.startsWith('* ')) {
       elements.push({
         type: 'bullet',
-        text: trimmed.slice(2),
+        text: stripEmojis(trimmed.slice(2)),
       });
       continue;
     }
@@ -210,7 +237,7 @@ export default function AIReportViewer({ content, onApplyCode }) {
       elements.push({
         type: 'numbered',
         number: numMatch[1],
-        text: numMatch[2],
+        text: stripEmojis(numMatch[2]),
       });
       continue;
     }
@@ -219,16 +246,19 @@ export default function AIReportViewer({ content, onApplyCode }) {
     if (trimmed.startsWith('**Status:**') || trimmed.startsWith('Status:')) {
       elements.push({
         type: 'status',
-        text: trimmed,
+        text: stripEmojis(trimmed),
       });
       continue;
     }
 
     // Normal paragraph
-    elements.push({
-      type: 'paragraph',
-      text: line,
-    });
+    const cleanedPara = stripEmojis(line);
+    if (cleanedPara) {
+      elements.push({
+        type: 'paragraph',
+        text: cleanedPara,
+      });
+    }
   }
 
   // Close any unclosed code block
@@ -253,8 +283,7 @@ export default function AIReportViewer({ content, onApplyCode }) {
           case 'h1':
           case 'h2':
             return (
-              <div key={idx} className="pt-2 pb-1 border-b border-[#EAE3DC] flex items-center gap-2">
-                <Sparkles className="w-4 h-4 text-[#C05A35] shrink-0" />
+              <div key={idx} className="pt-2 pb-1 border-b border-[#EAE3DC]">
                 <h3 className="font-bold text-base text-[#1E1B16] tracking-tight">
                   {renderInline(el.text)}
                 </h3>
@@ -288,7 +317,7 @@ export default function AIReportViewer({ content, onApplyCode }) {
             );
 
           case 'status': {
-            const isCritical = el.text.includes('ERROR') || el.text.includes('❌');
+            const isCritical = el.text.toUpperCase().includes('ERROR') || el.text.toUpperCase().includes('CRITICAL');
             return (
               <div
                 key={idx}
@@ -347,7 +376,7 @@ export default function AIReportViewer({ content, onApplyCode }) {
                 key={idx}
                 className="p-3 my-2 rounded-xl bg-[#FDF7F2] border border-[#F3DEC9] text-[#7A3F1F] flex items-start gap-2.5 text-xs"
               >
-                <Lightbulb className="w-4 h-4 text-[#C05A35] shrink-0 mt-0.5" />
+                <div className="w-1.5 h-full min-h-[16px] rounded-full bg-[#C05A35] shrink-0 mt-0.5" />
                 <div className="flex-1 leading-relaxed font-medium">
                   {renderInline(el.text)}
                 </div>

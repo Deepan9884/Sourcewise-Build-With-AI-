@@ -10,33 +10,26 @@ import { useAuthStore } from '../store/authStore'
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:4000'
 
-const AI_PERSONAS = [
+const AI_MODES = [
   {
-    id: 'kitsune',
-    name: 'Encouraging Kitsune',
-    role: 'Playful & Motivating Companion',
-    desc: 'Celebrates every milestone, gives energetic positive reinforcement, and maintains high study momentum.',
-    icon: '🦊',
+    id: 'friendly',
+    name: 'Friendly',
+    role: 'Warm & Encouraging Companion',
+    desc: 'Celebrates your progress, explains concepts in clear everyday language, and keeps learning engaging and stress-free.',
+    icon: '😊',
   },
   {
-    id: 'socratic',
-    name: 'Socratic Mentor',
-    role: 'Inquiry-Based Deep Learning',
-    desc: 'Guides you with probing questions instead of immediate answers, helping you construct understanding from first principles.',
+    id: 'tutor',
+    name: 'Tutor',
+    role: 'Structured & Direct Instruction',
+    desc: 'Provides structured explanations, worked examples, and comprehensive breakdowns to help you master core concepts.',
     icon: '🎓',
   },
   {
-    id: 'coach',
-    name: 'High-Yield Exam Coach',
-    role: 'Direct & Formula-Focused',
-    desc: 'Concise bullet points, memory hooks, and exam trick warnings without fluff. Optimized for time-crunched revision.',
-    icon: '⚡',
-  },
-  {
-    id: 'feynman',
-    name: 'Feynman Simplifier',
-    role: 'Analogy & Mental Models',
-    desc: 'Breaks complex academic jargon into intuitive everyday analogies as if explaining to a 10-year-old.',
+    id: 'mentor',
+    name: 'Mentor',
+    role: 'Socratic Inquiry & Deep Thinking',
+    desc: 'Guides you with probing questions instead of immediate answers, helping you deduce solutions from first principles.',
     icon: '💡',
   },
 ]
@@ -58,7 +51,11 @@ export default function SettingsPage() {
   const [studyRhythm, setStudyRhythm] = useState('night_owl')
 
   // --- 2. AI Companion State ---
-  const [aiPersona, setAiPersona] = useState('kitsune')
+  const [aiPersona, setAiPersona] = useState(() => {
+    const saved = typeof window !== 'undefined' ? localStorage.getItem('sw_ai_persona') : null
+    if (saved && ['friendly', 'tutor', 'mentor'].includes(saved)) return saved
+    return 'tutor'
+  })
   const [responseDepth, setResponseDepth] = useState('balanced')
   const [autoFlashcards, setAutoFlashcards] = useState(true)
   const [quizRigor, setQuizRigor] = useState('balanced')
@@ -111,7 +108,20 @@ export default function SettingsPage() {
           if (data.bio) setBio(data.bio)
 
           if (data.ai) {
-            if (data.ai.persona) setAiPersona(data.ai.persona)
+            if (data.ai.persona) {
+              const p = String(data.ai.persona).toLowerCase()
+              if (['friendly', 'tutor', 'mentor'].includes(p)) {
+                setAiPersona(p)
+              } else if (p === 'kitsune' || p === 'feynman') {
+                setAiPersona('friendly')
+              } else if (p === 'coach') {
+                setAiPersona('tutor')
+              } else if (p === 'socratic') {
+                setAiPersona('mentor')
+              } else {
+                setAiPersona('tutor')
+              }
+            }
             if (data.ai.responseDepth) setResponseDepth(data.ai.responseDepth)
             if (data.ai.autoFlashcards !== undefined) setAutoFlashcards(data.ai.autoFlashcards)
             if (data.ai.quizRigor) setQuizRigor(data.ai.quizRigor)
@@ -366,7 +376,7 @@ export default function SettingsPage() {
 
   const tabs = [
     { id: 'profile', label: 'Profile & Academic', icon: User, note: 'Identity & Goals' },
-    { id: 'ai', label: 'AI Study Companion', icon: Brain, note: 'Persona & Rigor' },
+    { id: 'ai', label: 'AI Study Companion', icon: Brain, note: 'Friendly, Tutor, Mentor' },
     { id: 'notifications', label: 'Habits & Alerts', icon: Bell, note: 'Schedule & Chimes' },
     { id: 'appearance', label: 'Appearance & Sound', icon: Palette, note: 'Theme & Font' },
     { id: 'security', label: 'Security & Data', icon: Shield, note: 'Password & Export' },
@@ -644,141 +654,57 @@ export default function SettingsPage() {
                     <Brain className="w-4 h-4" />
                   </div>
                   <div>
-                    <h2 className="font-bold text-base text-[#1E1B16]">AI Companion Persona & Tuning</h2>
-                    <p className="text-xs text-[#6B625C]">Customize how your AI explains concepts and conducts tutoring</p>
+                    <h2 className="font-bold text-base text-[#1E1B16]">AI Companion Mode</h2>
+                    <p className="text-xs text-[#6B625C]">Choose your preferred AI interaction mode</p>
                   </div>
                 </div>
 
                 <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-emerald-50 border border-emerald-200 text-emerald-800 text-[11px] font-bold">
                   <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-                  <span>Local LLM Ready</span>
+                  <span>AI Ready</span>
                 </div>
               </div>
 
-              {/* Companion Persona Selection */}
+              {/* Mode Selection */}
               <div>
                 <label className="block text-xs font-bold uppercase tracking-wider text-[#6B625C] mb-3">
-                  Select Companion Teaching Style
+                  Select Mode
                 </label>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5">
-                  {AI_PERSONAS.map((p) => (
-                    <button
-                      key={p.id}
-                      type="button"
-                      onClick={() => setAiPersona(p.id)}
-                      className={`p-4 rounded-2xl border text-left transition-all cursor-pointer flex flex-col justify-between relative ${
-                        aiPersona === p.id
-                          ? 'bg-[#FDEEE6] border-[#E8845F] shadow-xs'
-                          : 'bg-white border-[#EDE7E1] hover:bg-[#FAF6F2]'
-                      }`}
-                    >
-                      <div>
-                        <div className="flex items-center justify-between mb-1.5">
-                          <div className="flex items-center gap-2">
-                            <span className="text-xl">{p.icon}</span>
-                            <h3 className={`text-sm font-bold ${aiPersona === p.id ? 'text-[#C05A35]' : 'text-[#1E1B16]'}`}>
-                              {p.name}
-                            </h3>
-                          </div>
-                          {aiPersona === p.id && (
-                            <span className="w-5 h-5 rounded-full bg-[#E8845F] text-white flex items-center justify-center text-xs">
-                              <Check className="w-3 h-3 stroke-[3]" />
-                            </span>
-                          )}
-                        </div>
-                        <p className="text-[11px] font-semibold text-[#E8845F] mb-1.5">{p.role}</p>
-                        <p className="text-xs text-[#5B544E] leading-relaxed">{p.desc}</p>
-                      </div>
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              {/* Response Depth & Detail */}
-              <div>
-                <label className="block text-xs font-bold text-[#1E1B16] mb-2">
-                  Explanation Depth & Structure
-                </label>
-                <div className="grid grid-cols-3 gap-3">
-                  {[
-                    { id: 'concise', label: '⚡ High-Yield Bullets', desc: 'Fast, key takeaways' },
-                    { id: 'balanced', label: '⚖️ Balanced Clarity', desc: 'Standard explanation' },
-                    { id: 'deep', label: '🔬 Comprehensive Dive', desc: 'Full step-by-step proofs' },
-                  ].map((d) => (
-                    <button
-                      key={d.id}
-                      type="button"
-                      onClick={() => setResponseDepth(d.id)}
-                      className={`p-3 rounded-xl border text-center transition-all cursor-pointer ${
-                        responseDepth === d.id
-                          ? 'bg-[#FDEEE6] border-[#E8845F] text-[#C05A35] font-bold'
-                          : 'bg-white border-[#EDE7E1] text-[#5B544E] hover:bg-[#FAF6F2]'
-                      }`}
-                    >
-                      <p className="text-xs">{d.label}</p>
-                      <p className="text-[10px] font-normal text-[#7C726A] mt-0.5">{d.desc}</p>
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              {/* Toggles: Auto-generate Flashcards & Quiz Rigor */}
-              <div className="space-y-3 pt-2">
-                <div className="flex items-center justify-between p-3.5 bg-white rounded-2xl border border-[#EDE7E1]">
-                  <div>
-                    <p className="text-sm font-bold text-[#1E1B16]">Auto-Extract Spaced Flashcards</p>
-                    <p className="text-xs text-[#6B625C] mt-0.5">
-                      Automatically synthesize high-yield retrieval cards when analyzing new study materials
-                    </p>
-                  </div>
-                  <button
-                    type="button"
-                    onClick={() => setAutoFlashcards(!autoFlashcards)}
-                    className={`w-12 h-6.5 rounded-full transition-all cursor-pointer relative p-0.5 ${
-                      autoFlashcards ? 'bg-[#E8845F]' : 'bg-[#E5DFD9]'
-                    }`}
-                  >
-                    <div
-                      className={`w-5 h-5 rounded-full bg-white shadow-sm transform transition-transform ${
-                        autoFlashcards ? 'translate-x-5.5' : 'translate-x-0.5'
-                      }`}
-                    />
-                  </button>
-                </div>
-
-                <div className="p-3.5 bg-white rounded-2xl border border-[#EDE7E1] flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-                  <div>
-                    <p className="text-sm font-bold text-[#1E1B16]">Diagnostic Quiz Rigor</p>
-                    <p className="text-xs text-[#6B625C] mt-0.5">
-                      Sets cognitive difficulty for AI generated assessments
-                    </p>
-                  </div>
-                  <div className="flex items-center gap-1.5 bg-[#FAF6F2] p-1 rounded-xl border border-[#EDE7E1]">
-                    {['foundational', 'balanced', 'olympiad'].map((lvl) => (
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  {AI_MODES.map((m) => {
+                    const isSelected = aiPersona === m.id
+                    return (
                       <button
-                        key={lvl}
+                        key={m.id}
                         type="button"
-                        onClick={() => setQuizRigor(lvl)}
-                        className={`px-3 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer ${
-                          quizRigor === lvl
-                            ? 'bg-[#E8845F] text-white shadow-xs'
-                            : 'text-[#5B544E] hover:text-[#1E1B16]'
+                        onClick={() => setAiPersona(m.id)}
+                        className={`p-5 rounded-2xl border text-left transition-all cursor-pointer flex flex-col justify-between relative ${
+                          isSelected
+                            ? 'bg-[#FDEEE6] border-[#E8845F] ring-2 ring-[#E8845F]/30 shadow-xs'
+                            : 'bg-white border-[#EDE7E1] hover:bg-[#FAF6F2] hover:border-[#D1C7BD]'
                         }`}
                       >
-                        {lvl === 'foundational' ? 'Recall' : lvl === 'balanced' ? 'Balanced' : 'Advanced'}
+                        <div>
+                          <div className="flex items-center justify-between mb-3">
+                            <div className="flex items-center gap-2.5">
+                              <span className="text-2xl">{m.icon}</span>
+                              <h3 className={`text-base font-bold ${isSelected ? 'text-[#C05A35]' : 'text-[#1E1B16]'}`}>
+                                {m.name}
+                              </h3>
+                            </div>
+                            {isSelected && (
+                              <span className="w-6 h-6 rounded-full bg-[#E8845F] text-white flex items-center justify-center text-xs shadow-xs">
+                                <Check className="w-3.5 h-3.5 stroke-[3]" />
+                              </span>
+                            )}
+                          </div>
+                          <p className="text-xs font-semibold text-[#E8845F] mb-2">{m.role}</p>
+                          <p className="text-xs text-[#5B544E] leading-relaxed">{m.desc}</p>
+                        </div>
                       </button>
-                    ))}
-                  </div>
+                    )
+                  })}
                 </div>
-              </div>
-
-              {/* Local AI Model Info Box */}
-              <div className="p-3.5 rounded-2xl bg-[#FAF6F2] border border-[#EDE7E1] flex items-center justify-between text-xs text-[#5B544E]">
-                <div className="flex items-center gap-2">
-                  <Laptop className="w-4 h-4 text-[#E8845F]" />
-                  <span>Model Engine: <strong>llama3.2:3b (Ollama Host)</strong></span>
-                </div>
-                <span>ChromaDB RAG Active</span>
               </div>
             </GlowCard>
           )}

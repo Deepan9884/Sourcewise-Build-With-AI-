@@ -389,11 +389,11 @@ async function aiAssist({ action, language, code, error_output = '', user_id = n
   let fallbackMessage = '';
 
   if (detectedIssues.length > 0) {
-    fallbackMessage = `### 🔍 Detected Syntax & Runtime Errors\n\n` +
-      detectedIssues.map((issue) => `- ❌ **${issue}**`).join('\n\n') +
-      `\n\n💡 *Tip: Fix the highlighted syntax errors and re-run your program.*`;
+    fallbackMessage = `### Detected Syntax & Runtime Errors\n\n` +
+      detectedIssues.map((issue) => `- **${issue}**`).join('\n\n') +
+      `\n\nTip: Fix the highlighted syntax errors and re-run your program.`;
   } else if (error_output) {
-    fallbackMessage = `**Observed Diagnostic:**\n\`\`\`\n${error_output}\n\`\`\`\n\n💡 *Tip: Check variable scoping, array bounds, and return types.*`;
+    fallbackMessage = `**Observed Diagnostic:**\n\`\`\`\n${error_output}\n\`\`\`\n\nTip: Check variable scoping, array bounds, and return types.`;
   } else {
     fallbackMessage = `Run the code to verify execution output. (Static inspection found no obvious syntax delimiter errors).`;
   }
@@ -401,7 +401,7 @@ async function aiAssist({ action, language, code, error_output = '', user_id = n
   return {
     action,
     language: canonical,
-    analysis: `### 🤖 DeepCode AI Inspector\n\n**Action:** ${action.toUpperCase()}\n**Language:** ${canonical}\n\n**Code Overview:**\n- Analyzed ${code.split('\n').length} lines of code.\n\n${fallbackMessage}`,
+    analysis: `### DeepCode AI Inspector\n\n${fallbackMessage}`,
   };
 }
 

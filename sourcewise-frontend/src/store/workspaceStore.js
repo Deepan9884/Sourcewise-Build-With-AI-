@@ -193,7 +193,7 @@ export const useWorkspaceStore = create(
       // ── Tutor State ────────────────────────────────────────────────────────
       tutor: {
         isSessionActive: false,
-        style: 'Socratic Coach',
+        style: 'Tutor',
         topic: '',
         error: null,
       },

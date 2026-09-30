@@ -178,3 +178,9 @@ Date: 2026-09-29
 - Committed: e8047cd ui: remove signup modality chips and encryption footnote.
 - Test: MCP live :5173/signup — all 4 strings 0 matches, heading/mascot/form intact; fill + show-password + Log-in-link pass; console 0 errors/0 warnings. CLI: 11/11 pass 49.3s workers=1. eslint SignupPage.jsx clean (1 pre-existing react-hooks warning).
 - Files: sourcewise-frontend/src/pages/SignupPage.jsx
+### 2026-09-30 — harmonize tutoring modes, compiler fallbacks, and study suite UI
+- Step 1 (Pull/Sync): `git pull origin main` pulled 03b9045 cleanly from origin/main.
+- Step 2: Harmonized tutoring modes (Friendly, Tutor, Mentor) across python-ai (personality_engine, tutor_chain, tutor router), frontend (SettingsPage, AIWorkspacePage, workspaceStore), and mobile (chat.tsx, tutorStore). Enhanced compilerService fallbacks & AIReportViewer header. Added source auto-fetch & active sync in sourceStore & DashboardPage navigation to /knowledge. Upgraded PuzzleArenePage source selector dropzone.
+- Step 3 (Visual / E2E): Built frontend production bundle (0 errors, 2.60s). Ran node-api Jest test suite (17/17 suites, 121/121 tests pass). Playwright landing suite 9/9 passed (35.9s).
+- Step 4/5 (Commit & Push): Committed changes (6f8c330), updated journey.md, pushed cleanly to origin/main.
+- Files: compilerService.js, tutor.py, personality_engine.py, tutor_chain.py, AIReportViewer.jsx, MainLayout.jsx, compilerFallbacks.js, AIWorkspacePage.jsx, DashboardPage.jsx, PuzzleArenePage.jsx, SettingsPage.jsx, sourceStore.js, workspaceStore.js, chat.tsx, tutorStore.ts, journey.md

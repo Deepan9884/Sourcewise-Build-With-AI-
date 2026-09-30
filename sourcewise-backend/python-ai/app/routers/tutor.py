@@ -32,7 +32,7 @@ class TutorExplainRequest(BaseModel):
     question: str = Field(..., description="User's question to be explained")
     source_ids: List[str] = Field(..., description="List of source document IDs to search")
     user_profile: Optional[Dict] = Field(None, description="User's learning profile with mastery levels and preferences")
-    mode: str = Field(default="direct", description="Tutoring mode: direct, socratic, exploratory, exam_prep")
+    mode: str = Field(default="tutor", description="Tutoring mode: friendly, tutor, mentor, direct, socratic, exploratory, exam_prep")
     history: Optional[List[Dict]] = Field(default=None, description="Conversation history for context")
     session_id: Optional[str] = Field(None, description="Session ID for context management")
 

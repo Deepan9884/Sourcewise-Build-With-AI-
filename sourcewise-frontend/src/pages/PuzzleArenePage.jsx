@@ -1,13 +1,16 @@
-import { useState, useEffect, lazy, Suspense } from 'react'
+import { useState, useEffect, useRef, lazy, Suspense } from 'react'
 import { createPortal } from 'react-dom'
 import { motion, AnimatePresence } from 'framer-motion'
-import { useParams, useNavigate } from 'react-router-dom'
+import { useParams, useNavigate, Link } from 'react-router-dom'
 import {
   X, Zap, Trophy, AlertCircle, Loader2, Maximize2, Minimize2,
-  Gamepad2, ScanText, Waypoints, Flame, Layers, Shuffle, Type, Play, Crosshair, Target
+  Gamepad2, ScanText, Waypoints, Flame, Layers, Shuffle, Type, Play, Crosshair, Target,
+  UploadCloud, ExternalLink, Check, Plus, FileText, BookOpen
 } from 'lucide-react'
 import { useAuthStore } from '../store/authStore'
 import { usePuzzleStore } from '../store/puzzleStore'
+import { useSourceStore } from '../store/sourceStore'
+import { ingestDocument } from '../lib/chatApi'
 import PuzzleResult from '../components/puzzles/shared/PuzzleResult'
 
 // Lazy-load game components for code splitting
@@ -145,16 +148,28 @@ export default function PuzzleArenePage() {
   const { type: routeType } = useParams()
   const navigate            = useNavigate()
   const accessToken         = useAuthStore(s => s.accessToken)
+  const user                = useAuthStore(s => s.user)
   const store               = usePuzzleStore()
 
-  const [sources, setSources]       = useState([])
+  const {
+    uploadedSources: sources,
+    activeSourceIds,
+    toggleActiveSource,
+    addSource,
+    updateSourceStatus,
+    fetchSources,
+  } = useSourceStore()
+
   const [selectedSources, setSelectedSources] = useState([])
   const [topic, setTopic]           = useState('')
   const [difficulty, setDifficulty] = useState('Study')
   const [activeGame, setActiveGame] = useState(null)
   const [toast, setToast]           = useState(null)
-  const [loadingSources, setLoadingSources] = useState(true)
+  const [loadingSources, setLoadingSources] = useState(false)
   const [isFullScreen, setIsFullScreen] = useState(true)
+  const [isUploading, setIsUploading] = useState(false)
+  const [isDragOver, setIsDragOver] = useState(false)
+  const fileInputRef = useRef(null)
 
   useEffect(() => {
     const handleKeyDown = (e) => {
@@ -167,22 +182,87 @@ export default function PuzzleArenePage() {
   }, [activeGame]) // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
-    if (!accessToken) return
-    fetch(`${API_URL}/sources`, { headers: { Authorization: `Bearer ${accessToken}` } })
-      .then(r => r.ok ? r.json() : [])
-      .then(data => {
-        const list = Array.isArray(data) ? data : (data.sources || data.data || [])
-        setSources(list)
-        if (list.length <= 3) setSelectedSources(list.map(s => s.id))
-      })
-      .catch(() => {})
-      .finally(() => setLoadingSources(false))
+    if (accessToken) {
+      setLoadingSources(true)
+      fetchSources(accessToken).finally(() => setLoadingSources(false))
+    }
     store.fetchStats(accessToken)
-  }, [accessToken]) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [accessToken, fetchSources]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Auto-sync selectedSources with active sources or first 3
+  useEffect(() => {
+    if (sources.length > 0 && selectedSources.length === 0) {
+      const validActive = activeSourceIds.filter(id => sources.some(s => s.id === id))
+      if (validActive.length > 0) {
+        setSelectedSources(validActive)
+      } else {
+        setSelectedSources(sources.slice(0, 3).map(s => s.id))
+      }
+    }
+  }, [sources, activeSourceIds, selectedSources.length])
 
   const showToast = (msg) => {
     setToast(msg)
     setTimeout(() => setToast(null), 3000)
+  }
+
+  const toggleSource = (id) => {
+    setSelectedSources(prev =>
+      prev.includes(id) ? prev.filter(s => s !== id) : [...prev, id]
+    )
+    toggleActiveSource(id)
+  }
+
+  const handleUploadFiles = async (files) => {
+    if (!files || files.length === 0) return
+    setIsUploading(true)
+    for (const file of Array.from(files)) {
+      const sourceId = `src_${Date.now()}_${Math.random().toString(36).substring(7)}`
+      addSource({
+        id: sourceId,
+        name: file.name,
+        size: file.size,
+        type: file.name.split('.').pop().toLowerCase(),
+        status: 'uploading',
+        file,
+      })
+      try {
+        updateSourceStatus(sourceId, 'processing')
+        const result = await ingestDocument(file, sourceId, user?.id || 'anonymous', file.name)
+        let realId = sourceId
+        if (accessToken) {
+          const res = await fetch(`${API_URL}/sources`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${accessToken}` },
+            body: JSON.stringify({
+              id: sourceId,
+              name: file.name,
+              type: file.name.split('.').pop().toLowerCase(),
+              size: file.size,
+              status: 'ready',
+              chunks_indexed: result?.chunks_indexed || 0,
+            }),
+          })
+          if (res.ok) {
+            const saved = await res.json()
+            if (saved?.id) realId = saved.id
+          }
+        }
+        updateSourceStatus(sourceId, 'ready')
+        useSourceStore.setState((st) => ({
+          uploadedSources: st.uploadedSources.map((s) =>
+            s.id === sourceId ? { ...s, id: realId, chunksIndexed: result?.chunks_indexed || 0, status: 'ready' } : s
+          ),
+          activeSourceIds: st.activeSourceIds.map((id) => (id === sourceId ? realId : id)),
+        }))
+        setSelectedSources((prev) => (prev.includes(realId) ? prev : [...prev, realId]))
+        showToast(`Indexed "${file.name}" for challenges!`)
+      } catch (err) {
+        updateSourceStatus(sourceId, 'error')
+        showToast(`Failed to upload ${file.name}: ${err.message}`)
+      }
+    }
+    setIsUploading(false)
   }
 
   const handlePlay = async (game) => {
@@ -224,12 +304,6 @@ export default function PuzzleArenePage() {
   const handlePlayAgain = async () => {
     store.reset()
     await handlePlay(activeGame)
-  }
-
-  const toggleSource = (id) => {
-    setSelectedSources(prev =>
-      prev.includes(id) ? prev.filter(s => s !== id) : [...prev, id]
-    )
   }
 
   // ── Game Modal Data ──────────────────────────────────────────────────────────
@@ -306,47 +380,119 @@ export default function PuzzleArenePage() {
           initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.2 }}
           className="lg:col-span-1 flex flex-col gap-5"
         >
-          {/* Source selector */}
-          <div className="bg-white p-5 rounded-2xl border border-[#EDE7E1] flex flex-col shadow-xs">
-            <p className="text-xs font-bold uppercase tracking-wider text-[#6B635B] mb-3 flex items-center gap-2">
-              <ScanText className="w-4 h-4 text-[#C05A35]" /> Study Materials
-            </p>
-            {loadingSources ? (
-              <div className="flex items-center gap-2 text-sm text-[#7A7167] py-2">
-                <Loader2 className="w-4 h-4 animate-spin text-[#C05A35]" /> Loading documents...
+          {/* Source Selector & Library Panel */}
+          <div className="bg-white p-4 rounded-2xl border border-[#EDE7E1] flex flex-col shadow-xs">
+            {/* Header */}
+            <div className="flex items-center justify-between mb-2.5">
+              <div className="flex items-center gap-1.5 min-w-0">
+                <BookOpen className="w-3.5 h-3.5 text-[#C05A35] shrink-0" />
+                <span className="text-xs font-bold text-[#1E1B16] tracking-tight">Source Material</span>
+              </div>
+              {sources.length > 0 && (
+                <span className="text-[10px] font-semibold text-[#8C827A] bg-[#F5EFEA] px-2 py-0.5 rounded-full tabular-nums">
+                  {selectedSources.length}/{sources.length} active
+                </span>
+              )}
+            </div>
+
+            {/* Hidden file input for quick upload */}
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept=".pdf,.docx,.txt"
+              multiple
+              onChange={(e) => {
+                if (e.target.files) handleUploadFiles(e.target.files)
+                e.target.value = ''
+              }}
+              className="hidden"
+            />
+
+            {loadingSources && sources.length === 0 ? (
+              <div className="flex items-center justify-center gap-2 text-xs text-[#7A7167] py-4 bg-[#FAF8F5] rounded-xl border border-[#EDE7E1]">
+                <Loader2 className="w-3.5 h-3.5 animate-spin text-[#C05A35]" />
+                <span>Loading sources...</span>
               </div>
             ) : sources.length === 0 ? (
-              <div className="text-xs text-[#7A7167] bg-[#FAF8F5] rounded-xl p-4 text-center border border-[#EDE7E1]">
-                <p className="font-medium text-[#554E46]">No study materials available yet.</p>
-                <a href="/sources" className="text-[#C05A35] font-semibold mt-2 inline-block hover:underline">Upload PDFs or Notes →</a>
+              /* Minimal, clean upload dropzone when empty */
+              <div
+                onClick={() => fileInputRef.current?.click()}
+                onDragOver={(e) => { e.preventDefault(); setIsDragOver(true) }}
+                onDragLeave={() => setIsDragOver(false)}
+                onDrop={(e) => {
+                  e.preventDefault()
+                  setIsDragOver(false)
+                  if (e.dataTransfer.files) handleUploadFiles(e.dataTransfer.files)
+                }}
+                className={`border border-dashed rounded-xl p-4 text-center cursor-pointer transition-all flex flex-col items-center justify-center gap-1.5 ${
+                  isDragOver
+                    ? 'border-[#C05A35] bg-[#FFF2EB]'
+                    : 'border-[#E2D8CE] bg-[#FAF8F5]/80 hover:border-[#C05A35] hover:bg-[#FDF7F3]'
+                }`}
+              >
+                {isUploading ? (
+                  <Loader2 className="w-5 h-5 animate-spin text-[#C05A35]" />
+                ) : (
+                  <UploadCloud className="w-5 h-5 text-[#C05A35]" />
+                )}
+                <p className="text-xs font-semibold text-[#1E1B16]">
+                  {isUploading ? 'Indexing material...' : 'Upload PDF or Notes'}
+                </p>
+                <p className="text-[10px] text-[#8C827A]">Click or drop file to start</p>
               </div>
             ) : (
-              <div className="flex flex-col gap-2 max-h-[220px] overflow-y-auto pr-2 custom-scrollbar">
-                {sources.map(src => {
-                  const sel = selectedSources.includes(src.id)
-                  return (
-                    <button
-                      key={src.id}
-                      onClick={() => toggleSource(src.id)}
-                      className={`flex items-center gap-3 px-3.5 py-2.5 rounded-xl border text-left text-sm transition-all ${
-                        sel ? 'border-[#E8845F] bg-[#FDEEE6] text-[#C05A35] font-semibold shadow-xs' 
-                            : 'border-[#EDE7E1] bg-[#FAF8F5] text-[#554E46] hover:border-[#DFD6CD] hover:bg-[#F3EFEA]'
-                      }`}
-                    >
-                      <div className={`w-2 h-2 rounded-full shrink-0 transition-all ${sel ? 'bg-[#E8845F] ring-4 ring-[#E8845F]/20' : 'bg-[#C5BDB3]'}`} />
-                      <span className="truncate font-medium">{src.title || src.name || 'Untitled Document'}</span>
-                    </button>
-                  )
-                })}
+              /* Clean, spacious source list */
+              <div className="flex flex-col gap-1.5">
+                <div className="flex flex-col gap-1.5 max-h-[180px] overflow-y-auto pr-0.5 custom-scrollbar">
+                  {sources.map((src) => {
+                    const sel = selectedSources.includes(src.id)
+                    const title = src.title || src.name || 'Untitled Document'
+
+                    return (
+                      <button
+                        key={src.id}
+                        type="button"
+                        onClick={() => toggleSource(src.id)}
+                        title={title}
+                        className={`w-full flex items-center justify-between gap-2 px-3 py-2 rounded-xl text-left text-xs transition-all ${
+                          sel
+                            ? 'bg-[#FDEEE6] border border-[#F5C7B5] text-[#1E1B16] font-semibold'
+                            : 'bg-[#FAF8F5] border border-[#EDE7E1] text-[#554E46] hover:bg-[#F3EFEA]'
+                        }`}
+                      >
+                        <span className="truncate flex-1 text-xs font-medium">{title}</span>
+                        <div
+                          className={`w-4 h-4 rounded-full border flex items-center justify-center shrink-0 transition-colors ${
+                            sel ? 'bg-[#C05A35] border-[#C05A35] text-white' : 'border-[#D5CCC1] bg-white'
+                          }`}
+                        >
+                          {sel && <Check className="w-2.5 h-2.5 stroke-[3]" />}
+                        </div>
+                      </button>
+                    )
+                  })}
+                </div>
+
+                {/* Minimal Add Button */}
+                <button
+                  type="button"
+                  onClick={() => fileInputRef.current?.click()}
+                  disabled={isUploading}
+                  className="w-full mt-1 py-1.5 px-3 border border-dashed border-[#DED7CE] hover:border-[#C05A35] rounded-xl text-xs font-semibold text-[#7A7167] hover:text-[#C05A35] hover:bg-[#FFF8F5] transition-all flex items-center justify-center gap-1.5 disabled:opacity-60"
+                >
+                  {isUploading ? (
+                    <>
+                      <Loader2 className="w-3.5 h-3.5 animate-spin text-[#C05A35]" />
+                      <span>Indexing...</span>
+                    </>
+                  ) : (
+                    <>
+                      <Plus className="w-3.5 h-3.5 text-[#C05A35]" />
+                      <span>Add document</span>
+                    </>
+                  )}
+                </button>
               </div>
-            )}
-            {sources.length > 0 && (
-              <button
-                onClick={() => setSelectedSources(selectedSources.length === sources.length ? [] : sources.map(s => s.id))}
-                className="mt-3.5 text-xs font-semibold text-[#8A8177] hover:text-[#C05A35] self-start transition-colors"
-              >
-                {selectedSources.length === sources.length ? 'Clear selection' : 'Select all sources'}
-              </button>
             )}
           </div>
 
