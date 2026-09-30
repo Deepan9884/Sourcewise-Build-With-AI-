@@ -172,3 +172,9 @@ Date: 2026-09-29
 - Committed: fa56c51 ui: remove student-transformation and codex eyebrow pills from landing.
 - Test: MCP live :5173 — both pills 0 matches, both headings present; Journey/outcome-2/Codex clicks pass; console 0 errors/0 warnings. CLI: 11/11 pass 57.2s workers=1. Note: 2 pre-existing eslint unused-var errors in SourceWiseBookShowcase.jsx (jumpToChapter/displayChapter), unrelated to this edit.
 - Files: OrbitShowcase.jsx, SourceWiseBookShowcase.jsx, e2e/tests/landing.spec.ts
+
+### 2026-09-30 — remove signup modality chips + encryption footnote
+- Did: deleted 3-chip row (FSRS-5/40Hz/Socratic) under mascot + "End-to-end encrypted" footnote in card (SignupPage.jsx); pruned now-unused Flame/Zap/ShieldCheck imports; fixed JSX nesting (left-column close).
+- Committed: e8047cd ui: remove signup modality chips and encryption footnote.
+- Test: MCP live :5173/signup — all 4 strings 0 matches, heading/mascot/form intact; fill + show-password + Log-in-link pass; console 0 errors/0 warnings. CLI: 11/11 pass 49.3s workers=1. eslint SignupPage.jsx clean (1 pre-existing react-hooks warning).
+- Files: sourcewise-frontend/src/pages/SignupPage.jsx
