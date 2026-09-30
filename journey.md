@@ -172,3 +172,11 @@ Date: 2026-09-29
 - Committed: fa56c51 ui: remove student-transformation and codex eyebrow pills from landing.
 - Test: MCP live :5173 — both pills 0 matches, both headings present; Journey/outcome-2/Codex clicks pass; console 0 errors/0 warnings. CLI: 11/11 pass 57.2s workers=1. Note: 2 pre-existing eslint unused-var errors in SourceWiseBookShowcase.jsx (jumpToChapter/displayChapter), unrelated to this edit.
 - Files: OrbitShowcase.jsx, SourceWiseBookShowcase.jsx, e2e/tests/landing.spec.ts
+
+### 2026-09-30 — harmonize tutoring modes, compiler fallbacks, and study suite UI
+- Step 1 (Pull/Sync): `git pull origin main` pulled 03b9045 cleanly from origin/main.
+- Step 2: Harmonized tutoring modes (Friendly, Tutor, Mentor) across python-ai (personality_engine, tutor_chain, tutor router), frontend (SettingsPage, AIWorkspacePage, workspaceStore), and mobile (chat.tsx, tutorStore). Enhanced compilerService fallbacks & AIReportViewer header. Added source auto-fetch & active sync in sourceStore & DashboardPage navigation to /knowledge. Upgraded PuzzleArenePage source selector dropzone.
+- Step 3 (Visual / E2E): Built frontend production bundle (0 errors, 2.60s). Ran node-api Jest test suite (17/17 suites, 121/121 tests pass). Playwright landing suite 9/9 passed (35.9s).
+- Step 4/5 (Commit & Push): Committed changes (6f8c330), updated journey.md, pushed cleanly to origin/main.
+- Files: compilerService.js, tutor.py, personality_engine.py, tutor_chain.py, AIReportViewer.jsx, MainLayout.jsx, compilerFallbacks.js, AIWorkspacePage.jsx, DashboardPage.jsx, PuzzleArenePage.jsx, SettingsPage.jsx, sourceStore.js, workspaceStore.js, chat.tsx, tutorStore.ts, journey.md
+
