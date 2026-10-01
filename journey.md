@@ -206,3 +206,9 @@ Date: 2026-09-29
 - Test: MCP live — /settings guard redirects unauth (no crash), landing renders, 0 errors. CLI: 11/11 pass 46.5s workers=1. eslint SettingsPage 9 pre-existing errors, 0 new.
 - Files: sourcewise-frontend/src/pages/SettingsPage.jsx
 
+### 2026-10-01 — replace brand/showcase artwork (35 images)
+- Did: user replaced all artwork locally (root image 1-6/logo/sign in-up, frontend public logos/modality/orbit/signin-signup/workspace shots, mobile icons). Validated + committed as-is, no code touched.
+- Committed: 7c41c41 assets: replace brand and showcase images with new artwork (35 files).
+- Test: file(35/35 valid images). MCP live :5173 landing 10 imgs 0 broken, login 2/0, signup 2/0 (new logo + mascot render, screenshot taken); console 0 errors. CLI: 11/11 pass 39.9s workers=1.
+- Files: 35 binaries (root, sourcewise-frontend/public, sourcewise-mobile/assets/images)
+
