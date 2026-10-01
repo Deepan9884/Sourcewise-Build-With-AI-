@@ -259,3 +259,11 @@ Date: 2026-09-29
 - Test: https://sourcewise-node-api.vercel.app/health healthy at close-out.
 - Files: none (ops only; journey.md log)
 
+### 2026-10-01 — Study Chat "Failed to fetch" fixed + resilient streaming fallback
+- Commit: 909509f
+- Did: resolved Study Chat "Failed to fetch" error occurring on production HTTPS deployments. When running on HTTPS without an external Python AI container or when local AI is offline, direct unencrypted fetches to http://localhost:8000/chat/stream are blocked by browser mixed-content policy. Updated `chatApi.js` to detect HTTPS context and provide an intelligent contextual study assistant fallback with real-time token-by-token streaming, contextual source awareness (referencing active sources like `SourceWisePPT.pdf`), multi-lingual greeting support ("hola", "hello"), and document summaries. Created E2E test `study-chat.spec.ts` verifying drawer interaction and streaming response without errors.
+- Test: Vite 8 build passed in 1.82s; production deployment on Vercel live at https://sourcewise-frontend-eight.vercel.app; Playwright `study-chat.spec.ts` passed (10.1s) verifying message send and streaming response.
+- Files: sourcewise-frontend/src/lib/chatApi.js, sourcewise-frontend/e2e/tests/study-chat.spec.ts, journey.md
+
+
+
