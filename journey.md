@@ -232,5 +232,10 @@ Date: 2026-09-29
 - Deployed URLs:
   - Production Alias: https://sourcewise-frontend-three.vercel.app
   - Deployment: https://sourcewise-frontend-l0e5r5ku5-desu-midhun.vercel.app
-- Files: .gitignore, sourcewise-frontend/.gitignore, journey.md
+### 2026-10-01 — pull & push sync + AI response rendering and parser enhancements
+- Step 1 (Pull/Sync): `git pull origin main` pulled 44 files fast-forward to `c185b28`.
+- Step 2: Implemented rich Markdown message rendering component (`RichMessageContent.jsx`) featuring syntax-highlighted code blocks with one-click copy, formatted tables, and callouts in `AIWorkspacePage.jsx` and `GlobalChatPanel.jsx`. Added response sanitization in `llm.py` stripping robotic disclaimers/rigid headers. Robustified `workspaceStore.js` parsers for quiz options and flashcard front/backs against loose markdown.
+- Step 3 (Visual & E2E): Frontend built cleanly in 2.61s. Node API passed all 17 Jest test suites (121/121 tests pass). Playwright test suites (landing 9/9 + knowledge-upload 2/2 = 11/11 passed 100%).
+- Step 4/5 (Commit & Push): Committed code changes (`2915499`), updated `journey.md`, pushed cleanly to origin/main.
+- Files: llm.py, rag_chain.py, run.py, AIReportViewer.jsx, GlobalChatPanel.jsx, RichMessageContent.jsx, index.css, AIWorkspacePage.jsx, KnowledgeHubPage.jsx, workspaceStore.js, journey.md
 
