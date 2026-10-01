@@ -5,7 +5,6 @@
   "description": "SourceWise Study Agent - Monorepo Root",
   "scripts": {
     "build": "npm --prefix sourcewise-frontend run build",
-    "vercel-build": "npm --prefix sourcewise-frontend install && npm --prefix sourcewise-frontend run build",
     "dev:frontend": "npm --prefix sourcewise-frontend run dev",
     "dev:dashboard": "npm --prefix sourcewise-dashboard run dev",
     "dev:backend": "npm --prefix sourcewise-backend/node-api run dev",
