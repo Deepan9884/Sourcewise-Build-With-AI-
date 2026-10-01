@@ -121,17 +121,18 @@ class ActionExecutor:
         self, intent: ParsedIntent, source_ids: List[str], user_id: str
     ) -> ActionResult:
         """Generate quiz questions from sources using LLM"""
-        topic = intent.topic or "general knowledge"
+        topic = intent.topic or "core concepts and lessons"
         count = intent.count or 5
         
-        # Get chunks from sources (optimized top_k for faster response)
-        chunks = vector_store.query_chunks(
-            question=f"quiz on {topic}",
+        # Get substantive educational chunks across the material
+        chunks = vector_store.get_educational_chunks(
             source_ids=source_ids,
-            top_k=5,
+            query=topic,
+            top_k=12,
+            sample_across_doc=True,
         )
         
-        if not chunks and not source_ids and not topic:
+        if not chunks and not source_ids and not intent.topic:
             return ActionResult(
                 type="chat",
                 message="Please select sources first to generate a quiz.",
@@ -141,6 +142,11 @@ class ActionExecutor:
         quiz_prompt = f"""Create {count} quiz questions about: {topic}
 
 Based on the source material provided.
+
+CRITICAL EDUCATIONAL REQUIREMENTS:
+- Questions MUST test actual concepts, rules, vocabulary, definitions, techniques, and lessons taught in the material.
+- STRICTLY FORBIDDEN: DO NOT ask meta or bibliographic questions about the document itself (e.g. NEVER ask: "Who is the author?", "What is the book title?", "Who published this?", "What is section X named?", "What is in the table of contents?", or questions about copyright/ISBN/page numbers).
+- Every question must test whether the student understood the actual subject matter and ideas.
 
 FORMAT each question EXACTLY like this:
 Q: [question text]
@@ -228,17 +234,18 @@ Create exactly {count} questions. Be direct and factual."""
         self, intent: ParsedIntent, source_ids: List[str], user_id: str
     ) -> ActionResult:
         """Generate flashcards from sources using LLM"""
-        topic = intent.topic or "key concepts"
+        topic = intent.topic or "key concepts and vocabulary"
         count = intent.count or 10
         
-        # Get chunks from sources (optimized top_k for faster response)
-        chunks = vector_store.query_chunks(
-            question=f"flashcards about {topic}",
+        # Get substantive educational chunks across the material
+        chunks = vector_store.get_educational_chunks(
             source_ids=source_ids,
-            top_k=5,
+            query=topic,
+            top_k=12,
+            sample_across_doc=True,
         )
         
-        if not chunks and not source_ids and not topic:
+        if not chunks and not source_ids and not intent.topic:
             return ActionResult(
                 type="chat",
                 message="Please select sources first to generate flashcards.",
@@ -248,6 +255,10 @@ Create exactly {count} questions. Be direct and factual."""
         cards_prompt = f"""Create {count} flashcards about: {topic}
 
 Based on the source material provided.
+
+CRITICAL EDUCATIONAL REQUIREMENTS:
+- Flashcards MUST test actual vocabulary, terms, concepts, definitions, rules, and procedures taught in the material.
+- STRICTLY FORBIDDEN: NEVER create flashcards testing metadata about the document itself (e.g. author name, book title, publisher, table of contents).
 
 FORMAT each flashcard EXACTLY like this:
 FRONT: [question or term]
@@ -606,12 +617,13 @@ Make it sound like a knowledgeable tutor explaining to a student."""
         self, intent: ParsedIntent, source_ids: List[str], user_id: str
     ) -> ActionResult:
         """Create comprehensive study guide"""
-        topic = intent.topic or "your study material"
+        topic = intent.topic or "core concepts and lessons"
         
-        chunks = vector_store.query_chunks(
-            question=f"comprehensive overview {topic}",
+        chunks = vector_store.get_educational_chunks(
             source_ids=source_ids,
+            query=topic,
             top_k=15,
+            sample_across_doc=True,
         )
         
         if not chunks:
@@ -622,7 +634,7 @@ Make it sound like a knowledgeable tutor explaining to a student."""
         
         context = "\n\n".join([
             f"[{c['source_name']}, p.{c['page']}]\n{c['text']}"
-            for c in chunks[:10]
+            for c in chunks[:12]
         ])
         
         guide_prompt = f"""Create a comprehensive study guide for: {topic}
@@ -631,14 +643,15 @@ Based on this material:
 {context}
 
 The study guide should include:
-1. **Overview** - Brief introduction
-2. **Key Concepts** - Main ideas with explanations
-3. **Detailed Notes** - Organized by topic
-4. **Key Terms & Definitions** - Important vocabulary
-5. **Common Mistakes** - What to avoid
-6. **Practice Questions** - 5-10 review questions
+1. **Overview** - Brief introduction to the core subject matter (NOT document metadata)
+2. **Key Concepts** - Main ideas with in-depth explanations
+3. **Detailed Notes** - Substantive breakdown organized by topic
+4. **Key Terms & Definitions** - Important vocabulary and definitions
+5. **Common Mistakes** - What conceptual pitfalls to avoid
+6. **Practice Questions** - 5-10 review questions on the concepts taught
 7. **Summary** - Quick reference section
 
+CRITICAL: Focus exclusively on the concepts and lessons taught in the material. Do NOT include biographical or bibliographic trivia about the document (such as author name, publisher, or table of contents).
 Format with clear headings, bullet points, and examples where helpful."""
         
         guide = await llm_service.chat_action(
@@ -668,12 +681,13 @@ Format with clear headings, bullet points, and examples where helpful."""
         self, intent: ParsedIntent, source_ids: List[str], user_id: str
     ) -> ActionResult:
         """Create organized notes from sources"""
-        topic = intent.topic or "key topics"
+        topic = intent.topic or "core concepts and lessons"
         
-        chunks = vector_store.query_chunks(
-            question=topic,
+        chunks = vector_store.get_educational_chunks(
             source_ids=source_ids,
-            top_k=10,
+            query=topic,
+            top_k=15,
+            sample_across_doc=True,
         )
         
         if not chunks:
@@ -684,7 +698,7 @@ Format with clear headings, bullet points, and examples where helpful."""
         
         context = "\n\n".join([
             f"[{c['source_name']}, p.{c['page']}]\n{c['text']}"
-            for c in chunks[:8]
+            for c in chunks[:12]
         ])
         
         notes_prompt = f"""Create organized study notes for: {topic}
@@ -696,9 +710,10 @@ Format as clean, organized notes with:
 - Clear headings
 - Bullet points
 - Key definitions highlighted
-- Important formulas or processes numbered
+- Important formulas, grammar rules, or processes numbered
 - Cross-references between related concepts
 
+CRITICAL: Focus purely on teaching and explaining the concepts, rules, and knowledge inside the material. DO NOT summarize table of contents or include publishing metadata (e.g. author name, publisher, copyright).
 Make it easy to scan and review quickly."""
         
         notes = await llm_service.chat_action(

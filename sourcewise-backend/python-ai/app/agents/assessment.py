@@ -64,16 +64,17 @@ class AssessmentAgent(BaseAgent):
     
     async def _generate_quiz(self, context: AgentContext, **kwargs) -> AgentResult:
         """Generate intelligent quiz with blueprint analysis"""
-        topic = kwargs.get("topic", "general knowledge")
+        topic = kwargs.get("topic", "core concepts and lessons")
         count = kwargs.get("count", 10)
         difficulty = kwargs.get("difficulty", "adaptive")
         question_types = kwargs.get("question_types", ["mcq", "true_false", "scenario"])
         
-        # Get chunks from sources
-        chunks = vector_store.query_chunks(
-            question=f"quiz on {topic}",
+        # Get substantive chunks from sources
+        chunks = vector_store.get_educational_chunks(
             source_ids=context.source_ids,
-            top_k=10,
+            query=topic,
+            top_k=12,
+            sample_across_doc=True,
         )
         
         if not chunks:
@@ -175,7 +176,7 @@ class AssessmentAgent(BaseAgent):
         examples: List[Dict]
     ) -> List[Dict]:
         """Generate quiz using blueprint and few-shot learning"""
-        context_text = "\n".join([c.get("text", "")[:300] for c in chunks[:8]])
+        context_text = "\n\n".join([f"[{c.get('source_name', 'Source')}, p.{c.get('page', 1)}]\n{c.get('text', '')}" for c in chunks[:10]])
         
         # Build few-shot examples
         examples_text = "\n\n".join([
@@ -209,11 +210,13 @@ FOLLOW THESE EXAMPLES:
 {examples_text}
 
 RULES:
-1. Questions must test understanding, not memorization
+1. Questions must test understanding, concepts, rules, and skills, not document trivia
 2. Include scenario-based questions
 3. Provide clear, educational explanations
 4. Ensure answer correctness
 5. Make distractors plausible but clearly wrong
+6. CRITICAL: Questions MUST test substantive concepts, vocabulary, grammar rules, techniques, and lessons taught in the text.
+7. STRICTLY FORBIDDEN: NEVER ask meta, trivia, or bibliographic questions about the document itself (e.g., NEVER ask "Who is the author?", "What is the book title?", "What are the chapter/section names?", "Who published this?", "What is in the table of contents?", or questions about copyright/ISBN/page numbers).
 
 FORMAT each question EXACTLY like this:
 Q: [question text]

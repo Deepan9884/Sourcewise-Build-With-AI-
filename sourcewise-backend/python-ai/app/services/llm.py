@@ -129,7 +129,8 @@ Rules:
 - Test APPLICATION and ANALYSIS, not just recall
 - Include at least one "why" or "how" question
 - Cite sources in explanations
-- Questions should be answerable ONLY from the provided material""",
+- SUBSTANTIVE LEARNING FOCUS: All questions MUST test actual educational concepts, principles, rules, lessons, definitions, techniques, and skills taught in the text.
+- STRICTLY FORBIDDEN: NEVER ask meta, trivia, or bibliographic questions about the document itself (e.g. NEVER ask "Who is the author?", "What is the book title?", "What are the section/chapter names?", "Who published this book?", "What is in the table of contents?", or questions about copyright/ISBN/page numbers).""",
 
     "create_flashcards": """Create flashcards optimized for active recall and spaced repetition.
 
@@ -154,7 +155,9 @@ Rules:
 - Cover key terms, processes, relationships, and comparisons
 - Mix types: definitions, comparisons, "what would happen if...", process steps
 - Each card should test ONE concept (avoid multi-part answers)
-- Cite sources on the back when relevant""",
+- Cite sources on the back when relevant
+- SUBSTANTIVE LEARNING FOCUS: Cards MUST test actual vocabulary, definitions, concepts, and rules taught in the material.
+- STRICTLY FORBIDDEN: NEVER create flashcards testing metadata about the document itself (e.g. author name, book title, publisher, table of contents).""",
 
     "explain_concept": """Explain the concept thoroughly using multiple engaging pedagogical strategies.
 
@@ -982,6 +985,8 @@ CRITICAL INSTRUCTIONS:
 - Generate ONLY the requested content type. No conversational filler, no introductory remarks — output the structured content immediately.
 - Follow the format template EXACTLY as specified above.
 - Ground factual elements in the provided source material when available.
+- Focus STRICTLY on actual learning material: test concepts, definitions, rules, vocabulary, lessons, techniques, and substantive ideas.
+- ABSOLUTELY NEVER ask or include meta, trivia, or bibliographic questions about the document itself (e.g., NEVER ask "Who is the author?", "What is the book title?", "What are the chapter/section names?", "Who is the publisher?", "What is in the table of contents?", or publishing/copyright details).
 - For quizzes: ensure distractors are plausible but clearly incorrect.
 - For flashcards: make fronts clear questions or terms, and backs concise definitions or explanations.
 - For summaries & notes: organize with clean markdown headings and key takeaways."""

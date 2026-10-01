@@ -511,8 +511,11 @@ export const useWorkspaceStore = create(
           workspaceError: null,
         }))
 
-        const topicDesc = quizTop?.trim() ? `focusing on "${quizTop.trim()}"` : "covering the most important concepts"
+        const topicDesc = quizTop?.trim() ? `focusing on "${quizTop.trim()}"` : "covering the core concepts and lessons"
         const prompt = `Create a ${quizCount}-question ${quizDiff} ${quizTyp} quiz ${topicDesc} based strictly on the selected study material.
+CRITICAL REQUIREMENTS:
+- Questions MUST test actual educational concepts, rules, vocabulary, techniques, and lessons taught in the material.
+- STRICTLY FORBIDDEN: DO NOT ask meta or bibliographic questions about the document itself (such as author name, book title, publisher, table of contents, or section names).
 Return 4 options for each question (A, B, C, D), specify the correct answer, and provide a clear explanation.`
 
         try {
@@ -621,6 +624,9 @@ Return 4 options for each question (A, B, C, D), specify the correct answer, and
 
         const topicDesc = fcTopic?.trim() ? `on "${fcTopic.trim()}"` : "from the selected documents"
         const prompt = `Create ${fcCount} flashcards ${topicDesc} focusing on ${fcFocus} based on the uploaded material.
+CRITICAL REQUIREMENTS:
+- Flashcards MUST test actual vocabulary, terms, concepts, definitions, and rules taught in the material.
+- STRICTLY FORBIDDEN: DO NOT create flashcards testing document metadata (such as author name, book title, publisher, or table of contents).
 Format each card with:
 FRONT: [Question, key term, or concept]
 BACK: [Clear definition, explanation, or answer]
@@ -722,7 +728,10 @@ BACK: [Clear definition, explanation, or answer]
 
         const topicDesc = nTopic?.trim() ? `focusing on "${nTopic.trim()}"` : "covering the material thoroughly"
         const prompt = `Generate ${nStyle} (${nDepth} level) ${topicDesc} based on the selected uploaded study material.
-Structure the notes with clear markdown headings, bullet points, key definitions, formulas or frameworks, and an executive summary of key exam takeaways.`
+Structure the notes with clear markdown headings, bullet points, key definitions, formulas or frameworks, and an executive summary of key exam takeaways.
+CRITICAL REQUIREMENTS:
+- Focus purely on teaching and explaining the concepts, rules, vocabulary, and knowledge inside the material.
+- DO NOT summarize table of contents or include publishing metadata (e.g. author name, publisher, copyright).`
 
         try {
           const response = await sendAgentMessage({

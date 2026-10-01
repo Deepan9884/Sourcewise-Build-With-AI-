@@ -274,7 +274,7 @@ export default function PuzzleArenePage() {
     store.reset()
     try {
       await store.generate(
-        { type: game.id, sourceIds: selectedSources, topic: topic || game.name, difficulty: DIFF_MAP[difficulty] },
+        { type: game.id, sourceIds: selectedSources, topic: topic?.trim() || '', difficulty: DIFF_MAP[difficulty] },
         accessToken
       )
     } catch {

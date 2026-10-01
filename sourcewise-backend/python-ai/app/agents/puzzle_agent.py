@@ -54,7 +54,16 @@ class PuzzleAgent(BaseAgent):
 
     async def execute(self, context: AgentContext, **kwargs) -> AgentResult:
         puzzle_type = kwargs.get("puzzle_type", "word_search")
-        topic = kwargs.get("topic", "key concepts")
+        raw_topic = kwargs.get("topic", "")
+        # Sanitize topic: if empty or equal to game display names, use core educational concepts
+        if not raw_topic or raw_topic.lower().strip() in [
+            "word search", "concept match", "speed recall", "memory flip",
+            "word scramble", "fill in the blank", "key concepts", "general", "game"
+        ]:
+            topic = "core terms and concepts"
+        else:
+            topic = raw_topic.strip()
+
         count = kwargs.get("count", 10)
         difficulty = kwargs.get("difficulty", "study")
 
@@ -76,8 +85,8 @@ class PuzzleAgent(BaseAgent):
 
         return await fn(context, topic=topic, count=count, difficulty=difficulty)
 
-    async def _safe_llm_chat(self, prompt: str, chunks: list, timeout: float = 12.0) -> Optional[str]:
-        """Query LLM with strict timeout and exception handling. Falls back instantly if LLM is slow, down, or misconfigured."""
+    async def _safe_llm_chat(self, prompt: str, chunks: list, timeout: float = 45.0) -> Optional[str]:
+        """Query LLM with timeout and exception handling. Falls back gracefully only if LLM is down or times out."""
         try:
             return await asyncio.wait_for(
                 llm_service.chat(question=prompt, context_chunks=chunks or [], history=[]),
@@ -92,28 +101,31 @@ class PuzzleAgent(BaseAgent):
     # ──────────────────────────────────────────────────────────────────────────
 
     async def _gen_word_search(self, context: AgentContext, topic: str, count: int, difficulty: str) -> AgentResult:
-        chunks = vector_store.query_chunks(
-            question=f"key terms and vocabulary about {topic}",
+        chunks = vector_store.get_educational_chunks(
             source_ids=context.source_ids,
-            top_k=8,
+            query=topic,
+            top_k=10,
+            sample_across_doc=True,
         )
-        context_text = "\n".join(c.get("text", "")[:400] for c in chunks[:6]) if chunks else ""
+        context_text = "\n\n".join([f"[{c.get('source_name', 'Source')}, p.{c.get('page', 1)}]\n{c.get('text', '')}" for c in chunks[:8]]) if chunks else ""
 
-        prompt = f"""Extract {min(count, 15)} important single-word or hyphenated academic terms from this text about '{topic}'.
+        prompt = f"""Extract {min(count, 15)} important single-word or hyphenated academic/subject terms from this study material about '{topic}'.
 Return ONLY a JSON array. No markdown. No explanation.
-Format: [{{"term": "MITOCHONDRIA", "definition": "Organelle that produces cellular energy (ATP)"}}]
+Format: [{{"term": "ARIGATOU", "definition": "Standard polite Japanese expression for thank you"}}]
 Rules:
-- Terms must be 4-15 characters, UPPERCASE, no spaces (use hyphen if needed: CELL-CYCLE)
-- Prefer nouns and technical keywords
-- Each definition: 1 concise sentence
+- Terms MUST consist of Latin letters A-Z (uppercase, 3-14 characters, no spaces; use hyphens if needed: e.g. CELL-CYCLE, PARTICLE-WA)
+- For non-English materials (e.g. Japanese, French, Spanish), extract romanized terms (Romaji, e.g., 'ARIGATOU', 'NIHONGO', 'KUDASAI', 'TABERU') with English definitions, OR English concept terms (e.g., 'HONORIFIC', 'PAST-TENSE'). DO NOT output non-Latin scripts (Kanji/Kana) as they cannot fit in an English alphabet letter grid.
+- Prefer substantive nouns and technical/subject keywords taught in the text
+- Each definition: 1 concise informative sentence
+- STRICTLY FORBIDDEN: DO NOT extract document metadata such as author name, publisher, section names, or edition
 - If source text is empty, invent 10 plausible terms for the topic
 
 Source text:
-{context_text[:1500]}
+{context_text[:2500]}
 
 JSON array:"""
 
-        raw = await self._safe_llm_chat(prompt, chunks, timeout=12.0)
+        raw = await self._safe_llm_chat(prompt, chunks, timeout=45.0)
         words = self._parse_json(raw, [])
 
         # Fallback demo data
@@ -202,28 +214,35 @@ JSON array:"""
     # Match Pairs
     # ──────────────────────────────────────────────────────────────────────────
 
+    # ──────────────────────────────────────────────────────────────────────────
+    # Match Pairs
+    # ──────────────────────────────────────────────────────────────────────────
+
     async def _gen_match_pairs(self, context: AgentContext, topic: str, count: int, difficulty: str) -> AgentResult:
-        chunks = vector_store.query_chunks(
-            question=f"definitions and concepts about {topic}",
-            source_ids=context.source_ids, top_k=6,
+        chunks = vector_store.get_educational_chunks(
+            source_ids=context.source_ids,
+            query=topic,
+            top_k=10,
+            sample_across_doc=True,
         )
-        context_text = "\n".join(c.get("text", "")[:400] for c in chunks[:5]) if chunks else ""
+        context_text = "\n\n".join([f"[{c.get('source_name', 'Source')}, p.{c.get('page', 1)}]\n{c.get('text', '')}" for c in chunks[:8]]) if chunks else ""
         n = min(count, 10)
 
-        prompt = f"""Generate {n} term-definition pairs for '{topic}'.
+        prompt = f"""Generate {n} term-definition pairs based on this study material about '{topic}'.
 Return ONLY valid JSON. No markdown.
-Format: [{{"id": "1", "term": "Photosynthesis", "definition": "Process by which plants convert light into glucose"}}]
+Format: [{{"id": "1", "term": "Konnichiwa", "definition": "Standard Japanese daytime greeting meaning hello"}}]
 Rules:
-- Terms: 1-4 words, clear academic vocabulary
-- Definitions: 10-20 words, precise and educational
+- Terms: 1-4 words, clear vocabulary or concept names from the material (for non-English like Japanese, use Romanized Romaji or English concept terms)
+- Definitions: 10-25 words, precise and educational
 - No duplicate terms
+- STRICTLY FORBIDDEN: DO NOT include author names, book titles, publishers, or chapter names
 
 Source:
-{context_text[:1500]}
+{context_text[:2500]}
 
 JSON:"""
 
-        raw = await self._safe_llm_chat(prompt, chunks, timeout=12.0)
+        raw = await self._safe_llm_chat(prompt, chunks, timeout=45.0)
         pairs = self._parse_json(raw, [])
         if not pairs or len(pairs) < 4:
             pairs = self._fallback_pairs(topic, n)
@@ -248,28 +267,31 @@ JSON:"""
     # ──────────────────────────────────────────────────────────────────────────
 
     async def _gen_rapid_fire(self, context: AgentContext, topic: str, count: int, difficulty: str) -> AgentResult:
-        chunks = vector_store.query_chunks(
-            question=f"quiz questions about {topic}",
-            source_ids=context.source_ids, top_k=8,
+        chunks = vector_store.get_educational_chunks(
+            source_ids=context.source_ids,
+            query=topic,
+            top_k=10,
+            sample_across_doc=True,
         )
-        context_text = "\n".join(c.get("text", "")[:350] for c in chunks[:6]) if chunks else ""
+        context_text = "\n\n".join([f"[{c.get('source_name', 'Source')}, p.{c.get('page', 1)}]\n{c.get('text', '')}" for c in chunks[:8]]) if chunks else ""
         n = min(count, 12)
 
-        prompt = f"""Generate {n} rapid-fire quiz questions for '{topic}'.
-Each: show a TERM, player picks the correct DEFINITION from 4 options.
+        prompt = f"""Generate {n} rapid-fire quiz questions based on this study material about '{topic}'.
+Each: show a TERM/QUESTION, player picks the correct DEFINITION/ANSWER from 4 options.
 Return ONLY valid JSON. No markdown.
-Format: [{{"term": "ATP", "correct": "Energy currency of the cell", "distractors": ["Genetic blueprint", "Membrane protein", "Enzyme catalyst"], "concept": "Energy metabolism"}}]
+Format: [{{"term": "Arigatou", "correct": "Thank you (polite expression of gratitude)", "distractors": ["Goodbye", "Excuse me", "Good morning"], "concept": "Japanese Greetings"}}]
 Rules:
 - Distractors: plausible but clearly wrong
-- Terms: single concept, 1-4 words
+- Terms: single concept or word from the text, 1-4 words
 - Correct: concise 5-15 word definition
+- STRICTLY FORBIDDEN: DO NOT ask metadata questions (e.g. 'Who is the author?'). Test actual knowledge taught in the text.
 
 Source:
-{context_text[:1500]}
+{context_text[:2500]}
 
 JSON:"""
 
-        raw = await self._safe_llm_chat(prompt, chunks, timeout=12.0)
+        raw = await self._safe_llm_chat(prompt, chunks, timeout=45.0)
         items = self._parse_json(raw, [])
         if not items or len(items) < 4:
             items = self._fallback_rapid_fire(topic, n)
@@ -324,26 +346,30 @@ JSON:"""
     # ──────────────────────────────────────────────────────────────────────────
 
     async def _gen_anagram(self, context: AgentContext, topic: str, count: int, difficulty: str) -> AgentResult:
-        chunks = vector_store.query_chunks(
-            question=f"vocabulary terms for {topic}",
-            source_ids=context.source_ids, top_k=6,
+        chunks = vector_store.get_educational_chunks(
+            source_ids=context.source_ids,
+            query=topic,
+            top_k=10,
+            sample_across_doc=True,
         )
-        context_text = "\n".join(c.get("text", "")[:350] for c in chunks[:5]) if chunks else ""
+        context_text = "\n\n".join([f"[{c.get('source_name', 'Source')}, p.{c.get('page', 1)}]\n{c.get('text', '')}" for c in chunks[:8]]) if chunks else ""
         n = min(count, 10)
 
-        prompt = f"""Extract {n} important single-word (or compound, no spaces) academic terms from this text about '{topic}'.
+        prompt = f"""Extract {n} important single-word academic/subject terms from this text about '{topic}'.
 Return ONLY valid JSON. No markdown.
-Format: [{{"term": "MITOSIS", "definition": "Cell division producing two identical daughter cells", "hint": "Type of cell division"}}]
+Format: [{{"term": "SAYONARA", "definition": "Formal parting phrase meaning goodbye", "hint": "Parting expression"}}]
 Rules:
-- Single word only (can use hyphen), 4-14 characters UPPERCASE
+- Terms MUST consist of Latin letters A-Z (uppercase, 3-14 characters, no spaces, hyphens allowed)
+- For non-English materials (e.g. Japanese, French), extract romanized terms (Romaji, e.g., 'SAYONARA', 'NIHONGO', 'KUDASAI') or English grammar terms (e.g., 'PARTICLE'). DO NOT output non-Latin scripts (Kanji/Kana) as they cannot be scrambled with Latin letters.
 - Include a short 3-5 word hint different from definition
+- STRICTLY FORBIDDEN: DO NOT extract author name, publisher, or chapter names.
 
 Source:
-{context_text[:1200]}
+{context_text[:2500]}
 
 JSON:"""
 
-        raw = await self._safe_llm_chat(prompt, chunks, timeout=12.0)
+        raw = await self._safe_llm_chat(prompt, chunks, timeout=45.0)
         items = self._parse_json(raw, [])
         if not items or len(items) < 4:
             items = self._fallback_anagrams(topic, n)
@@ -380,19 +406,24 @@ JSON:"""
     # ──────────────────────────────────────────────────────────────────────────
 
     async def _gen_cloze(self, context: AgentContext, topic: str, count: int, difficulty: str) -> AgentResult:
-        chunks = vector_store.query_chunks(
-            question=topic or "key concepts",
-            source_ids=context.source_ids, top_k=5,
+        chunks = vector_store.get_educational_chunks(
+            source_ids=context.source_ids,
+            query=topic,
+            top_k=8,
+            sample_across_doc=True,
         )
 
-        # Pick a real passage from chunks
+        # Pick a real educational passage from chunks
         passage_source = ""
         if chunks:
             for chunk in chunks:
                 text = chunk.get("text", "")
-                if len(text) > 200:
+                if len(text) > 200 and not vector_store.is_front_matter_or_metadata(text, chunk.get("page", 1)):
                     passage_source = text[:800]
                     break
+
+        if not passage_source and chunks:
+            passage_source = chunks[0].get("text", "")[:800]
 
         if not passage_source:
             passage_source = f"This text covers key concepts in {topic}, including fundamental principles and their applications in real-world contexts."
@@ -409,13 +440,14 @@ Rules:
 - Only blank nouns/technical terms (not articles, prepositions)
 - Distractors: 3 plausible but wrong alternatives from the same domain
 - Blanks should be evenly spread through the passage
+- STRICTLY FORBIDDEN: DO NOT blank out author names or publisher names
 
 Passage:
 {passage_source}
 
 JSON:"""
 
-        raw = await self._safe_llm_chat(prompt, chunks, timeout=12.0)
+        raw = await self._safe_llm_chat(prompt, chunks, timeout=45.0)
         data = self._parse_json(raw, {})
 
         if not data or not data.get("blanks"):

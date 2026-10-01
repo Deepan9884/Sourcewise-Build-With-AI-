@@ -52,15 +52,16 @@ class FlashcardAgent(BaseAgent):
     
     async def execute(self, context: AgentContext, **kwargs) -> AgentResult:
         """Generate high-quality flashcards with intelligence"""
-        topic = kwargs.get("topic", "key concepts")
+        topic = kwargs.get("topic", "key concepts and vocabulary")
         count = kwargs.get("count", 10)
         card_types = kwargs.get("card_types", ["definition", "concept", "comparison", "application"])
         
-        # Get chunks from sources
-        chunks = vector_store.query_chunks(
-            question=f"flashcards about {topic}",
+        # Get substantive chunks from sources
+        chunks = vector_store.get_educational_chunks(
             source_ids=context.source_ids,
-            top_k=10,
+            query=topic,
+            top_k=12,
+            sample_across_doc=True,
         )
         
         if not chunks:
@@ -113,7 +114,7 @@ class FlashcardAgent(BaseAgent):
         examples: List[Dict]
     ) -> List[Dict]:
         """Generate flashcards using few-shot learning"""
-        context_text = "\n".join([c.get("text", "")[:300] for c in chunks[:8]])
+        context_text = "\n\n".join([f"[{c.get('source_name', 'Source')}, p.{c.get('page', 1)}]\n{c.get('text', '')}" for c in chunks[:10]])
         
         # Build few-shot examples string
         examples_text = "\n\n".join([
@@ -143,6 +144,8 @@ RULES FOR HIGH-QUALITY CARDS:
 4. Include context in answers
 5. Match difficulty to learner level
 6. Use clear, concise language
+7. CRITICAL: Flashcards MUST test actual vocabulary, terms, concepts, definitions, rules, and procedures taught in the material.
+8. STRICTLY FORBIDDEN: NEVER create flashcards testing metadata about the document itself (e.g. author name, book title, publisher, table of contents).
 
 FORMAT each card EXACTLY like this:
 FRONT: [question or term]
