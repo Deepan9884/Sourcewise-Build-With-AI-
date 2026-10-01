@@ -376,12 +376,11 @@ export default function MainLayout() {
                       animate={{ opacity: 1, x: 0 }}
                       className="flex flex-col"
                     >
-                      <span className="font-display text-base font-bold text-[#1E1B16] tracking-tight leading-tight">
-                        SourceWise
-                      </span>
-                      <span className="text-[10px] font-medium text-[#7C726A] tracking-normal">
-                        AI Study Companion
-                      </span>
+                      <img
+                        src="/text.png"
+                        alt="SourceWise"
+                        className="h-8 w-auto object-contain object-left"
+                      />
                     </motion.div>
                   )}
                 </Link>
