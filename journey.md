@@ -212,3 +212,9 @@ Date: 2026-09-29
 - Test: file(35/35 valid images). MCP live :5173 landing 10 imgs 0 broken, login 2/0, signup 2/0 (new logo + mascot render, screenshot taken); console 0 errors. CLI: 11/11 pass 39.9s workers=1.
 - Files: 35 binaries (root, sourcewise-frontend/public, sourcewise-mobile/assets/images)
 
+### 2026-10-01 — sidebar brand text replaced with text.png wordmark
+- Did: copied root text.png to public/text.png (web-servable) + swapped MainLayout sidebar text spans for <img src="/text.png" h-8>. Fox logo-mark kept. Note: artwork reads "AI STUDY SUITE" (sidebar previously said Companion).
+- Committed: da9e3fe ui: use text.png wordmark for sidebar brand text in MainLayout.
+- Test: /text.png serves 200 (848x239), in dist build; landing renders post-edit, 0 app errors (1 favicon 404 on direct-img nav only). CLI: 11/11 pass 51.6s workers=1. eslint MainLayout 6 pre-existing errors, 0 new. Sidebar itself needs auth (not visually covered).
+- Files: text.png, sourcewise-frontend/public/text.png, MainLayout.jsx
+
