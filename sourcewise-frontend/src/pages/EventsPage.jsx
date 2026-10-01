@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   Calendar,
@@ -7,111 +7,31 @@ import {
   Award,
   Plus,
   Search,
-  Filter,
-  ExternalLink,
   MapPin,
   Building,
-  Tag,
-  Star,
   CheckCircle2,
   Trash2,
   Edit3,
-  Share2,
-  FileText,
-  Users,
   Code2,
-  BookOpen,
   Laptop,
   Clock,
   ChevronRight,
   Download,
   Copy,
   Layers,
-  Presentation,
   Check,
   Globe
 } from 'lucide-react';
+import { INITIAL_EVENTS, useStudentEvents } from '../lib/studentEvents';
 
-export const INITIAL_EVENTS = [
-  {
-    id: 'evt-1',
-    title: 'Smart India Hackathon 2026 - Regional Finals',
-    category: 'Hackathon',
-    mode: 'In-Person',
-    startDate: '2026-03-14',
-    endDate: '2026-03-15',
-    venue: 'Convention Center, Anna University, Chennai',
-    organizer: 'Ministry of Education Innovation Cell & IEEE',
-    role: 'Team Lead',
-    outcome: 'Winner (1st Place)',
-    prizeAward: '1st Prize Trophy + ₹25,000 Cash Grant',
-    projectName: 'SourceWise AI Study Copilot',
-    projectDescription: 'Architected an autonomous AI study planner and multi-modal knowledge synthesis engine for undergraduate engineering students.',
-    techStack: ['React 19', 'FastAPI', 'ChromaDB', 'Gemini AI', 'TailwindCSS'],
-    teamMembers: 'Deepan D. (Lead), Priya K., Arun S.',
-    keyLearnings: 'Learned vector similarity retrieval optimization, client-side state hydration, and delivering high-impact pitch decks to industry judges within 3 minutes.',
-    skillsGained: ['Generative AI', 'Full-Stack Architecture', 'Pitching', 'Team Leadership'],
-    rating: 5,
-    certificateUrl: 'https://example.com/certificates/sih-2026-winner.pdf',
-    projectRepoUrl: 'https://github.com/sourcewise/sourcewise-ai',
-    liveDemoUrl: 'https://sourcewise.dev',
-    socialPostUrl: 'https://linkedin.com/in/deepand',
-    createdAt: '2026-03-16T10:00:00Z'
-  },
-  {
-    id: 'evt-2',
-    title: 'Advanced GenAI & Cloud RAG Workshop',
-    category: 'Workshop',
-    mode: 'In-Person',
-    startDate: '2026-02-20',
-    venue: 'Department Seminar Hall 3, Tech Campus',
-    organizer: 'Google Developer Groups (GDG) on Campus',
-    role: 'Participant',
-    outcome: 'Completed & Certified',
-    prizeAward: 'Verified Cloud Skill Badge',
-    keyLearnings: 'Deep dive into semantic chunking strategies, sentence-transformers, embedding caching, and containerized FastAPI pipelines on Google Cloud Run.',
-    techStack: ['Python', 'LangChain', 'Docker', 'Google Cloud Platform'],
-    skillsGained: ['Vector Databases', 'Prompt Engineering', 'Cloud Deployment'],
-    rating: 5,
-    certificateUrl: 'https://example.com/certificates/gdg-genai-badge.pdf',
-    createdAt: '2026-02-21T14:30:00Z'
-  },
-  {
-    id: 'evt-3',
-    title: 'National Level Tech Symposium: TechVeda 2026',
-    category: 'Symposium',
-    mode: 'In-Person',
-    startDate: '2026-01-28',
-    venue: 'Auditorium Block, PSG Tech, Coimbatore',
-    organizer: 'Department of Computer Science & Engineering',
-    role: 'Solo Contestant',
-    outcome: '1st Runner-Up',
-    prizeAward: 'Silver Medal & ₹10,000 Merit Award',
-    projectName: 'Real-time Autonomous Edge Vision',
-    projectDescription: 'Presented low-latency edge AI object detection models compiled for embedded microcontroller systems with sub-15ms inference latency.',
-    techStack: ['Python', 'OpenCV', 'TensorFlow Lite', 'Raspberry Pi'],
-    keyLearnings: 'Tackled aggressive technical Q&A defense from IEEE reviewers, live hardware sensor debugging under stage lighting, and concise scientific slide design.',
-    skillsGained: ['Edge AI', 'Computer Vision', 'Technical Defense', 'Hardware Debugging'],
-    rating: 4,
-    certificateUrl: 'https://example.com/certificates/techveda-runnerup.pdf',
-    projectRepoUrl: 'https://github.com/sourcewise/edge-vision',
-    createdAt: '2026-01-29T18:00:00Z'
-  }
-];
+export { INITIAL_EVENTS };
 
 export default function EventsPage() {
-  const [events, setEvents] = useState(() => {
-    try {
-      const saved = localStorage.getItem('sourcewise_student_events');
-      return saved ? JSON.parse(saved) : INITIAL_EVENTS;
-    } catch {
-      return INITIAL_EVENTS;
-    }
-  });
+  const { events, addEvent, deleteEvent, updateEvent } = useStudentEvents();
 
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('All');
-  const [selectedMode, setSelectedMode] = useState('All');
+  const [selectedMode] = useState('All');
   const [sortBy, setSortBy] = useState('date-desc');
   const [activeTab, setActiveTab] = useState('all');
   const [viewMode, setViewMode] = useState('cards'); // 'cards' | 'timeline'
@@ -152,11 +72,6 @@ export default function EventsPage() {
   const [techInput, setTechInput] = useState('');
   const [skillInput, setSkillInput] = useState('');
   const [modalTab, setModalTab] = useState('overview'); // 'overview' | 'outcome' | 'project' | 'learnings'
-
-  // Persist to localStorage
-  useEffect(() => {
-    localStorage.setItem('sourcewise_student_events', JSON.stringify(events));
-  }, [events]);
 
   const showToast = (msg) => {
     setToastMessage(msg);
@@ -210,20 +125,15 @@ export default function EventsPage() {
 
     if (editingEventId) {
       // Edit existing
-      setEvents(events.map(ev => ev.id === editingEventId ? { ...formData, id: editingEventId, updatedAt: new Date().toISOString() } : ev));
+      updateEvent(editingEventId, formData);
       showToast('Event updated successfully');
       if (viewingEvent?.id === editingEventId) {
         setViewingEvent({ ...formData, id: editingEventId });
       }
     } else {
       // Create new
-      const newEvent = {
-        ...formData,
-        id: 'evt-' + Date.now(),
-        createdAt: new Date().toISOString()
-      };
-      setEvents([newEvent, ...events]);
-      showToast('New event logged to your portfolio!');
+      addEvent(formData);
+      showToast('New event logged to your portfolio & calendar!');
     }
 
     setIsModalOpen(false);
@@ -231,7 +141,7 @@ export default function EventsPage() {
 
   const handleDelete = (id) => {
     if (window.confirm('Are you sure you want to delete this event from your logbook?')) {
-      setEvents(events.filter(e => e.id !== id));
+      deleteEvent(id);
       if (viewingEvent?.id === id) setViewingEvent(null);
       showToast('Event removed');
     }

@@ -8,10 +8,11 @@ import { useWorkspaceStore } from '../../store/workspaceStore'
 import FloatingFoxCompanion from './FloatingFoxCompanion'
 import GlobalChatPanel from '../knowledge/GlobalChatPanel'
 import {
-  Home, BookCopy, MessageSquare, Trophy, Calendar, Settings, Compass,
-  LogOut, User as UserIcon, ChevronLeft, ChevronRight, Puzzle, CalendarDays, Code2,
+  Home, BookCopy, MessageSquare, Calendar, Settings,
+  LogOut, ChevronLeft, ChevronRight, Puzzle, CalendarDays, Code2,
   GraduationCap
 } from 'lucide-react'
+import { EVENTS_CHANGED_EVENT } from '../../lib/studentEvents'
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:4000'
 
@@ -182,38 +183,74 @@ export default function MainLayout() {
   const location = useLocation()
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false)
   const [hoveredItem, setHoveredItem] = useState(null)
-  const [activeQuestsCount, setActiveQuestsCount] = useState(4)
-  const [eventsCount, setEventsCount] = useState(3)
+  const [activeQuestsCount, setActiveQuestsCount] = useState(() => {
+    try {
+      const todayKey = `sw_quests_${new Date().toDateString()}`
+      const saved = localStorage.getItem(todayKey)
+      if (saved) {
+        const quests = JSON.parse(saved)
+        return quests.filter((q) => !q.completed).length
+      }
+    } catch {
+      return 4
+    }
+    return 4
+  })
+  const [eventsCount, setEventsCount] = useState(() => {
+    try {
+      const savedEvents = localStorage.getItem('sourcewise_student_events')
+      if (savedEvents) {
+        const evts = JSON.parse(savedEvents)
+        if (Array.isArray(evts)) return evts.length
+      }
+    } catch {
+      return 3
+    }
+    return 3
+  })
   const [railStreak, setRailStreak] = useState(null)
   const workspaceTotalNotifs = useWorkspaceStore((state) => state.notifications.total) || 0
   const isAnyWorkspaceGenerating = useWorkspaceStore((state) => Object.values(state.isGenerating).some(Boolean))
   const lastToast = useWorkspaceStore((state) => state.lastCompletedToast)
   const dismissToast = useWorkspaceStore((state) => state.dismissToast)
 
-  // Sync available quests count from daily quests localStorage
+  // Sync counts and real-time events
   useEffect(() => {
-    try {
-      const todayKey = `sw_quests_${new Date().toDateString()}`
-      const saved = localStorage.getItem(todayKey)
-      if (saved) {
-        const quests = JSON.parse(saved)
-        const uncompleted = quests.filter((q) => !q.completed).length
-        setActiveQuestsCount(uncompleted)
+    const updateEvents = () => {
+      try {
+        const savedEvents = localStorage.getItem('sourcewise_student_events')
+        if (savedEvents) {
+          const evts = JSON.parse(savedEvents)
+          if (Array.isArray(evts)) setEventsCount(evts.length)
+        }
+      } catch {
+        // Default to 3
       }
-    } catch (e) {
-      // Default to 4
     }
 
-    try {
-      const savedEvents = localStorage.getItem('sourcewise_student_events')
-      if (savedEvents) {
-        const evts = JSON.parse(savedEvents)
-        if (Array.isArray(evts)) setEventsCount(evts.length)
+    const updateQuests = () => {
+      try {
+        const todayKey = `sw_quests_${new Date().toDateString()}`
+        const saved = localStorage.getItem(todayKey)
+        if (saved) {
+          const quests = JSON.parse(saved)
+          setActiveQuestsCount(quests.filter((q) => !q.completed).length)
+        }
+      } catch {
+        // Default
       }
-    } catch (e) {
-      // Default to 3
     }
-  }, [location.pathname])
+
+    window.addEventListener(EVENTS_CHANGED_EVENT, updateEvents)
+    window.addEventListener('storage', updateEvents)
+    window.addEventListener('storage', updateQuests)
+
+    return () => {
+      window.removeEventListener(EVENTS_CHANGED_EVENT, updateEvents)
+      window.removeEventListener('storage', updateEvents)
+      window.removeEventListener('storage', updateQuests)
+    }
+  }, [])
 
   // Rail footer: live streak (best effort, never blocks nav)
   useEffect(() => {

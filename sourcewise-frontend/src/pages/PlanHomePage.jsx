@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
-import { Flame, Target, BookOpen, Zap, CalendarDays } from 'lucide-react'
+import { Flame, Target, BookOpen, Zap } from 'lucide-react'
 import { useAuthStore } from '../store/authStore'
 import { usePlannerStore } from '../store/plannerStore'
 import PlannerPageV2 from './PlannerPageV2'
@@ -8,6 +8,7 @@ import InsightsPage from './InsightsPage'
 import PacingBar from '../components/plan/PacingBar'
 import TaskHybridList from '../components/plan/TaskHybridList'
 import StudyCalendar from '../components/plan/StudyCalendar'
+import CalendarActionMenu from '../components/plan/CalendarActionMenu'
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:4000'
 const ADAPT_KEY = () => `sw_adapt_${new Date().toDateString()}`
@@ -135,13 +136,19 @@ export default function PlanHomePage() {
 
       {/* ── My Plan: calendar ── */}
       <div className="pt-2">
-        <div className="flex items-center gap-2 mb-4">
-          <div className="w-7 h-7 rounded-lg bg-[#F1ECE6] flex items-center justify-center">
-            <CalendarDays className="w-4 h-4 text-[#5B544E]" />
-          </div>
-          <div>
-            <p className="text-[11px] font-extrabold uppercase tracking-widest text-[#8A817B]">My Plan</p>
-            <p className="text-[13px] font-bold text-[#1E1B16] leading-tight">Study Calendar</p>
+        <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
+          <div className="flex items-center gap-2.5">
+            <CalendarActionMenu variant="icon" />
+            <div>
+              <p className="text-[11px] font-extrabold uppercase tracking-widest text-[#8A817B]">My Plan</p>
+              <div className="flex items-center gap-2">
+                <p className="text-[13px] font-bold text-[#1E1B16] leading-tight">Study Calendar</p>
+                <span className="text-[10px] text-teal-800 font-bold bg-teal-50 border border-teal-200/70 px-2 py-0.5 rounded-full hidden sm:inline-flex items-center gap-1 shadow-2xs">
+                  <span>⚡</span>
+                  <span>Tap calendar icon for Add / Delete Event</span>
+                </span>
+              </div>
+            </div>
           </div>
         </div>
         <StudyCalendar planId={currentPlan?.id} />

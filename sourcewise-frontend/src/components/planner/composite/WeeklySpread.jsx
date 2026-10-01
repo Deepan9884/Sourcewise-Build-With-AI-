@@ -5,6 +5,7 @@ import InkSplash from '../primitives/InkSplash'
 import { subjectStyle } from '../utils/subjectPalette'
 import { prettyDay, hhmm, weekDatesISO } from '../utils/dateHelpers'
 import { useInkSplash } from '../hooks/useInkSplash'
+import { useStudentEvents, getCategoryStyle } from '../../../lib/studentEvents'
 
 const ACT_ICON = { read: '📖', practice: '✍️', flashcards: '🃏', explain: '💡', quiz: '❓', summarize: '📝' }
 
@@ -32,6 +33,31 @@ export default function WeeklySpread({ slots = [], weekStart, onSlotClick, onSlo
     return m
   }, [slots])
 
+  const { events: studentEvents } = useStudentEvents()
+
+  const eventsByDate = useMemo(() => {
+    const map = {}
+    for (const ev of studentEvents) {
+      if (!ev.startDate) continue
+      const start = ev.startDate
+      const end = ev.endDate && ev.endDate >= start ? ev.endDate : start
+      let cur = new Date(`${start}T00:00:00`)
+      const stop = new Date(`${end}T00:00:00`)
+      let safety = 0
+      while (cur <= stop && safety < 60) {
+        const y = cur.getFullYear()
+        const m = String(cur.getMonth() + 1).padStart(2, '0')
+        const d = String(cur.getDate()).padStart(2, '0')
+        const dStr = `${y}-${m}-${d}`
+        if (!map[dStr]) map[dStr] = []
+        map[dStr].push(ev)
+        cur.setDate(cur.getDate() + 1)
+        safety++
+      }
+    }
+    return map
+  }, [studentEvents])
+
   const renderDay = (date) => (
     <div
       key={date}
@@ -43,8 +69,36 @@ export default function WeeklySpread({ slots = [], weekStart, onSlotClick, onSlo
       }}
       className="rounded-xl bg-white/70 border border-[#E7DCCB] p-2 min-h-[150px]"
     >
-      <p className="text-[11px] font-extrabold uppercase tracking-wide text-[#6B625C] mb-1.5">{prettyDay(date)}</p>
+      <div className="flex items-center justify-between mb-1.5">
+        <p className="text-[11px] font-extrabold uppercase tracking-wide text-[#6B625C]">{prettyDay(date)}</p>
+        {(eventsByDate[date] || []).length > 0 && (
+          <span className="text-[9px] font-extrabold text-emerald-800 bg-emerald-100 px-1 py-0.2 rounded">
+            📅 {(eventsByDate[date] || []).length}
+          </span>
+        )}
+      </div>
+
       <div className="space-y-1.5">
+        {/* Student portfolio events */}
+        {(eventsByDate[date] || []).map((ev) => {
+          const st = getCategoryStyle(ev.category)
+          return (
+            <div
+              key={ev.id}
+              className={`p-1.5 rounded-lg border text-[10px] font-bold shadow-2xs flex items-center justify-between gap-1 ${st.bg} ${st.border} ${st.text}`}
+              title={`${ev.category}: ${ev.title}`}
+            >
+              <div className="flex items-center gap-1 min-w-0">
+                <span>🏆</span>
+                <span className="truncate">{ev.title}</span>
+              </div>
+              <span className="text-[8px] uppercase tracking-wider px-1 py-0.2 rounded bg-white/80 shrink-0">
+                {ev.category}
+              </span>
+            </div>
+          )
+        })}
+
         {(byDate[date] || []).slice(0, 6).map((s) => {
           const sub = s.plan_subjects || {}
           const st = subjectStyle(sub.subject_name || s.topic || '')
