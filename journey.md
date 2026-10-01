@@ -244,3 +244,18 @@ Date: 2026-09-29
 - Files: index.js, notes.routes.js, notes.test.js, notesApi.js, notesExport.js, workspaceStore.js, AIWorkspacePage.jsx, package.json, journey.md
 
 
+### 2026-10-01 — redeploy frontend to Vercel + auto-deploy on GitHub push
+- Did: linked repo root to desu-midhun/sourcewise-frontend (CLI authed), `vercel --prod` redeployed (38s) — alias https://sourcewise-frontend-three.vercel.app live (root/login/text.png all 200). Connected GitHub repo via `vercel git connect` so pushes to main auto-deploy. Note: project has no env vars set (VITE_API_URL unbaked — same as prior deploy).
+- Test: prod alias curl root 200, /login 200 (SPA rewrite), /text.png 200. Auto-deploy proven by this SOP push (see vercel ls). No code changes (reverted vercel-link .gitignore dup; .vercel/ gitignored).
+- Files: none (ops only; journey.md log)
+
+### 2026-10-01 — Vercel env vars + backend deploy + frontend rewired to prod API
+- Did: created project sourcewise-node-api (API, rootDir node-api) + git-connected for auto-deploy. Added 17 backend env (prod+preview, values from local .env; FRONTEND_ORIGIN=prod frontend; NODE_ENV=production; no PORT/PYTHON_AI_URL/INTERNAL_API_KEY — all empty locally). Deployed backend https://sourcewise-node-api.vercel.app (/health healthy, DB ok, AI unavailable as expected). Set frontend VITE_API_URL (prod+preview) + redeployed frontend (prod bundle verified containing API URL).
+- Test: backend /health healthy; frontend prod curl / + /login 200; bundle greps 3x API URL. No code changes.
+- Files: none (ops only; journey.md log)
+
+### 2026-10-01 — Render backend move ABORTED (billing card required, none available)
+- Did: installed Render CLI 2.28.0 (brew), device-login authorized, workspace set (My Workspace). Service create for sourcewise-node-api failed 402: Render demands billing card even for free tier. User has no card — move impossible; Vercel backend stays production (re-verified healthy). No Render resources created, nothing to clean.
+- Test: https://sourcewise-node-api.vercel.app/health healthy at close-out.
+- Files: none (ops only; journey.md log)
+
