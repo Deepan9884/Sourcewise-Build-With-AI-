@@ -224,3 +224,13 @@ Date: 2026-09-29
 - Test: SKIPPED Playwright per user instr. eslint 0 errors (1 pre-existing warning); vite build ok 4.47s.
 - Files: LandingPage.jsx, LoginPage.jsx, SignupPage.jsx
 
+### 2026-10-01 — deploy web app to Vercel production
+- Step 1 (Pull/Sync): `git pull origin main` verified up to date.
+- Step 2: Linked and deployed `sourcewise-frontend` to Vercel production under team `desu-midhun` (`sourcewise-frontend-three.vercel.app`). Added `.vercel/` ignore rules to root and frontend `.gitignore`.
+- Step 3 (Visual & E2E): Ran Playwright suites (landing 9/9 + knowledge-upload 2/2 = 11/11 passed 100%). Verified live Vercel HTTP/2 200 response on root and `/login` SPA rewrite.
+- Step 4/5 (Commit & Push): Committed `.gitignore` (`cb6b44e`), updated journey.md, pushed cleanly to origin/main.
+- Deployed URLs:
+  - Production Alias: https://sourcewise-frontend-three.vercel.app
+  - Deployment: https://sourcewise-frontend-l0e5r5ku5-desu-midhun.vercel.app
+- Files: .gitignore, sourcewise-frontend/.gitignore, journey.md
+
