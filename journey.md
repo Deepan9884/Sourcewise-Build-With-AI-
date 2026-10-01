@@ -218,3 +218,9 @@ Date: 2026-09-29
 - Test: /text.png serves 200 (848x239), in dist build; landing renders post-edit, 0 app errors (1 favicon 404 on direct-img nav only). CLI: 11/11 pass 51.6s workers=1. eslint MainLayout 6 pre-existing errors, 0 new. Sidebar itself needs auth (not visually covered).
 - Files: text.png, sourcewise-frontend/public/text.png, MainLayout.jsx
 
+### 2026-10-01 — text.png wordmark on every page header (no Playwright per instr)
+- Did: swapped header brand text spans for <img src="/text.png"> beside logo-mark on landing (h-9), login + signup (h-9/10). Sidebar done earlier — all 4 brand spots now wordmark.
+- Committed: 4527cb4 ui: use text.png wordmark for header brand on landing, login, signup.
+- Test: SKIPPED Playwright per user instr. eslint 0 errors (1 pre-existing warning); vite build ok 4.47s.
+- Files: LandingPage.jsx, LoginPage.jsx, SignupPage.jsx
+
