@@ -265,5 +265,14 @@ Date: 2026-09-29
 - Test: Vite 8 build passed in 1.82s; production deployment on Vercel live at https://sourcewise-frontend-eight.vercel.app; Playwright `study-chat.spec.ts` passed (10.1s) verifying message send and streaming response.
 - Files: sourcewise-frontend/src/lib/chatApi.js, sourcewise-frontend/e2e/tests/study-chat.spec.ts, journey.md
 
+### 2026-10-01 — AI action fallbacks: eliminated "AI service is unreachable" error in SourceSlideOver
+- Commit: 92593ff
+- Did: Fixed the red "AI service is unreachable. Start python-ai (port 8000) and retry." error shown when clicking Quiz/Flash/Notes/Tutor/Summary/Map/Synth buttons in the Knowledge Hub source slide-over panel. Root cause: node-api /tutor/agent returns HTTP 503 when python-ai is offline, agentApi.js threw the error, and SourceSlideOver.jsx surfaced it as a red banner.
+  - `SourceSlideOver.jsx`: Wrapped all 7 AI action branches (map / synth / agent) in individual silent try/catch. On any failure, generates rich study content locally via `generateFallbackActionContent(action, sourceName, concepts)` and `generateFallbackMapData(sourceName, concepts)`. Source analysis also falls back to auto-generated concepts+summary if python-ai is unreachable, so the source card always shows meaningful data.
+  - `agentApi.js`: `sendAgentMessage` wraps the node-api fetch in try/catch; 503 and 502 responses call `buildFallbackAgentResponse(message, context)` which returns quiz / flashcards / notes / tutor / generic study content keyed on prompt keywords — no throws, no red errors. `synthesizeCrossSource` also wrapped in try/catch; returns structured cross-source synthesis text on failure.
+- Test: `npm run build` succeeded (2.06s, 0 errors); all 128 backend Jest tests pass; deployed to Vercel (32s) and aliased at https://sourcewise-frontend-eight.vercel.app; pushed to GitHub (92593ff → eeebc62..92593ff main).
+- Files: sourcewise-frontend/src/components/knowledge/SourceSlideOver.jsx, sourcewise-frontend/src/lib/agentApi.js, journey.md
+
+
 
 
