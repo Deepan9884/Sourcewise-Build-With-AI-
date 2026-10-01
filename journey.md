@@ -199,3 +199,10 @@ Date: 2026-09-29
 - Test: node /health ai_service ok; AI /metrics/ready embedder/vector_db/llm_gemini all ok. MCP live :5173 landing + login render, 0 errors. CLI: 11/11 pass 43.0s workers=1. Note: chat round-trip needs auth (not covered); .venv is gitignored (local-only).
 - Files: sourcewise-backend/scripts/dev.js (+ local-only python-ai/.venv; AI running via nohup, log /tmp/python-ai.log)
 
+### 2026-10-01 — explain knowledge upload Failed-to-fetch + remove Companion Linked card
+- Why fetch failed: KnowledgeHub ingestDocument POSTs browser-direct to :8000/ingest (chatApi.js). Screenshots 08:46-48 predate AI start 08:53 — :8000 refused connection, fetch threw "Failed to fetch". AI up since, /ingest live (422 no-key proves reachability), /metrics/ready all ok. Fix = retry upload now; no code change needed on upload path.
+- Did: removed Companion Linked scholar badge card from settings sidebar (SettingsPage.jsx, 13 lines). Images folder untouched per instr (image 1.png left modified-in-place, unstaged).
+- Committed: dab3a70 ui: remove Companion Linked scholar badge from settings sidebar.
+- Test: MCP live — /settings guard redirects unauth (no crash), landing renders, 0 errors. CLI: 11/11 pass 46.5s workers=1. eslint SettingsPage 9 pre-existing errors, 0 new.
+- Files: sourcewise-frontend/src/pages/SettingsPage.jsx
+
