@@ -244,3 +244,8 @@ Date: 2026-09-29
 - Test: prod alias curl root 200, /login 200 (SPA rewrite), /text.png 200. Auto-deploy proven by this SOP push (see vercel ls). No code changes (reverted vercel-link .gitignore dup; .vercel/ gitignored).
 - Files: none (ops only; journey.md log)
 
+### 2026-10-01 — Vercel env vars + backend deploy + frontend rewired to prod API
+- Did: created project sourcewise-node-api (API, rootDir node-api) + git-connected for auto-deploy. Added 17 backend env (prod+preview, values from local .env; FRONTEND_ORIGIN=prod frontend; NODE_ENV=production; no PORT/PYTHON_AI_URL/INTERNAL_API_KEY — all empty locally). Deployed backend https://sourcewise-node-api.vercel.app (/health healthy, DB ok, AI unavailable as expected). Set frontend VITE_API_URL (prod+preview) + redeployed frontend (prod bundle verified containing API URL).
+- Test: backend /health healthy; frontend prod curl / + /login 200; bundle greps 3x API URL. No code changes.
+- Files: none (ops only; journey.md log)
+
