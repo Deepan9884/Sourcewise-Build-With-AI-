@@ -249,3 +249,8 @@ Date: 2026-09-29
 - Test: backend /health healthy; frontend prod curl / + /login 200; bundle greps 3x API URL. No code changes.
 - Files: none (ops only; journey.md log)
 
+### 2026-10-01 — Render backend move ABORTED (billing card required, none available)
+- Did: installed Render CLI 2.28.0 (brew), device-login authorized, workspace set (My Workspace). Service create for sourcewise-node-api failed 402: Render demands billing card even for free tier. User has no card — move impossible; Vercel backend stays production (re-verified healthy). No Render resources created, nothing to clean.
+- Test: https://sourcewise-node-api.vercel.app/health healthy at close-out.
+- Files: none (ops only; journey.md log)
+
