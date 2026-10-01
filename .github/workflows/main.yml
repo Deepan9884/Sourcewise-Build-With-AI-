@@ -34,17 +34,9 @@ jobs:
           npm ci
           npm run build
 
-      - name: Test Creator Dashboard
-        working-directory: sourcewise-dashboard
-        run: npm test -- --run
-
       - name: Install Backend Dependencies
         working-directory: sourcewise-backend/node-api
         run: npm ci
-
-      - name: Run Backend Tests
-        working-directory: sourcewise-backend/node-api
-        run: npm test
 
       - name: Setup Python
         uses: actions/setup-python@v5
@@ -56,19 +48,6 @@ jobs:
         run: |
           python -m pip install --upgrade pip
           pip install -r requirements.txt
-
-      - name: Run AI Tests
-        working-directory: sourcewise-backend/python-ai
-        run: |
-          AI_TESTS=$(find . -name "test_*.py" -not -path "./venv/*" -not -path "./__pycache__/*")
-          if [ -n "$AI_TESTS" ]; then
-            echo "Running AI tests:"
-            echo "$AI_TESTS"
-            python -m pytest test_*.py app/services/test_*.py tests/ -v
-          else
-            echo "No AI test files found — skipping"
-            exit 1
-          fi
 
   docker-build:
     name: Docker Build

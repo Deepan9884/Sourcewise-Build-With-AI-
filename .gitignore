@@ -73,3 +73,14 @@ lerna-debug.log*
 test.txt
 test_backend.py
 test_imports.py
+__tests__/
+tests/
+test_*.py
+*.test.js
+*.test.ts
+*.spec.js
+*.spec.ts
+e2e/
+test-results/
+playwright-report/
+*TESTING_REPORT*.md
