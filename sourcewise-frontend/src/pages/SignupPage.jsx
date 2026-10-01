@@ -86,14 +86,11 @@ export default function SignupPage() {
             alt="SourceWise logo"
             className="h-11 w-11 sm:h-12 sm:w-12 object-contain transition-transform duration-300 group-hover:scale-105"
           />
-          <span className="flex flex-col">
-            <span className="font-headline-sm text-headline-sm text-on-surface font-bold tracking-tight">
-              SourceWise
-            </span>
-            <span className="font-label-sm text-label-sm text-on-surface-variant font-semibold tracking-wider uppercase -mt-0.5">
-              AI Study Suite
-            </span>
-          </span>
+          <img
+            src="/text.png"
+            alt="SourceWise"
+            className="h-9 sm:h-10 w-auto object-contain object-left"
+          />
         </Link>
 
         {/* Back to Home Link */}

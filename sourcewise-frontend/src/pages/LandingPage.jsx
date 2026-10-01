@@ -262,14 +262,11 @@ export default function LandingPage() {
                 className="h-12 w-12 object-contain transition-transform group-hover:scale-105"
                 src="/logo-mark.png"
               />
-              <div className="flex flex-col">
-                <span className="font-headline-sm text-headline-sm text-on-surface font-bold tracking-tight group-hover:text-primary transition-colors">
-                  SourceWise
-                </span>
-                <span className="font-label-sm text-label-sm text-on-surface-variant font-semibold tracking-wider uppercase -mt-1">
-                  AI Study Suite
-                </span>
-              </div>
+              <img
+                alt="SourceWise"
+                className="h-9 w-auto object-contain object-left"
+                src="/text.png"
+              />
             </Link>
           </div>
 
