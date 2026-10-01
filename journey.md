@@ -239,3 +239,8 @@ Date: 2026-09-29
 - Step 4/5 (Commit & Push): Committed code changes (`2915499`), updated `journey.md`, pushed cleanly to origin/main.
 - Files: llm.py, rag_chain.py, run.py, AIReportViewer.jsx, GlobalChatPanel.jsx, RichMessageContent.jsx, index.css, AIWorkspacePage.jsx, KnowledgeHubPage.jsx, workspaceStore.js, journey.md
 
+### 2026-10-01 — redeploy frontend to Vercel + auto-deploy on GitHub push
+- Did: linked repo root to desu-midhun/sourcewise-frontend (CLI authed), `vercel --prod` redeployed (38s) — alias https://sourcewise-frontend-three.vercel.app live (root/login/text.png all 200). Connected GitHub repo via `vercel git connect` so pushes to main auto-deploy. Note: project has no env vars set (VITE_API_URL unbaked — same as prior deploy).
+- Test: prod alias curl root 200, /login 200 (SPA rewrite), /text.png 200. Auto-deploy proven by this SOP push (see vercel ls). No code changes (reverted vercel-link .gitignore dup; .vercel/ gitignored).
+- Files: none (ops only; journey.md log)
+
