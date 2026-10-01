@@ -183,6 +183,42 @@ export async function processSuperCompanionCommand(query, { navigate, onToast })
   const omni = getOmniContext();
 
   // ─────────────────────────────────────────────────────────────
+  // 0. GREETINGS & CASUAL INTERACTION (Hi, Hello, Hey, etc.)
+  // ─────────────────────────────────────────────────────────────
+  const isGreeting =
+    /^(hi|hello|hey|hiya|howdy|hola|yo|sup|greetings|good\s+(morning|afternoon|evening)|what'?s\s+up)(\s+[a-z]+)?[\s!.,?]*$/i.test(qLower) ||
+    /^(hi|hello|hey)\s*(there|sourcewise|companion|bot|friend)?[\s!.,?]*$/i.test(qLower);
+
+  if (isGreeting) {
+    const user = omni.user;
+    const name = user?.name?.split(' ')[0] || user?.email?.split('@')[0] || '';
+    const nameGreeting = name ? `, ${name}` : '';
+    const eventCount = omni.events.length;
+    const taskCount = omni.todaySlots.filter(s => s.status !== 'completed').length;
+
+    let statusSnippet = '';
+    if (eventCount > 0 || taskCount > 0) {
+      const parts = [];
+      if (eventCount > 0) parts.push(`📅 **${eventCount}** scheduled event${eventCount > 1 ? 's' : ''}`);
+      if (taskCount > 0) parts.push(`📋 **${taskCount}** study task${taskCount > 1 ? 's' : ''} today`);
+      statusSnippet = `\n\nYou currently have ${parts.join(' and ')} on your schedule.`;
+    }
+
+    return {
+      handled: true,
+      role: 'assistant',
+      content: `👋 Hey${nameGreeting}! How can I help you today?${statusSnippet}
+
+Feel free to command me anytime:
+- 📅 *"Add an event in calendar: Hackathon on Oct 25"*
+- 🗑️ *"Delete event [name]"*
+- 📚 *"List all my sources"*
+- 📋 *"What are my tasks today?"*
+- 🧭 *"Take me to my plan"*`
+    };
+  }
+
+  // ─────────────────────────────────────────────────────────────
   // 1. ADD EVENT TO CALENDAR
   // ─────────────────────────────────────────────────────────────
   const isAddEvent =

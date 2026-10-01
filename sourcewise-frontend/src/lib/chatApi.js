@@ -78,7 +78,12 @@ export async function deleteSourceVectors(sourceId) {
  * Generate an intelligent, contextual study response when backend AI is offline or blocked.
  */
 function buildStudyAssistantResponse(question, sourceIds) {
-  const qLower = (question || '').trim().toLowerCase();
+  // Strip any raw [Context: ...] wrapper if present
+  const cleanQ = (question || '')
+    .replace(/^\[Context:.*?\]\s*/is, '')
+    .replace(/^Context:.*?\n+/is, '')
+    .trim();
+  const qLower = cleanQ.toLowerCase();
 
   // Find active sources for context
   const allSources = useSourceStore.getState().uploadedSources || [];
@@ -103,15 +108,19 @@ Tengo tu documento ${contextDesc} cargado y listo en el contexto de estudio.
 - 🎯 **Preguntas de práctica**: Dime si quieres poner a prueba lo que has aprendido.`;
   }
 
-  if (['hi', 'hello', 'hey', 'greetings'].includes(qLower) || qLower.startsWith('hi ') || qLower.startsWith('hello ')) {
+  if (
+    ['hi', 'hello', 'hey', 'greetings', 'howdy', 'yo', 'sup'].includes(qLower) ||
+    /^(hi|hello|hey|hiya|howdy|yo|sup|good\s+(morning|afternoon|evening)|what'?s\s+up)[\s!.,?]*$/i.test(qLower) ||
+    /^(hi|hello|hey)\s*(there|sourcewise|tutor|bot|assistant)?[\s!.,?]*$/i.test(qLower)
+  ) {
     return `Hello! 👋 I'm your **SourceWise Study Assistant**.
 
-I have ${contextDesc} active in your workspace.
+${sourceNames.length > 0 ? `I have your active material (${contextDesc}) ready in your study workspace.` : 'I am ready to help you learn and prepare for your exams.'}
 
-How would you like to proceed with your study session?
-- 📌 **Key Takeaways**: Ask me for a structured summary of your documents.
-- 🔍 **Deep-Dive Concepts**: Ask about any specific concept, diagram, or formula.
-- 📝 **Practice & Quizzes**: Ask for practice questions or flashcards based on your sources.`;
+How can I help you today?
+- 📌 **Key Takeaways**: Ask me for a clear summary of any topic or source.
+- 🔍 **Explain Concepts**: Ask about any specific concept, diagram, or formula in plain English.
+- 📝 **Practice**: Ask for a quick 3-question quiz or flashcards.`;
   }
 
   // Summary requests
@@ -135,7 +144,7 @@ Here is a structured overview of your study context:
   }
 
   // General Questions or Concept Explanations
-  return `### 💡 Analysis & Study Guidance: "${question}"
+  return `### 💡 Study Guidance: "${cleanQ}"
 
 Based on ${contextDesc} in your current study context:
 

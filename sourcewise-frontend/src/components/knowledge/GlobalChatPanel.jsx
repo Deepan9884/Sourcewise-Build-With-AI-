@@ -9,7 +9,7 @@ import {
 import { useAuthStore } from '../../store/authStore'
 import { streamChat } from '../../lib/chatApi'
 import { RichMessageContent } from '../ui/RichMessageContent'
-import { processSuperCompanionCommand, getOmniContext } from '../../lib/superCompanionEngine'
+import { processSuperCompanionCommand } from '../../lib/superCompanionEngine'
 import { addStudentEvent, deleteStudentEvent } from '../../lib/studentEvents'
 
 const QUICK_SPRINTS = [
@@ -97,22 +97,12 @@ export default function GlobalChatPanel({ open, onClose, sourceIds = [], context
       console.warn('[GlobalChat] Command processing fallback to LLM:', cmdErr)
     }
 
-    // ── General Inquiry: Enriched with full App Omni-Context ──
-    const omni = getOmniContext()
-    const activeDocNames = omni.activeSources.map(s => s.name || s.title).join(', ')
-    const eventsBrief = omni.events.slice(0, 3).map(e => `${e.title} (${e.startDate})`).join(', ')
-    const tasksBrief = omni.todaySlots.slice(0, 3).map(s => s.topic).join(', ')
-
-    const enrichedQuestion = `[Context: Active Sources: "${activeDocNames || 'None'}" | Calendar Events: "${eventsBrief || 'None'}" | Today's Tasks: "${tasksBrief || 'None'}" | Streak: ${omni.user?.streak || 1}d]
-
-${question}`
-
     setMessages((m) => [...m, { role: 'assistant', content: '', streaming: true }])
     setStreaming(true)
     let acc = ''
 
     await streamChat({
-      question: enrichedQuestion,
+      question,
       sourceIds,
       userId: user?.id || 'anonymous',
       history: messages

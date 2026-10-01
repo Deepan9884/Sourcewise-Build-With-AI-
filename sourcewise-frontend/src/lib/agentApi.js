@@ -61,7 +61,7 @@ export async function sendAgentMessage({
       headers: gatewayHeaders(),
       body: JSON.stringify(body),
     });
-  } catch (_) {
+  } catch {
     return buildFallbackAgentResponse(message, context);
   }
 
@@ -77,7 +77,7 @@ export async function sendAgentMessage({
         return buildFallbackAgentResponse(message, context);
       }
       return direct.json();
-    } catch (_) {
+    } catch {
       return buildFallbackAgentResponse(message, context);
     }
   }
@@ -96,6 +96,22 @@ export async function sendAgentMessage({
 function buildFallbackAgentResponse(message = '', context = {}) {
   const m = String(message).toLowerCase();
   const topic = context?.topic || 'your study material';
+
+  const isGreeting =
+    /^(hi|hello|hey|hiya|howdy|hola|yo|sup|greetings|good\s+(morning|afternoon|evening)|what'?s\s+up)(\s+[a-z]+)?[\s!.,?]*$/i.test(m.trim()) ||
+    /^(hi|hello|hey)\s*(there|sourcewise|tutor|bot|assistant)?[\s!.,?]*$/i.test(m.trim());
+
+  if (isGreeting) {
+    return {
+      type: 'text',
+      message: `Hey there! 👋 I'm your SourceWise study assistant.\n\n` +
+        `How can I help you today?\n` +
+        `• 📚 **Ask about your documents**: Ask questions, request summaries, or clarify difficult concepts.\n` +
+        `• 📝 **Practice**: Type *"quiz me"* or *"flashcards"* to test your understanding.\n` +
+        `• 🎯 **Next steps**: Ask *"what should I study next?"* to stay on track.`,
+      data: { topic }
+    };
+  }
 
   if (m.includes('quiz') || m.includes('multiple-choice')) {
     return {
@@ -119,12 +135,12 @@ function buildFallbackAgentResponse(message = '', context = {}) {
     return {
       type: 'flashcards',
       message: `Here are 6 key flashcards for ${topic}:\n\n` +
-        `• **Card 1** — Front: Core Architecture | Back: Coordinates execution, ensures invariant integrity and resource bounds.\n` +
-        `• **Card 2** — Front: State Mechanics | Back: Predictable transitions, lifecycle verification, and idempotent updates.\n` +
-        `• **Card 3** — Front: Concurrency Invariant | Back: Atomic locks, immutable references, and isolated work queues.\n` +
-        `• **Card 4** — Front: Primary Bottleneck | Back: Contention on shared critical paths and I/O serialization.\n` +
-        `• **Card 5** — Front: Failure Recovery | Back: Circuit breakers, graceful degradation, and structured exponential backoff.\n` +
-        `• **Card 6** — Front: Mastery Verification | Back: Stress-testing edge cases and benchmark integration under load.`,
+        `• **Card 1** — Front: Core Concept | Back: Key foundation and structural definitions.\n` +
+        `• **Card 2** — Front: Important Principles | Back: Predictable transitions and consistent rules.\n` +
+        `• **Card 3** — Front: Key Trade-offs | Back: Speed vs. accuracy and resource utilization.\n` +
+        `• **Card 4** — Front: Common Bottlenecks | Back: High contention and unindexed lookups.\n` +
+        `• **Card 5** — Front: Best Practices | Back: Clean boundaries and graceful degradation.\n` +
+        `• **Card 6** — Front: Exam Checkpoint | Back: Practical application and problem solving.`,
       data: { topic },
     };
   }
@@ -136,13 +152,13 @@ function buildFallbackAgentResponse(message = '', context = {}) {
         `## 1. Executive Summary\n` +
         `Essential principles and operational mechanics for mastering ${topic}.\n\n` +
         `## 2. Core Concepts\n` +
-        `- **Foundations**: Mathematical models and system specifications.\n` +
-        `- **State Pipeline**: Intake, verification, deterministic transformation, and cleanup.\n` +
-        `- **Safety Boundaries**: Invariants, error containment, and isolation.\n\n` +
+        `- **Foundations**: Key definitions, system specifications, and core formulas.\n` +
+        `- **State Pipeline**: Workflow steps, verification, and practical results.\n` +
+        `- **Safety Boundaries**: Critical rules and edge case considerations.\n\n` +
         `## 3. Practical Guidance\n` +
-        `1. Always validate edge cases and untrusted input.\n` +
-        `2. Favor idempotent state transforms.\n` +
-        `3. Monitor p95/p99 latency percentiles.`,
+        `1. Always test with real examples.\n` +
+        `2. Focus on understanding root principles over rote memorization.\n` +
+        `3. Review and practice with spaced repetition.`,
       data: { topic },
     };
   }
@@ -151,19 +167,20 @@ function buildFallbackAgentResponse(message = '', context = {}) {
     return {
       type: 'tutor',
       message: `Welcome to your tutoring session on **${topic}**! I'm here to guide you step-by-step through the core concepts.\n\n` +
-        `Let's start with the foundational intuition: think of this topic like an air traffic control system. If operations proceeded without shared coordination protocols or safety margins, congestion and failures would occur immediately.\n\n` +
-        `To begin, what aspect of **${topic}** would you like to master first: the core architecture, operational trade-offs, or hands-on problem solving?`,
+        `What aspect of **${topic}** would you like to master first: the core definitions, practical examples, or practice problems?`,
       data: { topic },
     };
   }
 
   return {
     type: 'text',
-    message: `Here is a high-yield overview for **${topic}**:\n\n` +
-      `1. **Core Principle**: Maintaining deterministic state transitions and strict validation boundaries.\n` +
-      `2. **Lifecycle Flow**: Intake → Invariant Verification → Execution → State Commitment.\n` +
-      `3. **Key Optimization**: Balance throughput against request latency under operational load.\n` +
-      `4. **Review Checkpoint**: Verify edge cases and test yourself on failure recovery mechanisms.`,
+    message: `I'm ready to help you study **${topic}**! 💡\n\n` +
+      `Feel free to ask me:\n` +
+      `• **Explain** any concept or section in simple terms.\n` +
+      `• **Summarize** key takeaways and definitions.\n` +
+      `• **Create a quiz** to test your understanding.\n` +
+      `• **Generate flashcards** for quick revision.\n\n` +
+      `What would you like to explore first?`,
     data: { topic },
   };
 }
@@ -293,7 +310,7 @@ export async function synthesizeCrossSource(sourceIds, focusTopic = null) {
 
     if (!res.ok) throw new Error('Synthesis failed');
     return res.json();
-  } catch (_) {
+  } catch {
     const topic = focusTopic || 'your study sources';
     return {
       synthesis: `# Cross-Source Synthesis: ${topic}\n\n` +
