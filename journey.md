@@ -192,3 +192,10 @@ Date: 2026-09-29
 - Step 4/5 (Commit & Push): Committed changes (`e01b496`), updated journey.md, pushed cleanly to origin/main.
 - Files: .vercelignore, VERCEL_DEPLOYMENT_GUIDE.md, package.json, vercel.json, sourcewise-backend/node-api/api/index.js, sourcewise-backend/node-api/src/index.js, sourcewise-backend/node-api/vercel.json, sourcewise-dashboard/package-lock.json, sourcewise-dashboard/vercel.json, sourcewise-frontend/.env.example, sourcewise-frontend/src/pages/SettingsPage.jsx, sourcewise-frontend/vercel.json, journey.md
 
+### 2026-10-01 — fix AI workspace "service unreachable" (python-ai down)
+- Cause: python-ai :8000 not running (no process, nothing on port; node-ai health showed ai_service unavailable). No venv existed and no interpreter had deps.
+- Did: created python-ai/.venv (python3.11) + installed requirements.txt; started AI via .venv (nohup, log /tmp/python-ai.log) — /health ok, model all-MiniLM-L6-v2 loaded (mps). Fixed scripts/dev.js resolvePythonBin to prefer python-ai/.venv/bin/python on macOS/Linux (was win32-only, fell back to bare python3).
+- Committed: f5522df fix(dev): prefer python-ai .venv on macOS/Linux in resolvePythonBin.
+- Test: node /health ai_service ok; AI /metrics/ready embedder/vector_db/llm_gemini all ok. MCP live :5173 landing + login render, 0 errors. CLI: 11/11 pass 43.0s workers=1. Note: chat round-trip needs auth (not covered); .venv is gitignored (local-only).
+- Files: sourcewise-backend/scripts/dev.js (+ local-only python-ai/.venv; AI running via nohup, log /tmp/python-ai.log)
+
