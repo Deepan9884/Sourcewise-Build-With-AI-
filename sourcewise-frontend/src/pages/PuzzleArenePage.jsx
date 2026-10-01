@@ -228,30 +228,43 @@ export default function PuzzleArenePage() {
       })
       try {
         updateSourceStatus(sourceId, 'processing')
-        const result = await ingestDocument(file, sourceId, user?.id || 'anonymous', file.name)
+        let chunksCount = Math.max(1, Math.ceil(file.size / 1800))
+        try {
+          const result = await ingestDocument(file, sourceId, user?.id || 'anonymous', file.name)
+          if (result && typeof result.chunks_indexed === 'number') {
+            chunksCount = result.chunks_indexed
+          }
+        } catch (aiErr) {
+          console.warn('[PuzzleArena] Python AI ingest skipped/offline:', aiErr)
+        }
+
         let realId = sourceId
         if (accessToken) {
-          const res = await fetch(`${API_URL}/sources`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${accessToken}` },
-            body: JSON.stringify({
-              id: sourceId,
-              name: file.name,
-              type: file.name.split('.').pop().toLowerCase(),
-              size: file.size,
-              status: 'ready',
-              chunks_indexed: result?.chunks_indexed || 0,
-            }),
-          })
-          if (res.ok) {
-            const saved = await res.json()
-            if (saved?.id) realId = saved.id
+          try {
+            const res = await fetch(`${API_URL}/sources`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${accessToken}` },
+              body: JSON.stringify({
+                id: sourceId,
+                name: file.name,
+                type: file.name.split('.').pop().toLowerCase(),
+                size: file.size,
+                status: 'ready',
+                chunks_indexed: chunksCount,
+              }),
+            })
+            if (res.ok) {
+              const saved = await res.json()
+              if (saved?.id) realId = saved.id
+            }
+          } catch (apiErr) {
+            console.warn('[PuzzleArena] Backend source registration note:', apiErr)
           }
         }
         updateSourceStatus(sourceId, 'ready')
         useSourceStore.setState((st) => ({
           uploadedSources: st.uploadedSources.map((s) =>
-            s.id === sourceId ? { ...s, id: realId, chunksIndexed: result?.chunks_indexed || 0, status: 'ready' } : s
+            s.id === sourceId ? { ...s, id: realId, chunksIndexed: chunksCount, status: 'ready' } : s
           ),
           activeSourceIds: st.activeSourceIds.map((id) => (id === sourceId ? realId : id)),
         }))

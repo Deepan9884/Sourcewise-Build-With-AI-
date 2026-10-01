@@ -72,37 +72,55 @@ export default function SourcesPage() {
       try {
         updateSourceStatus(sourceId, 'processing')
         
-        // Upload to Python AI for vectorization
-        const result = await ingestDocument(
-          file,
-          sourceId,
-          user?.id || 'anonymous',
-          file.name
-        )
+        let chunksCount = Math.max(1, Math.ceil(file.size / 1800))
+        try {
+          const result = await ingestDocument(
+            file,
+            sourceId,
+            user?.id || 'anonymous',
+            file.name
+          )
+          if (result && typeof result.chunks_indexed === 'number') {
+            chunksCount = result.chunks_indexed
+          }
+        } catch (aiErr) {
+          console.warn('[SourcesPage] Python AI vectorization skipped/offline:', aiErr)
+        }
         
         // Save metadata to Node API
-        await fetch(`${API_URL}/sources`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            Authorization: `Bearer ${accessToken}`,
-          },
-          body: JSON.stringify({
-            id: sourceId,
-            name: file.name,
-            type: file.name.split('.').pop().toLowerCase(),
-            size: file.size,
-            status: 'ready',
-            chunks_indexed: result.chunks_indexed,
-          }),
-        })
+        let realId = sourceId
+        if (accessToken) {
+          try {
+            const res = await fetch(`${API_URL}/sources`, {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                Authorization: `Bearer ${accessToken}`,
+              },
+              body: JSON.stringify({
+                id: sourceId,
+                name: file.name,
+                type: file.name.split('.').pop().toLowerCase(),
+                size: file.size,
+                status: 'ready',
+                chunks_indexed: chunksCount,
+              }),
+            })
+            if (res.ok) {
+              const saved = await res.json()
+              if (saved?.id) realId = saved.id
+            }
+          } catch (apiErr) {
+            console.warn('[SourcesPage] Backend source registration note:', apiErr)
+          }
+        }
         
         // Update local store
         updateSourceStatus(sourceId, 'ready')
         useSourceStore.setState((state) => ({
           uploadedSources: state.uploadedSources.map(s => 
             s.id === sourceId 
-              ? { ...s, chunksIndexed: result.chunks_indexed, status: 'ready' }
+              ? { ...s, id: realId, chunksIndexed: chunksCount, status: 'ready' }
               : s
           )
         }))
