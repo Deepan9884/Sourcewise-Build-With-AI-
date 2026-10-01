@@ -33,6 +33,7 @@ build/
 web-build/
 .expo/
 .next/
+.vercel/
 *.tsbuildinfo
 
 # Environment Secret Files
