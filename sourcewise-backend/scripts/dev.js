@@ -43,6 +43,9 @@ function resolvePythonBin() {
     }
     return 'python';
   }
+  // macOS/Linux: prefer the project venv when present, else system python3.
+  const venvBin = path.join(aiDir, '.venv', 'bin', 'python');
+  if (fs.existsSync(venvBin) && checkBin(venvBin)) return venvBin;
   return 'python3';
 }
 const PYTHON_BIN = resolvePythonBin();
