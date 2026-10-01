@@ -9,9 +9,9 @@ if os.path.isdir(_venv_site) and _venv_site not in sys.path:
 import uvicorn
 
 if __name__ == "__main__":
-    # Auto-reload is a dev-only convenience; never enable it in production
-    # (the Docker image sets ENVIRONMENT=production via compose).
-    reload = os.getenv("ENVIRONMENT", "development") != "production"
+    # On Windows/Node child_process spawns, uvicorn reload can cause socket inheritance lockups.
+    # Disable reload by default for rock-solid stability unless DEV_RELOAD=true is set.
+    reload = os.getenv("DEV_RELOAD", "false").lower() == "true"
     uvicorn.run(
         "app.main:app",
         host="0.0.0.0",

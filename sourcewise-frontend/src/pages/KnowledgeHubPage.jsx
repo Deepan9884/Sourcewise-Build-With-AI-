@@ -13,6 +13,7 @@ import { useChatStore } from '../store/chatStore'
 import { ingestDocument, deleteSourceVectors } from '../lib/chatApi'
 import { synthesizeCrossSource } from '../lib/agentApi'
 import SourceSlideOver from '../components/knowledge/SourceSlideOver'
+import { RichMessageContent } from '../components/ui/RichMessageContent'
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:4000'
 
@@ -291,7 +292,9 @@ export default function KnowledgeHubPage() {
                 Dismiss
               </button>
             </div>
-            <p className="text-sm text-body whitespace-pre-wrap leading-relaxed pl-8">{synthResult}</p>
+            <div className="text-sm text-body pl-8">
+              <RichMessageContent content={synthResult} />
+            </div>
           </motion.div>
         )}
       </AnimatePresence>

@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { X, Send, Loader2, RotateCcw, Zap, ArrowRight } from 'lucide-react'
 import { useAuthStore } from '../../store/authStore'
 import { streamChat } from '../../lib/chatApi'
+import { RichMessageContent } from '../ui/RichMessageContent'
 
 const QUICK_SPRINTS = [
   { label: '📋 Pending Tasks Today', q: "What are all the study tasks pending today? Please list them clearly with priorities." },
@@ -193,13 +194,13 @@ export default function GlobalChatPanel({ open, onClose, sourceIds = [], context
                     initial={{ opacity: 0, y: 8, scale: 0.98 }}
                     animate={{ opacity: 1, y: 0, scale: 1 }}
                     transition={{ duration: 0.2 }}
-                    className={`max-w-[88%] p-3.5 rounded-2xl text-xs sm:text-sm whitespace-pre-wrap leading-relaxed shadow-2xs ${
+                    className={`max-w-[88%] p-3.5 rounded-2xl text-xs sm:text-sm leading-relaxed shadow-2xs ${
                       m.role === 'user'
                         ? 'ml-auto bg-coral text-white font-medium rounded-tr-xs'
                         : 'bg-[#FAFAFA] border border-[#EDE7E1] text-[#1E1B16] rounded-tl-xs'
                     }`}
                   >
-                    {typeof m.content === 'string' ? m.content : ''}
+                    <RichMessageContent content={m.content} isUser={m.role === 'user'} />
                     {m.streaming && <Loader2 className="w-3.5 h-3.5 animate-spin inline ml-1.5 text-coral" />}
                   </motion.div>
                 ))

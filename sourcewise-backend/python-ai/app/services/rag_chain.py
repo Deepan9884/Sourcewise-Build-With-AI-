@@ -136,16 +136,10 @@ async def answer_with_usage(
     unique_chunks.sort(key=lambda x: x["score"], reverse=True)
     top_chunks = unique_chunks[:settings.RERANK_TOP_K]
 
-    advisory_prefix = ""
     if not top_chunks:
-        advisory_prefix = "*(Note: No direct matches found in your selected documents. Here is an answer based on general knowledge:)*\n\n"
         context_chunks = []
         comp_stats = {"compression_applied": False, "compression_ratio": 1.0, "compressed_tokens": 0}
     else:
-        best_score = top_chunks[0]["score"]
-        if best_score < settings.MIN_RELEVANCE_THRESHOLD:
-            advisory_prefix = f"*(Note: Limited direct match in selected documents [relevance: {best_score:.0%}]. Here is a comprehensive answer:)*\n\n"
-
         # 5. Compress context to reduce tokens sent to Gemini/Grok
         compressed, comp_stats = compress_chunks(
             top_chunks,
@@ -160,7 +154,6 @@ async def answer_with_usage(
         context_chunks=context_chunks,
         history=history or [],
     )
-    answer_text = advisory_prefix + answer_text
     usage["context_chunks"] = len(context_chunks)
     usage["compression_applied"] = comp_stats["compression_applied"]
     usage["compression_ratio"] = comp_stats["compression_ratio"]
@@ -233,13 +226,8 @@ async def stream_answer_with_usage(
     unique_chunks.sort(key=lambda x: x["score"], reverse=True)
     top_chunks = unique_chunks[:settings.RERANK_TOP_K]
 
-    advisory_prefix = ""
     if not top_chunks:
         yield {"type": "citations", "data": []}
-        yield {
-            "type": "token",
-            "data": "*(Note: No direct matches found in your selected documents. Here is an answer based on general knowledge:)*\n\n",
-        }
         try:
             async for event in llm_service.stream_chat_with_usage(
                 question=question,
@@ -252,11 +240,6 @@ async def stream_answer_with_usage(
             return
         yield {"type": "done"}
         return
-
-    # 3. Check confidence
-    best_score = top_chunks[0]["score"]
-    if best_score < settings.MIN_RELEVANCE_THRESHOLD:
-        advisory_prefix = f"*(Note: Limited direct match in selected documents [relevance: {best_score:.0%}]. Here is a comprehensive answer:)*\n\n"
 
     # 4. Compress context
     compressed, comp_stats = compress_chunks(
@@ -280,8 +263,6 @@ async def stream_answer_with_usage(
         for i, c in enumerate(context_chunks[:5])
     ]
     yield {"type": "citations", "data": citations}
-    if advisory_prefix:
-        yield {"type": "token", "data": advisory_prefix}
 
     # 6. Stream tokens from provider (token-budgeted)
     try:

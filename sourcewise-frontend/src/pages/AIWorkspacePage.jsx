@@ -13,6 +13,7 @@ import { useWorkspaceStore } from '../store/workspaceStore'
 import { streamChat } from '../lib/chatApi'
 import { sendAgentMessage } from '../lib/agentApi'
 import { GlowCard } from '../components/ui/glow-card'
+import { RichMessageContent } from '../components/ui/RichMessageContent'
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:4000'
 
@@ -25,86 +26,13 @@ const MODES = {
 }
 
 /**
- * Clean inline markdown formatter for notes & summaries
- */
-function formatInline(str) {
-  if (!str) return ''
-  const parts = str.split(/(\*\*.*?\*\*|`.*?`)/g)
-  return parts.map((part, i) => {
-    if (part.startsWith('**') && part.endsWith('**')) {
-      return <strong key={i} className="font-semibold text-[#1E1B16]">{part.slice(2, -2)}</strong>
-    }
-    if (part.startsWith('`') && part.endsWith('`')) {
-      return <code key={i} className="px-1.5 py-0.5 rounded bg-[#F3EFEB] text-[#C05A35] font-mono text-xs">{part.slice(1, -1)}</code>
-    }
-    return part
-  })
-}
-
-/**
- * Structured Notes Renderer
+ * Structured Notes Renderer — powered by RichMessageContent
  */
 function FormattedNotesView({ text }) {
   if (!text) return null
-  const lines = text.split('\n')
-  return (
-    <div className="space-y-3 font-sans text-sm text-[#1E1B16] leading-relaxed">
-      {lines.map((line, idx) => {
-        const trimmed = line.trim()
-        if (!trimmed) return <div key={idx} className="h-2" />
-
-        if (line.startsWith('# ')) {
-          return (
-            <h1 key={idx} className="text-xl font-bold font-display text-[#1E1B16] pt-3 pb-1 border-b border-[#EDE7E1]">
-              {line.replace('# ', '')}
-            </h1>
-          )
-        }
-        if (line.startsWith('## ')) {
-          return (
-            <h2 key={idx} className="text-base font-bold font-display text-[#C05A35] pt-2">
-              {line.replace('## ', '')}
-            </h2>
-          )
-        }
-        if (line.startsWith('### ')) {
-          return (
-            <h3 key={idx} className="text-sm font-semibold text-[#1E1B16] pt-1">
-              {line.replace('### ', '')}
-            </h3>
-          )
-        }
-        if (trimmed.startsWith('- ') || trimmed.startsWith('* ')) {
-          const content = trimmed.substring(2)
-          return (
-            <div key={idx} className="flex items-start space-x-2 pl-2">
-              <span className="text-[#E8845F] text-base leading-4">•</span>
-              <p className="flex-1">{formatInline(content)}</p>
-            </div>
-          )
-        }
-        if (trimmed.match(/^\d+\.\s/)) {
-          const num = trimmed.match(/^\d+\.\s/)[0]
-          const content = trimmed.replace(/^\d+\.\s/, '')
-          return (
-            <div key={idx} className="flex items-start space-x-2 pl-2">
-              <span className="text-[#C05A35] font-semibold text-xs min-w-[20px]">{num}</span>
-              <p className="flex-1">{formatInline(content)}</p>
-            </div>
-          )
-        }
-        if (trimmed.startsWith('> ')) {
-          return (
-            <blockquote key={idx} className="pl-3 border-l-2 border-[#E8845F] bg-[#FAF8F5] py-1.5 px-3 rounded-r-lg text-xs italic text-[#5B544E]">
-              {formatInline(trimmed.replace('> ', ''))}
-            </blockquote>
-          )
-        }
-        return <p key={idx}>{formatInline(line)}</p>
-      })}
-    </div>
-  )
+  return <RichMessageContent content={text} />
 }
+
 
 /**
  * Reusable Material Selector Component
@@ -263,12 +191,14 @@ export default function AIWorkspacePage() {
   const quizTopic = quiz.topic
   const setQuizTopic = (v) => setQuizOption('topic', v)
   const setQuizQuestions = (v) => setQuizOption('questions', typeof v === 'function' ? v(quiz.questions) : v)
+  const setQuizAnswers = (v) => setQuizOption('answers', typeof v === 'function' ? v(quiz.answers) : v)
+  const setQuizCompleted = (v) => setQuizOption('completed', !!v)
 
   // Flashcards aliases
   const flashcards = flashcardsState.cards
   const currentCardIndex = flashcardsState.currentIndex
   const isFlipped = flashcardsState.isFlipped
-  const setIsFlipped = (v) => setFlashcardOption('isFlipped', typeof v === 'function' ? v(flashcardsState.isFlipped) : v)
+  const setIsFlipped = (v) => setFlashcardOption('isFlipped', typeof v === 'function' ? v(flashcardsState.isFlipped) : !!v)
   const flashcardRating = flashcardsState.rating
   const flashcardCount = flashcardsState.count
   const setFlashcardCount = (v) => setFlashcardOption('count', v)
@@ -449,40 +379,7 @@ export default function AIWorkspacePage() {
   // GENERATION HANDLERS (Quiz, Flashcards, Notes, Tutor)
   // ════════════════════════════════════════════════════════════════════════════
 
-  // Fallback text parser for quiz questions if LLM outputs markdown
-  const parseQuizText = (text) => {
-    if (!text || typeof text !== 'string') return []
-    const questions = []
-    const blocks = text.split(/(?=(?:^\d+\.|\bQ\d*:|\bQuestion\s*\d*:))/mi)
-    for (const block of blocks) {
-      const lines = block.trim().split('\n').map(l => l.trim()).filter(Boolean)
-      if (lines.length < 2) continue
-      const qLine = lines[0].replace(/^(?:\d+\.|\bQ\d*:|\bQuestion\s*\d*:)\s*/i, '')
-      const options = []
-      let correct = 0
-      let explanation = ''
-      for (const line of lines.slice(1)) {
-        const optMatch = line.match(/^[A-D][\).:]\s*(.+)/i)
-        if (optMatch) {
-          options.push(optMatch[1])
-        } else if (line.match(/^ANSWER:\s*([A-D])/i)) {
-          const letter = line.match(/^ANSWER:\s*([A-D])/i)[1].toUpperCase()
-          correct = 'ABCD'.indexOf(letter)
-        } else if (line.match(/^EXPLANATION:\s*(.+)/i)) {
-          explanation = line.match(/^EXPLANATION:\s*(.+)/i)[1]
-        }
-      }
-      if (qLine && options.length >= 2) {
-        questions.push({
-          question: qLine,
-          options,
-          correct: correct >= 0 ? correct : 0,
-          explanation
-        })
-      }
-    }
-    return questions
-  }
+
 
   // 1. Generate Quiz (Runs in background store, never stops when leaving)
   const handleGenerateQuiz = async () => {
@@ -687,11 +584,11 @@ Begin our session by giving a warm 2-sentence welcome, introducing the first fun
 
   // Quiz Interaction Handlers
   const handleQuizAnswer = (questionIndex, answerIndex) => {
-    setQuizAnswers(prev => ({ ...prev, [questionIndex]: answerIndex }))
+    setQuizAnswer(questionIndex, answerIndex)
   }
 
   const handleQuizSubmit = () => {
-    setQuizCompleted(true)
+    submitQuiz()
     trackQuizProgress()
   }
 
@@ -880,7 +777,7 @@ Begin our session by giving a warm 2-sentence welcome, introducing the first fun
                 ? 'bg-[#E8845F] text-white shadow-xs'
                 : 'bg-white border border-[#EDE7E1] text-[#1E1B16] shadow-xs'
             }`}>
-              <div className="whitespace-pre-wrap leading-relaxed text-sm">{msg.content}</div>
+              <RichMessageContent content={msg.content} isUser={msg.role === 'user'} />
 
               {/* Interactive Personal AI Task Cards */}
               {msg.tasks && msg.tasks.length > 0 && (
@@ -1040,7 +937,7 @@ Begin our session by giving a warm 2-sentence welcome, introducing the first fun
               <div className="flex justify-center space-x-3">
                 <button
                   type="button"
-                  onClick={() => { setQuizCompleted(false); setQuizAnswers({}); setCurrentQuizIndex(0) }}
+                  onClick={() => resetQuiz()}
                   className="sw-btn-secondary !h-10 !px-5 !text-xs inline-flex items-center space-x-1.5"
                 >
                   <RotateCcw className="w-3.5 h-3.5" />
@@ -1048,7 +945,7 @@ Begin our session by giving a warm 2-sentence welcome, introducing the first fun
                 </button>
                 <button
                   type="button"
-                  onClick={() => { setQuizQuestions([]); setQuizCompleted(false); setQuizAnswers({}); setCurrentQuizIndex(0) }}
+                  onClick={() => { setQuizQuestions([]); resetQuiz(); }}
                   className="sw-btn-primary !h-10 !px-5 !text-xs inline-flex items-center space-x-1.5"
                 >
                   <HelpCircle className="w-3.5 h-3.5" />
@@ -1081,7 +978,7 @@ Begin our session by giving a warm 2-sentence welcome, introducing the first fun
               </div>
               <button
                 type="button"
-                onClick={() => { setQuizQuestions([]); setQuizAnswers({}); setCurrentQuizIndex(0) }}
+                onClick={() => { setQuizQuestions([]); resetQuiz(); }}
                 className="text-xs text-[#8A817B] hover:text-[#C05A35] transition-colors"
               >
                 Quit / New Quiz
@@ -1092,12 +989,20 @@ Begin our session by giving a warm 2-sentence welcome, introducing the first fun
             {currentQ && (
               <GlowCard className="p-6">
                 <p className="text-base font-semibold text-[#1E1B16] mb-5 leading-snug">
-                  {currentQuizIndex + 1}. {currentQ.question}
+                  {currentQuizIndex + 1}. {(currentQ.question || '')
+                    .replace(/^(?:#+\s*)?(?:Question\s*\d*[\.:]?|\bQ\d*[\.:]?|\d+[\.:])\s*/i, '')
+                    .replace(/\*\*/g, '')
+                    .replace(/\*/g, '')
+                    .trim()}
                 </p>
 
                 <div className="space-y-2.5">
                   {currentQ.options.map((option, idx) => {
                     const isSelected = quizAnswers[currentQuizIndex] === idx
+                    const cleanOption = typeof option === 'string'
+                      ? option.replace(/^(?:[-*•]\s*)?(?:[A-D][\)\.:])\s*/i, '').replace(/\*\*/g, '').replace(/\*/g, '').trim()
+                      : option
+
                     return (
                       <button
                         key={idx}
@@ -1115,7 +1020,7 @@ Begin our session by giving a warm 2-sentence welcome, introducing the first fun
                           }`}>
                             {String.fromCharCode(65 + idx)}
                           </span>
-                          <span className="font-medium">{option}</span>
+                          <span className="font-medium">{cleanOption}</span>
                         </div>
                         {isSelected && <Check className="w-4 h-4 text-[#E8845F] shrink-0" />}
                       </button>
@@ -1350,33 +1255,68 @@ Begin our session by giving a warm 2-sentence welcome, introducing the first fun
             </div>
 
             {/* 3D Interactive Flip Card */}
-            {card && (
-              <div 
-                onClick={() => setIsFlipped(prev => !prev)}
-                className="relative w-full h-72 cursor-pointer select-none group perspective-1000"
-              >
-                <div className={`relative w-full h-full rounded-2xl transition-transform duration-500 transform-style-3d shadow-md ${
-                  isFlipped ? 'rotate-y-180' : ''
-                }`}>
-                  {/* Front Side */}
-                  <div className="absolute inset-0 rounded-2xl bg-white border-2 border-[#EDE7E1] p-8 flex flex-col items-center justify-center text-center backface-hidden group-hover:border-[#E8845F]/50 transition-colors">
-                    <span className="text-[10px] font-bold uppercase tracking-wider text-[#8A817B] mb-3">Front • Question / Concept</span>
-                    <p className="text-lg font-bold text-[#1E1B16] leading-relaxed">{card.front}</p>
-                    <span className="text-xs text-[#8A817B] mt-6 flex items-center space-x-1">
-                      <RotateCcw className="w-3 h-3 text-[#E8845F]" />
-                      <span>Click or press space to reveal answer</span>
-                    </span>
-                  </div>
+            {card && (() => {
+              const cleanFront = (card.front || '')
+                .replace(/^(?:#+\s*)?(?:Card\s*\d+[:\.]?\s*)?(?:Front\s*[:\.]?\s*)/i, '')
+                .replace(/\*\*/g, '')
+                .replace(/\*/g, '')
+                .trim()
+              const cleanBack = (card.back || '')
+                .replace(/^(?:#+\s*)?(?:Back\s*[:\.]?\s*)/i, '')
+                .replace(/\*\*/g, '')
+                .replace(/\*/g, '')
+                .trim()
 
-                  {/* Back Side */}
-                  <div className="absolute inset-0 rounded-2xl bg-gradient-to-br from-[#E8845F] to-[#C05A35] text-white p-8 flex flex-col items-center justify-center text-center backface-hidden rotate-y-180 shadow-warm">
-                    <span className="text-[10px] font-bold uppercase tracking-wider text-white/80 mb-3">Back • Explanation / Definition</span>
-                    <p className="text-base font-medium leading-relaxed">{card.back}</p>
-                    <span className="text-xs text-white/80 mt-6">Click to flip back</span>
+              return (
+                <div 
+                  onClick={toggleCardFlip}
+                  className="relative w-full h-72 cursor-pointer select-none group perspective-1000"
+                  style={{ perspective: '1000px' }}
+                >
+                  <div
+                    className={`relative w-full h-full rounded-2xl transform-style-3d shadow-md ${
+                      isFlipped ? 'rotate-y-180' : ''
+                    }`}
+                    style={{
+                      transformStyle: 'preserve-3d',
+                      WebkitTransformStyle: 'preserve-3d',
+                      transform: isFlipped ? 'rotateY(180deg)' : 'rotateY(0deg)',
+                      transition: 'transform 0.5s cubic-bezier(0.4, 0, 0.2, 1)',
+                    }}
+                  >
+                    {/* Front Side */}
+                    <div
+                      className="absolute inset-0 rounded-2xl bg-white border-2 border-[#EDE7E1] p-8 flex flex-col items-center justify-center text-center backface-hidden group-hover:border-[#E8845F]/50 transition-colors"
+                      style={{
+                        backfaceVisibility: 'hidden',
+                        WebkitBackfaceVisibility: 'hidden',
+                      }}
+                    >
+                      <span className="text-[10px] font-bold uppercase tracking-wider text-[#8A817B] mb-3">Front • Question / Concept</span>
+                      <p className="text-lg font-bold text-[#1E1B16] leading-relaxed">{cleanFront}</p>
+                      <span className="text-xs text-[#8A817B] mt-6 flex items-center space-x-1">
+                        <RotateCcw className="w-3 h-3 text-[#E8845F]" />
+                        <span>Click to reveal answer</span>
+                      </span>
+                    </div>
+
+                    {/* Back Side */}
+                    <div
+                      className="absolute inset-0 rounded-2xl bg-gradient-to-br from-[#E8845F] to-[#C05A35] text-white p-8 flex flex-col items-center justify-center text-center backface-hidden rotate-y-180 shadow-warm"
+                      style={{
+                        backfaceVisibility: 'hidden',
+                        WebkitBackfaceVisibility: 'hidden',
+                        transform: 'rotateY(180deg)',
+                      }}
+                    >
+                      <span className="text-[10px] font-bold uppercase tracking-wider text-white/80 mb-3">Back • Explanation / Definition</span>
+                      <p className="text-base font-medium leading-relaxed">{cleanBack}</p>
+                      <span className="text-xs text-white/80 mt-6">Click to flip back</span>
+                    </div>
                   </div>
                 </div>
-              </div>
-            )}
+              )
+            })()}
 
             {/* Navigation & Spaced Repetition Rating */}
             <div className="space-y-4">
@@ -1395,7 +1335,7 @@ Begin our session by giving a warm 2-sentence welcome, introducing the first fun
 
                 <button
                   type="button"
-                  onClick={() => setIsFlipped(prev => !prev)}
+                  onClick={toggleCardFlip}
                   className="sw-btn-secondary !h-9 !px-4 !text-xs inline-flex items-center space-x-1.5"
                 >
                   <RotateCcw className="w-3.5 h-3.5" />
@@ -1811,7 +1751,7 @@ Begin our session by giving a warm 2-sentence welcome, introducing the first fun
                     ? 'bg-[#E8845F] text-white shadow-xs'
                     : 'bg-white border border-[#EDE7E1] text-[#1E1B16] shadow-xs'
                 }`}>
-                  <div className="whitespace-pre-wrap leading-relaxed text-sm">{msg.content}</div>
+                  <RichMessageContent content={msg.content} isUser={msg.role === 'user'} />
                   {msg.citations && msg.citations.length > 0 && (
                     <div className="-mx-5 -mb-4 mt-4 px-5 py-3 bg-[#FAFAFA] border-t border-[#EDE7E1] rounded-b-2xl">
                       <p className="text-[11px] font-semibold text-[#8A817B] mb-1.5 uppercase tracking-wider">Grounding</p>

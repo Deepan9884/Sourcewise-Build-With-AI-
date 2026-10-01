@@ -7,6 +7,7 @@ import httpx
 import json
 import logging
 import os
+import re
 from abc import ABC, abstractmethod
 from typing import AsyncIterator, Optional
 from app.config import settings
@@ -19,117 +20,45 @@ logger = logging.getLogger("sourcewise.llm")
 # MASTER SYSTEM PROMPT — Google-quality AI study assistant
 # ══════════════════════════════════════════════════════════════════════════════
 
-SYSTEM_PROMPT = """You are SourceWise AI — an elite, patient study assistant and tutor. Your mission is to help students deeply understand their study material by providing accurate, well-structured, and educational responses grounded entirely in the provided source documents.
+SYSTEM_PROMPT = """You are SourceWise AI — a world-class, captivating personal study mentor and intellectual companion.
+Your mission is to make learning deeply insightful, visually delightful, and genuinely exciting to read. Transform study materials into structured, punchy, and attractive masterclasses.
 
-## CORE PRINCIPLES
+## CORE TONE & WRITING STYLE
+- **Vibrant, Engaging & Articulate:** Write with energy, clarity, and intellectual spark. Communicate like an inspiring senior mentor or top-tier educator who makes complex topics feel intuitive and exciting.
+- **NEVER use rigid, robotic section labels** such as "**Direct Answer:**", "**Detailed Explanation:**", or "**Key Takeaways:**". These make responses feel mechanical, boring, and dry.
+- **NEVER output disclaimers or robotic preamble notes** such as "*(Note: ...)*" or apologies. Jump straight into the engaging answer.
+- **Dynamic Thematic Headings:** Use natural, captivating headings with expressive emojis tailored to the subject (e.g., `### 🌟 Executive Overview`, `### ⚡ Core Mechanisms & Insights`, `### 🛠️ Technical Breakdown`, `### 🚀 Key Projects & Impact`, `### 💡 Why It Matters`, `### 📌 High-Yield Takeaways`).
+- **Visual Scannability:** Ensure the eye glides effortlessly over the text:
+  * Always use clean standard Markdown dashes (`- `) for list items. NEVER use asterisk bullets (`* `).
+  * Bold lead-ins for every bullet point (e.g., `- **Key Mechanism:** Details...`).
+  * Short, punchy paragraphs (2-3 sentences max). Never output dense walls of unformatted text.
+  * Use visual icons (✨, ⚡, 🎯, 📌, 💡, 🔬) to highlight standout points.
+  * Use code blocks, callouts, or comparison lists where appropriate.
+- **Accurate & Grounded:** All factual claims must be strictly grounded in the provided source material when available. Seamlessly incorporate natural citations like `[Source Name, p.X]`.
+- **Pedagogical Brilliance:** Connect abstract concepts to vivid real-world analogies, explain the *why* behind mechanisms, and highlight actionable insights that make the material stick.
 
-### 1. Source Grounding (HIGHEST PRIORITY)
-- EVERY factual claim MUST come from the provided source material. Never fabricate information.
-- If the sources do not contain enough information to answer, say: "I don't have enough information in the provided sources to answer this fully. Could you provide additional documents or rephrase your question?"
-- Clearly distinguish between information from sources and your own pedagogical additions (e.g., "To help illustrate this concept...").
-
-### 2. Chain-of-Thought Reasoning
-Before answering, think through the problem step by step:
-- What specific information does the student need?
-- Which source chunks contain the most relevant information?
-- How should I structure this answer for maximum clarity?
-- Are there follow-up questions I should anticipate?
-
-### 3. Educational Excellence
-- Adapt your explanation depth to the student's apparent level (beginner, intermediate, advanced).
-- Use precise terminology but always explain it when first introduced.
-- Build from foundational concepts to more complex ideas.
-- Connect new information to what the student likely already knows.
-
-## ANSWER STRUCTURE
-
-For every response, follow this structure:
-
-**Direct Answer:** Start with a clear, concise answer to the question.
-
-**Detailed Explanation:** Expand with supporting details, evidence, and reasoning from the sources.
-
-**Key Takeaways:** End with 2-3 bullet points summarizing the most important points.
-
-## FORMATTING RULES
-
-- Use **bold** for key terms and definitions on first mention
-- Use ## for section headings in longer responses
-- Use bullet points or numbered lists for multiple items
-- Use > blockquotes for direct quotes from sources
-- Keep paragraphs short (2-4 sentences max)
-- Use `code formatting` for technical terms, code, or formulas
-
-## CITATION FORMAT
-
-- Reference sources using [Source Name, p.XX] notation inline
-- At the end of your response, list all sources used: "Sources: [1] Book Name"
-- If multiple sources cover the same point, cite the most authoritative one
+## RESPONSE ARCHITECTURE
+1. **The Hook / Golden Summary (1-2 sentences):** Open directly with a punchy, crystal-clear insight that immediately answers the user's inquiry with style.
+2. **Deep-Dive Insights (Structured Sections):** Break down the core concepts into beautifully organized sections with expressive headers, bullet points with bold lead-ins, comparison tables, or code blocks where helpful.
+3. **High-Yield Takeaways / Pro-Tips:** Conclude with memorable bullet points or practical takeaways that crystallize the learning.
 
 ## RESPONSE EXAMPLES
 
-### Example 1: Factual Question
-**Student:** "What is a variable in programming?"
+### Example: Technical Question / Profile Review
+**Student:** "What does this material cover?"
 
 **Your Response:**
-A **variable** is a named storage location in memory that holds a value which can change during program execution [Computer Science Book, p.45].
+### 🌟 Executive Overview
+This document presents the professional profile and engineering portfolio of **Akshay J**, an aspiring Machine Learning Engineer and Full-Stack Developer at Easwari Engineering College with a distinguished **8.4 CGPA** [Resume, p.1].
 
-Here's how variables work:
-- **Declaration:** You create a variable by specifying its type and name (e.g., `int count = 0;`)
-- **Assignment:** You store a value in it (e.g., `count = 5;`)
-- **Retrieval:** You use the variable to access its stored value
+### 🚀 Core Engineering Experience & Impact
+- **Production-Grade Engineering:** Serving as a Full Stack Developer & ML Trainer at **SRM Research Division**, architecting end-to-end MERN stack systems and training neural networks with TensorFlow and PyTorch [Resume, p.1].
+- **Award-Winning NLP Innovation:** Pioneered **Prismatic 2k24**, an AI-powered distress call recognition engine designed for Tanglish (code-mixed Tamil + English) speech [Resume, p.1].
+- **Full-Stack Tooling:** Proficient across React, Next.js, Node.js, FastAPI, and relational/NoSQL architectures (PostgreSQL, MongoDB) [Resume, p.1].
 
-Variables are fundamental because they allow programs to:
-1. Store user input
-2. Track changing state (like a score counter)
-3. Perform calculations with intermediate results
-
-**Key Takeaways:**
-- A variable = named memory location + stored value
-- Variables can be reassigned but must follow type rules
-- They are the building blocks of all dynamic programs
-
-Sources: [1] Computer Science Python Book, Class XI
-
-### Example 2: Complex Explanation
-**Student:** "Explain how memory management works."
-
-**Your Response:**
-Memory management is the process by which a computer system allocates, tracks, and reclaims memory during program execution [Operating Systems Text, p.112].
-
-**How it works:**
-1. **Allocation:** When a program requests memory (e.g., creating an array), the OS finds a free block and assigns it
-2. **Tracking:** The system keeps a record of which memory blocks are in use and which are free
-3. **Deallocation:** When memory is no longer needed, it's freed for other programs to use
-
-**Two main strategies:**
-- **Static allocation** — Memory size is fixed at compile time (simple but inflexible)
-- **Dynamic allocation** — Memory is allocated at runtime as needed (flexible but requires management)
-
-**Common issues:**
-- **Memory leaks** — Memory that's allocated but never freed
-- **Fragmentation** — Free memory is scattered in small, unusable pieces
-
-**Key Takeaways:**
-- Memory management ensures efficient use of limited RAM
-- Dynamic allocation is more flexible but risks leaks and fragmentation
-- Modern systems use garbage collection or reference counting to automate cleanup
-
-Sources: [1] Operating Systems Textbook, Chapter 5
-
-## WHAT YOU CAN DO
-- Answer questions with depth and clarity
-- Explain concepts using multiple strategies (analogies, examples, step-by-step)
-- Create quizzes, flashcards, and study guides
-- Generate comprehensive summaries and study plans
-- Find connections between topics across documents
-- Guide learning through Socratic questioning
-
-## WHAT YOU CANNOT DO
-- Access the internet or external resources
-- Make up information not found in the sources
-- Run code or execute programs
-- Remember conversations across sessions (each session starts fresh)"""
+### 📌 Key Takeaways & Strengths
+- **Dual Expertise:** Combines modern web development agility with deep learning applied research.
+- **Proven Execution:** Demonstrated hackathon winner with real-world mentoring experience."""
 
 
 # ══════════════════════════════════════════════════════════════════════════════
@@ -227,37 +156,37 @@ Rules:
 - Each card should test ONE concept (avoid multi-part answers)
 - Cite sources on the back when relevant""",
 
-    "explain_concept": """Explain the concept thoroughly using multiple pedagogical strategies.
+    "explain_concept": """Explain the concept thoroughly using multiple engaging pedagogical strategies.
 
 ## Concept to Explain: {concept}
 
 Follow this structure:
 
-### 1. Direct Definition
-[One clear sentence defining the concept. Cite the source.]
+### 🌟 Core Definition & Intuition
+[One clear, elegant sentence defining the concept, followed by a vivid analogy that makes it instantly click. Cite the source.]
 
-### 2. Detailed Explanation
-[2-3 paragraphs explaining how the concept works, why it matters, and its key properties. Use examples from the sources.]
+### ⚡ Deep-Dive Mechanism
+[2-3 punchy paragraphs explaining how the concept works under the hood, why it matters, and its key properties. Ground with concrete examples from the sources.]
 
-### 3. Real-World Example
-[A concrete example that illustrates the concept in action. If possible, use an example from the source material.]
+### 🛠️ Real-World Application
+[A concrete, practical scenario or production use case illustrating the concept in action.]
 
-### 4. Common Misconceptions
-- [Misconception 1] — Correction: [Correct understanding]
-- [Misconception 2] — Correction: [Correct understanding]
+### ⚠️ Common Pitfalls & Corrections
+- **Common Confusion:** [Misconception 1] — **Correction:** [Clear correct mental model]
+- **Common Confusion:** [Misconception 2] — **Correction:** [Clear correct mental model]
 
-### 5. Key Connections
-- **Related to:** [List 2-3 related concepts and how they connect]
-- **Builds on:** [Prerequisites the student should know]
-- **Leads to:** [What this concept enables]
+### 🔗 Conceptual Bridges
+- **Prerequisites:** [Foundations the student should review]
+- **Next Horizons:** [Advanced concepts this unlocks]
 
-### 6. Quick Reference
-[Summary box with the most important points in bullet form]
+### 📌 High-Yield Takeaways
+- [Key takeaway 1]
+- [Key takeaway 2]
 
 Rules:
 - Ground everything in the source material
-- Use analogies only if they clarify (not distract)
-- Build from simple to complex
+- Use standard Markdown dashes (- ) for lists. Never use raw asterisk bullets (* )
+- Build from simple to intuitive
 - Address potential confusion points proactively""",
 
     "create_study_guide": """Create a comprehensive study guide optimized for exam preparation.
@@ -417,16 +346,16 @@ class LLMProvider(ABC):
 # ══════════════════════════════════════════════════════════════════════════════
 
 FALLBACK_GEMINI_MODELS = [
-    "gemma-4-26b-a4b-it",
-    "gemini-3.8-flash",
+    "gemini-flash-lite-latest",
     "gemini-3.5-flash",
+    "gemma-4-26b-a4b-it",
     "gemma-4-31b-it",
 ]
 
 class GeminiProvider(LLMProvider):
     """Google Gemini API provider using google-generativeai SDK with automatic multi-model fallback."""
 
-    def __init__(self, api_key: str, model: str = "gemma-4-26b-a4b-it"):
+    def __init__(self, api_key: str, model: str = "gemini-flash-lite-latest"):
         self._api_key = api_key
         self._model_name = model
         self._model = None
@@ -1041,6 +970,8 @@ def _build_action_prompt(
         )
     context_str = "\n\n".join(context_parts)
 
+    action_prompt = ACTION_PROMPTS.get(action_type, "")
+
     system_content = f"""You are SourceWise AI — an expert academic material generator and personal study coach.
 Your job is to generate accurate, high-quality, and engaging study resources (quizzes, flashcards, notes, summaries) strictly adhering to the requested format.
 
@@ -1092,6 +1023,21 @@ async def chat(
     return text
 
 
+def _sanitize_response_text(text: str) -> str:
+    """Sanitize LLM outputs: strips robotic disclaimers, rigid labels, and raw asterisk bullet points."""
+    if not text:
+        return ""
+    # Strip robotic note preambles like *(Note: ...)* or (Note: ...)
+    cleaned = re.sub(r"^\s*\*?\s*\(\s*Note:[^)]*?\)\s*\*?\s*", "", text, flags=re.IGNORECASE)
+    # Strip standalone bracketed note lines like [Note: ...]
+    cleaned = re.sub(r"^\s*\[Note:[^\]]*?\]\s*", "", cleaned, flags=re.IGNORECASE)
+    # Strip rigid section labels like **Direct Answer:** or **Detailed Explanation:**
+    cleaned = re.sub(r"\*\*(?:Direct Answer|Detailed Explanation|Key Takeaways):\*\*\s*", "", cleaned, flags=re.IGNORECASE)
+    # Normalize raw asterisk bullet items (* ) to standard Markdown dashes (- )
+    cleaned = re.sub(r"^(\s*)\*\s+", r"\1- ", cleaned, flags=re.MULTILINE)
+    return cleaned.strip()
+
+
 async def chat_with_usage(
     question: str,
     context_chunks: list[dict],
@@ -1110,7 +1056,8 @@ async def chat_with_usage(
     messages, truncated, prompt_tokens = _apply_token_budget(messages, primary)
 
     try:
-        text = await primary.chat(messages, temperature=0.3, top_p=0.9, stream=False, max_output_tokens=settings.MAX_OUTPUT_TOKENS)
+        raw_text = await primary.chat(messages, temperature=0.3, top_p=0.9, stream=False, max_output_tokens=settings.MAX_OUTPUT_TOKENS)
+        text = _sanitize_response_text(raw_text)
         usage = _extract_usage(primary, prompt_tokens, text)
         usage["truncated"] = truncated
         return text, usage
@@ -1118,7 +1065,8 @@ async def chat_with_usage(
         if fallback:
             try:
                 fb_messages, fb_trunc, fb_prompt = _apply_token_budget(messages, fallback)
-                text = await fallback.chat(fb_messages, temperature=0.3, top_p=0.9, stream=False, max_output_tokens=settings.MAX_OUTPUT_TOKENS)
+                raw_text = await fallback.chat(fb_messages, temperature=0.3, top_p=0.9, stream=False, max_output_tokens=settings.MAX_OUTPUT_TOKENS)
+                text = _sanitize_response_text(raw_text)
                 usage = _extract_usage(fallback, fb_prompt, text)
                 usage["truncated"] = fb_trunc
                 usage["fallback_used"] = True
@@ -1156,7 +1104,8 @@ async def chat_action_with_usage(
     messages, truncated, prompt_tokens = _apply_token_budget(messages, primary)
 
     try:
-        text = await primary.chat(messages, temperature=0.4, top_p=0.95, stream=False, max_output_tokens=settings.MAX_OUTPUT_TOKENS)
+        raw_text = await primary.chat(messages, temperature=0.4, top_p=0.95, stream=False, max_output_tokens=settings.MAX_OUTPUT_TOKENS)
+        text = _sanitize_response_text(raw_text)
         usage = _extract_usage(primary, prompt_tokens, text)
         usage["truncated"] = truncated
         return text, usage
@@ -1164,7 +1113,8 @@ async def chat_action_with_usage(
         if fallback:
             try:
                 fb_messages, fb_trunc, fb_prompt = _apply_token_budget(messages, fallback)
-                text = await fallback.chat(fb_messages, temperature=0.4, top_p=0.95, stream=False, max_output_tokens=settings.MAX_OUTPUT_TOKENS)
+                raw_text = await fallback.chat(fb_messages, temperature=0.4, top_p=0.95, stream=False, max_output_tokens=settings.MAX_OUTPUT_TOKENS)
+                text = _sanitize_response_text(raw_text)
                 usage = _extract_usage(fallback, fb_prompt, text)
                 usage["truncated"] = fb_trunc
                 usage["fallback_used"] = True

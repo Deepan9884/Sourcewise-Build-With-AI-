@@ -55,7 +55,7 @@ function renderInline(text) {
         </em>
       );
     }
-    return part;
+    return part ? part.replace(/\*/g, '') : '';
   });
 }
 

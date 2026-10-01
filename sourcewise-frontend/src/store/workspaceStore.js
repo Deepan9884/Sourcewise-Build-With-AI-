@@ -10,25 +10,69 @@ const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:4000'
 export function parseQuizText(text) {
   if (!text || typeof text !== 'string') return []
   const questions = []
-  const blocks = text.split(/(?=(?:^\d+\.|\bQ\d*:|\bQuestion\s*\d*:))/mi)
-  for (const block of blocks) {
-    const lines = block.trim().split('\n').map(l => l.trim()).filter(Boolean)
+
+  // Split on markdown horizontal rules or Question markers
+  const rawBlocks = text.split(/(?:^|\n)\s*(?:---|___|\*\*\*)\s*(?:\n|$)|(?=(?:^|\n)\s*(?:\*{0,2}Question\s*\d*|\bQ\d*|\d+\.)\s*[:\.]?)/mi)
+
+  for (const block of rawBlocks) {
+    const trimmedBlock = block.trim()
+    if (!trimmedBlock) continue
+
+    const lines = trimmedBlock.split('\n').map(l => l.trim()).filter(Boolean)
     if (lines.length < 2) continue
-    const qLine = lines[0].replace(/^(?:\d+\.|\bQ\d*:|\bQuestion\s*\d*:)\s*/i, '')
-    const options = []
-    let correct = 0
+
+    let qLine = ''
+    let options = []
+    let correct = -1
     let explanation = ''
-    for (const line of lines.slice(1)) {
-      const optMatch = line.match(/^[A-D][\).:]\s*(.+)/i)
+    let inOptions = false
+
+    for (let i = 0; i < lines.length; i++) {
+      const line = lines[i]
+      // Clean markdown bold and italics from the line to make parsing robust
+      const cleanLine = line.replace(/\*\*/g, '').replace(/\*/g, '').trim()
+
+      // Match option A) B) C) D)
+      const optMatch = cleanLine.match(/^(?:[-*•]\s*)?([A-D])[\)\.:]\s*(.+)/i)
       if (optMatch) {
-        options.push(optMatch[1])
-      } else if (line.match(/^ANSWER:\s*([A-D])/i)) {
-        const letter = line.match(/^ANSWER:\s*([A-D])/i)[1].toUpperCase()
+        inOptions = true
+        options.push(optMatch[2].trim())
+        continue
+      }
+
+      // Match Answer line
+      const ansMatch = cleanLine.match(/^(?:ANSWER|Ans|Correct(?:\s*Answer)?)\s*[:\.]?\s*\[?([A-D])\]?/i)
+      if (ansMatch) {
+        const letter = ansMatch[1].toUpperCase()
         correct = 'ABCD'.indexOf(letter)
-      } else if (line.match(/^EXPLANATION:\s*(.+)/i)) {
-        explanation = line.match(/^EXPLANATION:\s*(.+)/i)[1]
+        continue
+      }
+
+      // Match Explanation line
+      const expMatch = cleanLine.match(/^(?:EXPLANATION|Reason)\s*[:\.]?\s*(.+)/i)
+      if (expMatch) {
+        explanation = expMatch[1].trim()
+        continue
+      }
+
+      // Match Difficulty or Concept lines to avoid treating as question
+      if (/^(?:Difficulty|Concept(?:\s*Tested)?)\s*[:\.]/i.test(cleanLine)) {
+        continue
+      }
+
+      // If not yet in options, treat as question text
+      if (!inOptions && !qLine) {
+        const stripped = cleanLine
+          .replace(/^(?:#+\s*)?(?:Question\s*\d*[\.:]?|\bQ\d*[\.:]?|\d+[\.:])\s*/i, '')
+          .trim()
+        if (stripped) {
+          qLine = stripped
+        }
+      } else if (!inOptions && qLine) {
+        qLine += ' ' + cleanLine
       }
     }
+
     if (qLine && options.length >= 2) {
       questions.push({
         question: qLine,
@@ -38,6 +82,7 @@ export function parseQuizText(text) {
       })
     }
   }
+
   return questions
 }
 
@@ -47,17 +92,30 @@ export function parseQuizText(text) {
 export function parseFlashcardsText(text) {
   if (!text || typeof text !== 'string') return []
   const cards = []
-  const blocks = text.split(/---|---|\n\n(?=FRONT:|\bCard\s*\d+:)/i)
-  for (const block of blocks) {
-    const frontMatch = block.match(/(?:FRONT|Term|Question):\s*(.+?)(?=\n(?:BACK|Answer|Definition):|$)/is)
-    const backMatch = block.match(/(?:BACK|Answer|Definition):\s*(.+?)(?=\n---|$)/is)
+
+  // Split on --- or Card markers
+  const rawBlocks = text.split(/(?:^|\n)\s*(?:---|___|\*\*\*)\s*(?:\n|$)|(?=(?:^|\n)\s*(?:\*{0,2}Card\s*\d+\*{0,2})\s*(?:\n|$))/mi)
+
+  for (const block of rawBlocks) {
+    const trimmed = block.trim()
+    if (!trimmed) continue
+
+    // Clean markdown bold and italics from the block for rock-solid extraction
+    const cleanBlock = trimmed.replace(/\*\*/g, '').replace(/\*/g, '').trim()
+
+    // Look for Front: ... and Back: ...
+    const frontMatch = cleanBlock.match(/(?:FRONT|Term|Question|Concept)\s*[:\.]?\s*([\s\S]+?)(?=(?:\n\s*(?:BACK|Answer|Definition|Explanation)\s*[:\.]?)|$)/i)
+    const backMatch = cleanBlock.match(/(?:BACK|Answer|Definition|Explanation)\s*[:\.]?\s*([\s\S]+?)(?=(?:\n\s*---)|$)/i)
+
     if (frontMatch && backMatch) {
-      cards.push({
-        front: frontMatch[1].trim(),
-        back: backMatch[1].trim()
-      })
+      const front = frontMatch[1].replace(/^(?:Card\s*\d+[:\.]?\s*)/i, '').trim()
+      const back = backMatch[1].trim()
+      if (front && back) {
+        cards.push({ front, back })
+      }
     }
   }
+
   return cards
 }
 
@@ -115,7 +173,25 @@ export const useWorkspaceStore = create(
       },
 
       setQuizOption: (key, val) =>
-        set((s) => ({ quiz: { ...s.quiz, [key]: val } })),
+        set((s) => ({
+          quiz: {
+            ...s.quiz,
+            [key]: typeof val === 'function' ? val(s.quiz[key]) : val,
+          },
+        })),
+
+      setQuizAnswers: (answers) =>
+        set((s) => ({
+          quiz: {
+            ...s.quiz,
+            answers: typeof answers === 'function' ? answers(s.quiz.answers) : answers,
+          },
+        })),
+
+      setQuizCompleted: (completed) =>
+        set((s) => ({
+          quiz: { ...s.quiz, completed: !!completed },
+        })),
 
       setQuizAnswer: (questionIndex, answerIndex) =>
         set((s) => ({
@@ -154,7 +230,20 @@ export const useWorkspaceStore = create(
       },
 
       setFlashcardOption: (key, val) =>
-        set((s) => ({ flashcards: { ...s.flashcards, [key]: val } })),
+        set((s) => ({
+          flashcards: {
+            ...s.flashcards,
+            [key]: typeof val === 'function' ? val(s.flashcards[key]) : val,
+          },
+        })),
+
+      setIsFlipped: (val) =>
+        set((s) => ({
+          flashcards: {
+            ...s.flashcards,
+            isFlipped: typeof val === 'function' ? val(s.flashcards.isFlipped) : !!val,
+          },
+        })),
 
       setCurrentCardIndex: (idx) =>
         set((s) => ({ flashcards: { ...s.flashcards, currentIndex: idx, isFlipped: false, rating: null } })),
@@ -279,14 +368,29 @@ Return 4 options for each question (A, B, C, D), specify the correct answer, and
             rawQuestions = parseQuizText(response.message || response.data || '')
           }
 
-          const normalized = rawQuestions.map((q, idx) => ({
-            id: idx,
-            question: q.question || q.q || `Question ${idx + 1}`,
-            options: Array.isArray(q.options) && q.options.length >= 2 ? q.options : ['Option A', 'Option B', 'Option C', 'Option D'],
-            correct: typeof q.answer === 'number' ? q.answer : (typeof q.correct === 'number' ? q.correct : 0),
-            explanation: q.explanation || 'Refer to your study material for details.',
-            concept: q.topic || q.concept || 'General Knowledge'
-          }))
+          const normalized = rawQuestions.map((q, idx) => {
+            const rawQ = q.question || q.q || `Question ${idx + 1}`
+            const cleanQ = rawQ
+              .replace(/^(?:#+\s*)?(?:Question\s*\d*[\.:]?|\bQ\d*[\.:]?|\d+[\.:])\s*/i, '')
+              .replace(/\*\*/g, '')
+              .replace(/\*/g, '')
+              .trim()
+
+            const cleanOptions = (Array.isArray(q.options) && q.options.length >= 2 ? q.options : ['Option A', 'Option B', 'Option C', 'Option D']).map(opt =>
+              typeof opt === 'string'
+                ? opt.replace(/^(?:[-*•]\s*)?(?:[A-D][\)\.:])\s*/i, '').replace(/\*\*/g, '').replace(/\*/g, '').trim()
+                : opt
+            )
+
+            return {
+              id: idx,
+              question: cleanQ || `Question ${idx + 1}`,
+              options: cleanOptions,
+              correct: typeof q.answer === 'number' ? q.answer : (typeof q.correct === 'number' ? q.correct : 0),
+              explanation: (q.explanation || 'Refer to your study material for details.').replace(/\*\*/g, '').replace(/\*/g, '').trim(),
+              concept: q.topic || q.concept || 'General Knowledge'
+            }
+          })
 
           if (normalized.length === 0) {
             throw new Error("Could not parse quiz questions from the generated content. Please try again.")
@@ -371,11 +475,26 @@ BACK: [Clear definition, explanation, or answer]
             rawCards = parseFlashcardsText(response.message || response.data || '')
           }
 
-          const normalized = rawCards.map((c, idx) => ({
-            id: idx,
-            front: c.front || c.term || c.question || '',
-            back: c.back || c.definition || c.answer || ''
-          })).filter(c => c.front && c.back)
+          const normalized = rawCards.map((c, idx) => {
+            const rawFront = c.front || c.term || c.question || ''
+            const rawBack = c.back || c.definition || c.answer || ''
+            const cleanFront = rawFront
+              .replace(/^(?:#+\s*)?(?:Card\s*\d+[:\.]?\s*)?(?:Front\s*[:\.]?\s*)/i, '')
+              .replace(/\*\*/g, '')
+              .replace(/\*/g, '')
+              .trim()
+            const cleanBack = rawBack
+              .replace(/^(?:#+\s*)?(?:Back\s*[:\.]?\s*)/i, '')
+              .replace(/\*\*/g, '')
+              .replace(/\*/g, '')
+              .trim()
+
+            return {
+              id: idx,
+              front: cleanFront,
+              back: cleanBack
+            }
+          }).filter(c => c.front && c.back)
 
           if (normalized.length === 0) {
             throw new Error("Unable to extract flashcards from response. Please try again.")
