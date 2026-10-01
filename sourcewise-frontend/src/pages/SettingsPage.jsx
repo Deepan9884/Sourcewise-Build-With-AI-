@@ -477,19 +477,6 @@ export default function SettingsPage() {
               )
             })}
           </div>
-
-          {/* Persistent Scholar Growth Badge */}
-          <div className="p-4 rounded-3xl bg-white border border-[#EDE7E1] shadow-xs flex items-center gap-3 mt-4">
-            <div className="w-11 h-11 rounded-2xl bg-[#FDEEE6] border border-[#F5C7B5] flex items-center justify-center shrink-0">
-              <img src="/logo-mark.png" alt="Fox companion" className="w-8 h-8 object-contain" />
-            </div>
-            <div>
-              <p className="text-xs font-bold text-[#1E1B16]">Companion Linked</p>
-              <p className="text-[11px] font-medium text-[#10B981] flex items-center gap-1">
-                Level 2 Scholar • Online
-              </p>
-            </div>
-          </div>
         </motion.div>
 
         {/* Tab Content Panels */}
