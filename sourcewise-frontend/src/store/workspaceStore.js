@@ -1,6 +1,7 @@
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
 import { sendAgentMessage } from '../lib/agentApi'
+import { fetchCloudNotes, saveCloudNote, updateCloudNote, deleteCloudNote } from '../lib/notesApi'
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:4000'
 
@@ -266,18 +267,182 @@ export const useWorkspaceStore = create(
 
       // ── Notes State ────────────────────────────────────────────────────────
       notes: {
+        id: null,
+        title: 'Untitled Study Notes',
         content: null,
         style: 'Comprehensive Study Notes',
         depth: 'Balanced',
         topic: '',
         error: null,
+        isCloudSaved: false,
+        cloudNotes: [],
+        isFetchingCloud: false,
+        isSavingCloud: false,
+        activeView: 'reader', // 'reader' | 'editor'
       },
 
       setNotesOption: (key, val) =>
-        set((s) => ({ notes: { ...s.notes, [key]: val } })),
+        set((s) => ({
+          notes: {
+            ...s.notes,
+            [key]: typeof val === 'function' ? val(s.notes[key]) : val,
+          },
+        })),
+
+      setNotesTitle: (title) =>
+        set((s) => ({
+          notes: { ...s.notes, title, isCloudSaved: false },
+        })),
+
+      setNotesContent: (content) =>
+        set((s) => ({
+          notes: {
+            ...s.notes,
+            content: typeof content === 'function' ? content(s.notes.content) : content,
+            isCloudSaved: false,
+          },
+        })),
 
       clearNotes: () =>
-        set((s) => ({ notes: { ...s.notes, content: null } })),
+        set((s) => ({
+          notes: {
+            ...s.notes,
+            id: null,
+            title: 'Untitled Study Notes',
+            content: null,
+            isCloudSaved: false,
+            activeView: 'reader',
+          },
+        })),
+
+      loadCloudNote: (note) =>
+        set((s) => ({
+          notes: {
+            ...s.notes,
+            id: note.id,
+            title: note.title || 'Untitled Notes',
+            content: note.content || '',
+            style: note.style || s.notes.style,
+            depth: note.depth || s.notes.depth,
+            topic: note.topic || '',
+            isCloudSaved: true,
+            activeView: 'reader',
+            error: null,
+          },
+        })),
+
+      fetchCloudNotesList: async (token) => {
+        set((s) => ({ notes: { ...s.notes, isFetchingCloud: true } }))
+        try {
+          const list = await fetchCloudNotes(token)
+          set((s) => ({
+            notes: {
+              ...s.notes,
+              cloudNotes: Array.isArray(list) ? list : [],
+              isFetchingCloud: false,
+            },
+          }))
+          return list
+        } catch (err) {
+          set((s) => ({
+            notes: { ...s.notes, isFetchingCloud: false, error: err.message },
+          }))
+          return []
+        }
+      },
+
+      saveCurrentNoteToCloud: async (token, customTitle) => {
+        const { notes } = get()
+        if (!notes.content) return null
+
+        set((s) => ({ notes: { ...s.notes, isSavingCloud: true } }))
+        try {
+          const titleToSave = (customTitle || notes.title || 'Study Notes').trim()
+          let savedNote
+
+          if (notes.id) {
+            // Update existing note ("and change that")
+            savedNote = await updateCloudNote(
+              notes.id,
+              {
+                title: titleToSave,
+                content: notes.content,
+                style: notes.style,
+                depth: notes.depth,
+                topic: notes.topic,
+              },
+              token
+            )
+          } else {
+            // Save as new note in cloud
+            savedNote = await saveCloudNote(
+              {
+                title: titleToSave,
+                content: notes.content,
+                style: notes.style,
+                depth: notes.depth,
+                topic: notes.topic,
+              },
+              token
+            )
+          }
+
+          set((s) => {
+            const existingIdx = s.notes.cloudNotes.findIndex((n) => n.id === savedNote.id)
+            let updatedList
+            if (existingIdx >= 0) {
+              updatedList = [...s.notes.cloudNotes]
+              updatedList[existingIdx] = savedNote
+            } else {
+              updatedList = [savedNote, ...s.notes.cloudNotes]
+            }
+
+            return {
+              notes: {
+                ...s.notes,
+                id: savedNote.id,
+                title: savedNote.title,
+                content: savedNote.content,
+                isCloudSaved: true,
+                isSavingCloud: false,
+                cloudNotes: updatedList,
+                error: null,
+              },
+            }
+          })
+
+          return savedNote
+        } catch (err) {
+          set((s) => ({
+            notes: { ...s.notes, isSavingCloud: false, error: err.message },
+          }))
+          throw err
+        }
+      },
+
+      deleteCloudNoteAction: async (noteId, token) => {
+        try {
+          await deleteCloudNote(noteId, token)
+          set((s) => {
+            const updated = s.notes.cloudNotes.filter((n) => n.id !== noteId)
+            const isCurrentDeleted = s.notes.id === noteId
+            return {
+              notes: {
+                ...s.notes,
+                cloudNotes: updated,
+                ...(isCurrentDeleted
+                  ? { id: null, isCloudSaved: false }
+                  : {}),
+              },
+            }
+          })
+        } catch (err) {
+          set((s) => ({
+            notes: { ...s.notes, error: err.message },
+          }))
+          throw err
+        }
+      },
 
       // ── Tutor State ────────────────────────────────────────────────────────
       tutor: {
@@ -575,14 +740,31 @@ Structure the notes with clear markdown headings, bullet points, key definitions
 
           const finalStr = typeof content === 'string' ? content : JSON.stringify(content, null, 2)
 
+          let derivedTitle = nTopic?.trim() ? `${nTopic.trim()} Study Notes` : 'Study Notes'
+          const headingMatch = finalStr.match(/^#\s+(.+)$/m)
+          if (headingMatch && headingMatch[1].trim()) {
+            derivedTitle = headingMatch[1].replace(/\*\*/g, '').trim()
+          }
+
           set((s) => ({
             notes: {
               ...s.notes,
+              id: null,
+              title: derivedTitle,
               content: finalStr,
+              isCloudSaved: false,
+              activeView: 'reader',
               error: null,
             },
             isGenerating: { ...s.isGenerating, notes: false },
           }))
+
+          // Auto-save to cloud storage if token available
+          if (token) {
+            get().saveCurrentNoteToCloud(token, derivedTitle).catch((err) => {
+              console.warn('[Workspace] Auto-save note to cloud error:', err)
+            })
+          }
 
           if (token && API_URL) {
             fetch(`${API_URL}/progress/track`, {

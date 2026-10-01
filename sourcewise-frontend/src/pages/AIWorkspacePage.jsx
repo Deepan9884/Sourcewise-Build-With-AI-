@@ -5,13 +5,15 @@ import {
   HelpCircle, BookOpen, Copy, Check, ChevronRight, ChevronLeft,
   Award, AlertCircle, RefreshCw, Download, 
   CheckCircle2, SlidersHorizontal, ArrowRight, RotateCcw,
-  GraduationCap, Layers, Compass, CheckSquare, Square, Key, Sparkles
+  GraduationCap, Layers, Compass, CheckSquare, Square, Key, Sparkles,
+  Cloud, CloudUpload, Folder, FolderOpen, Edit3, Eye, Trash2, Search, Code, ChevronDown, Pencil, FileDown
 } from 'lucide-react'
 import { useSourceStore } from '../store/sourceStore'
 import { useAuthStore } from '../store/authStore'
 import { useWorkspaceStore } from '../store/workspaceStore'
 import { streamChat } from '../lib/chatApi'
 import { sendAgentMessage } from '../lib/agentApi'
+import { exportNotesAsJson, exportNotesAsPdf, exportNotesAsMarkdown } from '../lib/notesExport'
 import { GlowCard } from '../components/ui/glow-card'
 import { RichMessageContent } from '../components/ui/RichMessageContent'
 
@@ -172,7 +174,7 @@ export default function AIWorkspacePage() {
     clearNotification,
     quiz, setQuizOption, setQuizAnswer, setCurrentQuizIndex, submitQuiz, resetQuiz, startQuizGeneration,
     flashcards: flashcardsState, setFlashcardOption, setCurrentCardIndex, toggleCardFlip, setFlashcardRating, resetFlashcards, startFlashcardGeneration,
-    notes: notesState, setNotesOption, clearNotes, startNotesGeneration,
+    notes: notesState, setNotesOption, setNotesTitle, setNotesContent, clearNotes, loadCloudNote, fetchCloudNotesList, saveCurrentNoteToCloud, deleteCloudNoteAction, startNotesGeneration,
     tutor: tutorState, setTutorOption,
     chatMessages, setChatMessages, addChatMessage,
   } = workspaceStore
@@ -208,15 +210,29 @@ export default function AIWorkspacePage() {
   const setFlashcardTopic = (v) => setFlashcardOption('topic', v)
   const setFlashcards = (v) => setFlashcardOption('cards', typeof v === 'function' ? v(flashcardsState.cards) : v)
 
-  // Notes aliases
+  // Notes aliases & cloud state
   const generatedContent = notesState.content
-  const setGeneratedContent = (v) => setNotesOption('content', typeof v === 'function' ? v(notesState.content) : v)
+  const setGeneratedContent = (v) => setNotesContent(v)
+  const notesTitle = notesState.title || 'Untitled Study Notes'
   const notesStyle = notesState.style
   const setNotesStyle = (v) => setNotesOption('style', v)
   const notesDepth = notesState.depth
   const setNotesDepth = (v) => setNotesOption('depth', v)
   const notesTopic = notesState.topic
   const setNotesTopic = (v) => setNotesOption('topic', v)
+  const isCloudSaved = notesState.isCloudSaved
+  const isSavingCloud = notesState.isSavingCloud
+  const isFetchingCloud = notesState.isFetchingCloud
+  const cloudNotes = notesState.cloudNotes || []
+  const activeNotesView = notesState.activeView || 'reader'
+  const setActiveNotesView = (v) => setNotesOption('activeView', v)
+
+  // Notes UI state
+  const [showCloudDrawer, setShowCloudDrawer] = useState(false)
+  const [cloudSearchQuery, setCloudSearchQuery] = useState('')
+  const [exportMenuOpen, setExportMenuOpen] = useState(false)
+  const [isEditingTitle, setIsEditingTitle] = useState(false)
+  const [titleDraft, setTitleDraft] = useState('')
 
   // Tutor aliases
   const isTutorSessionActive = tutorState.isSessionActive
@@ -256,6 +272,13 @@ export default function AIWorkspacePage() {
       clearNotification(urlMode)
     }
   }, [urlMode, setActiveMode, clearNotification])
+
+  // Hydrate cloud notes when entering notes mode
+  useEffect(() => {
+    if (accessToken && activeMode === 'notes') {
+      fetchCloudNotesList(accessToken)
+    }
+  }, [accessToken, activeMode, fetchCloudNotesList])
 
   // Hydrate sources from backend if store is empty
   const fetchSources = useCallback(async () => {
@@ -681,15 +704,70 @@ Begin our session by giving a warm 2-sentence welcome, introducing the first fun
     setTimeout(() => setCopied(false), 2000)
   }
 
-  const handleDownloadNotes = () => {
+  const handleExportPdf = () => {
     if (!generatedContent) return
-    const blob = new Blob([generatedContent], { type: 'text/markdown' })
-    const url = URL.createObjectURL(blob)
-    const a = document.createElement('a')
-    a.href = url
-    a.download = `Study_Notes_${Date.now()}.md`
-    a.click()
-    URL.revokeObjectURL(url)
+    exportNotesAsPdf({
+      title: notesTitle,
+      content: generatedContent,
+      style: notesStyle,
+      depth: notesDepth,
+      topic: notesTopic,
+    })
+    setExportMenuOpen(false)
+  }
+
+  const handleExportJson = () => {
+    if (!generatedContent) return
+    exportNotesAsJson({
+      id: notesState.id,
+      title: notesTitle,
+      content: generatedContent,
+      style: notesStyle,
+      depth: notesDepth,
+      topic: notesTopic,
+      createdAt: notesState.createdAt,
+    })
+    setExportMenuOpen(false)
+  }
+
+  const handleExportMarkdown = () => {
+    if (!generatedContent) return
+    exportNotesAsMarkdown({
+      title: notesTitle,
+      content: generatedContent,
+    })
+    setExportMenuOpen(false)
+  }
+
+  const handleSaveToCloud = async () => {
+    if (!generatedContent || !accessToken) return
+    try {
+      await saveCurrentNoteToCloud(accessToken, notesTitle)
+    } catch (err) {
+      setError(err.message || 'Failed to save note to cloud storage.')
+    }
+  }
+
+  const handleDeleteCloudNote = async (noteId, e) => {
+    e?.stopPropagation()
+    if (!accessToken || !window.confirm('Are you sure you want to remove this note from cloud storage?')) return
+    try {
+      await deleteCloudNoteAction(noteId, accessToken)
+    } catch (err) {
+      setError(err.message || 'Failed to delete note from cloud storage.')
+    }
+  }
+
+  const handleSelectCloudNote = (note) => {
+    loadCloudNote(note)
+    setShowCloudDrawer(false)
+  }
+
+  const handleSaveTitle = () => {
+    if (titleDraft.trim()) {
+      setNotesTitle(titleDraft.trim())
+    }
+    setIsEditingTitle(false)
   }
 
   // ════════════════════════════════════════════════════════════════════════════
@@ -1524,52 +1602,511 @@ Begin our session by giving a warm 2-sentence welcome, introducing the first fun
   // ════════════════════════════════════════════════════════════════════════════
   // RENDER: NOTES MODE (Select material -> Customize style -> Generate -> Read)
   // ════════════════════════════════════════════════════════════════════════════
+  // ════════════════════════════════════════════════════════════════════════════
+  // RENDER: NOTES MODE (Select material -> Customize style -> Generate -> Read & Edit & Cloud Storage)
+  // ════════════════════════════════════════════════════════════════════════════
   const renderNotesMode = () => {
-    // Generated Notes View
-    if (generatedContent) {
+    // Filtered cloud notes for drawer/search
+    const filteredCloudNotes = (cloudNotes || []).filter((n) => {
+      if (!cloudSearchQuery.trim()) return true
+      const q = cloudSearchQuery.toLowerCase()
       return (
-        <div className="flex-1 overflow-y-auto p-6">
-          <div className="max-w-3xl mx-auto space-y-4">
+        (n.title && n.title.toLowerCase().includes(q)) ||
+        (n.topic && n.topic.toLowerCase().includes(q)) ||
+        (n.content && n.content.toLowerCase().includes(q))
+      )
+    })
+
+    // Cloud Storage Drawer / Modal
+    const renderCloudDrawer = () => {
+      if (!showCloudDrawer) return null
+      return (
+        <div className="fixed inset-0 z-50 flex items-center justify-end bg-black/40 backdrop-blur-xs transition-opacity animate-in fade-in duration-200">
+          <div
+            className="w-full max-w-md h-full bg-white shadow-2xl border-l border-[#EDE7E1] flex flex-col overflow-hidden"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Drawer Header */}
+            <div className="p-5 border-b border-[#EDE7E1] bg-[#FAF8F5] flex items-center justify-between">
+              <div className="flex items-center space-x-2.5">
+                <div className="w-9 h-9 rounded-xl bg-[#FDEEE6] text-[#C05A35] flex items-center justify-center">
+                  <Cloud className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="font-bold text-base text-[#1E1B16]">Cloud Notes Library</h3>
+                  <p className="text-xs text-[#8A817B]">
+                    {cloudNotes.length} saved note{cloudNotes.length === 1 ? '' : 's'} in cloud storage
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowCloudDrawer(false)}
+                className="p-2 text-[#8A817B] hover:text-[#1E1B16] rounded-xl hover:bg-white transition-colors"
+              >
+                ✕
+              </button>
+            </div>
+
+            {/* Search Input */}
+            <div className="p-4 border-b border-[#EDE7E1] bg-white">
+              <div className="relative">
+                <Search className="w-4 h-4 text-[#8A817B] absolute left-3.5 top-3" />
+                <input
+                  type="text"
+                  placeholder="Search saved cloud notes..."
+                  value={cloudSearchQuery}
+                  onChange={(e) => setCloudSearchQuery(e.target.value)}
+                  className="w-full pl-9 pr-3.5 py-2 text-xs rounded-xl border border-[#EDE7E1] focus:outline-none focus:border-[#E8845F] bg-[#FAF8F5]"
+                />
+              </div>
+            </div>
+
+            {/* Notes List */}
+            <div className="flex-1 overflow-y-auto p-4 space-y-3">
+              {isFetchingCloud && (
+                <div className="flex items-center justify-center py-12 space-x-2 text-xs text-[#8A817B]">
+                  <Loader2 className="w-4 h-4 animate-spin text-[#E8845F]" />
+                  <span>Loading cloud storage...</span>
+                </div>
+              )}
+
+              {!isFetchingCloud && filteredCloudNotes.length === 0 && (
+                <div className="text-center py-12 px-4">
+                  <Folder className="w-10 h-10 text-[#D1C7BD] mx-auto mb-2" />
+                  <p className="text-xs font-semibold text-[#5B544E]">
+                    {cloudSearchQuery ? 'No notes matched your search' : 'No notes saved in cloud yet'}
+                  </p>
+                  <p className="text-[11px] text-[#8A817B] mt-1 max-w-xs mx-auto">
+                    Generate notes from your documents or click "Save to Cloud" to keep them permanently accessible.
+                  </p>
+                </div>
+              )}
+
+              {!isFetchingCloud &&
+                filteredCloudNotes.map((note) => {
+                  const isCurrent = notesState.id === note.id
+                  const dateStr = note.createdAt
+                    ? new Date(note.createdAt).toLocaleDateString(undefined, {
+                        month: 'short',
+                        day: 'numeric',
+                        year: 'numeric',
+                      })
+                    : 'Recent'
+
+                  return (
+                    <div
+                      key={note.id}
+                      onClick={() => handleSelectCloudNote(note)}
+                      className={`p-4 rounded-xl border transition-all cursor-pointer group text-left ${
+                        isCurrent
+                          ? 'border-[#E8845F] bg-[#FFF8F5] shadow-xs ring-1 ring-[#E8845F]/30'
+                          : 'border-[#EDE7E1] bg-white hover:border-[#E8845F]/50 hover:bg-[#FAF8F5]'
+                      }`}
+                    >
+                      <div className="flex items-start justify-between gap-2 mb-1.5">
+                        <h4 className="font-bold text-sm text-[#1E1B16] line-clamp-1 group-hover:text-[#C05A35] transition-colors">
+                          {note.title}
+                        </h4>
+                        <button
+                          type="button"
+                          onClick={(e) => handleDeleteCloudNote(note.id, e)}
+                          title="Delete from cloud"
+                          className="p-1 text-[#8A817B] hover:text-red-500 rounded-md hover:bg-red-50 opacity-0 group-hover:opacity-100 transition-opacity shrink-0"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
+
+                      <p className="text-xs text-[#5B544E] line-clamp-2 mb-2.5">
+                        {note.preview || 'Structured study notes and takeaways.'}
+                      </p>
+
+                      <div className="flex items-center justify-between text-[10px] text-[#8A817B] pt-1 border-t border-[#EDE7E1]/50">
+                        <div className="flex items-center space-x-1.5">
+                          <span className="px-2 py-0.5 rounded-full bg-[#FAF8F5] border border-[#EDE7E1] font-medium text-[#5B544E]">
+                            {note.depth || 'Balanced'}
+                          </span>
+                          <span>• {note.wordCount || 0} words</span>
+                        </div>
+                        <span>{dateStr}</span>
+                      </div>
+                    </div>
+                  )
+                })}
+            </div>
+
+            {/* Drawer Footer */}
+            <div className="p-4 border-t border-[#EDE7E1] bg-[#FAF8F5] flex justify-between items-center text-xs">
+              <span className="text-[#8A817B]">Click note to read & edit</span>
+              <button
+                type="button"
+                onClick={() => setShowCloudDrawer(false)}
+                className="sw-btn-secondary !h-8 !px-3 !text-xs"
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
+      )
+    }
+
+    // Generated / Loaded Notes View (Reader & Live Editor)
+    if (generatedContent) {
+      const wordCount = (generatedContent || '').split(/\s+/).filter(Boolean).length
+      const charCount = (generatedContent || '').length
+
+      return (
+        <div className="flex-1 overflow-y-auto p-6 relative">
+          {renderCloudDrawer()}
+
+          <div className="max-w-4xl mx-auto space-y-4">
             {/* Header & Actions Toolbar */}
             <div className="flex flex-wrap items-center justify-between gap-3 pb-3 border-b border-[#EDE7E1]">
-              <div>
-                <span className="text-xs font-semibold px-2.5 py-0.5 rounded-full bg-[#FDEEE6] text-[#C05A35]">
-                  Notes from {selectedMaterialIds.length} source(s)
-                </span>
-                <span className="text-xs text-[#8A817B] ml-2">• {notesStyle}</span>
+              <div className="flex items-center space-x-3">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setGeneratedContent(null)
+                    clearNotes()
+                  }}
+                  className="p-1.5 rounded-xl border border-[#EDE7E1] text-[#5B544E] hover:text-[#1E1B16] hover:border-[#D1C7BD] transition-colors"
+                  title="Back to Note Generator"
+                >
+                  <ChevronLeft className="w-4 h-4" />
+                </button>
+
+                <div>
+                  {/* Editable Title */}
+                  {isEditingTitle ? (
+                    <div className="flex items-center space-x-1.5">
+                      <input
+                        type="text"
+                        value={titleDraft}
+                        onChange={(e) => setTitleDraft(e.target.value)}
+                        onKeyDown={(e) => e.key === 'Enter' && handleSaveTitle()}
+                        autoFocus
+                        className="text-sm font-bold px-2 py-1 rounded-lg border border-[#E8845F] focus:outline-none bg-white text-[#1E1B16]"
+                      />
+                      <button
+                        type="button"
+                        onClick={handleSaveTitle}
+                        className="p-1 text-green-600 hover:bg-green-50 rounded-md"
+                      >
+                        <Check className="w-4 h-4" />
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setIsEditingTitle(false)}
+                        className="p-1 text-[#8A817B] hover:bg-[#FAF8F5] rounded-md"
+                      >
+                        ✕
+                      </button>
+                    </div>
+                  ) : (
+                    <div
+                      onClick={() => {
+                        setTitleDraft(notesTitle)
+                        setIsEditingTitle(true)
+                      }}
+                      className="group flex items-center space-x-1.5 cursor-pointer"
+                      title="Click to rename note"
+                    >
+                      <h3 className="text-sm sm:text-base font-bold text-[#1E1B16] group-hover:text-[#C05A35] transition-colors">
+                        {notesTitle}
+                      </h3>
+                      <Pencil className="w-3.5 h-3.5 text-[#8A817B] opacity-0 group-hover:opacity-100 transition-opacity" />
+                    </div>
+                  )}
+
+                  {/* Metadata & Cloud Status */}
+                  <div className="flex items-center space-x-2 mt-1">
+                    <span className="text-[11px] font-semibold px-2 py-0.5 rounded-full bg-[#FDEEE6] text-[#C05A35]">
+                      {notesStyle}
+                    </span>
+                    <span className="text-[11px] text-[#8A817B]">• {notesDepth}</span>
+                    <span className="text-[11px] text-[#8A817B]">• {wordCount} words</span>
+
+                    {/* Cloud status badge */}
+                    {isSavingCloud ? (
+                      <span className="inline-flex items-center text-[10px] font-medium text-[#C05A35] bg-[#FFF8F5] px-2 py-0.5 rounded-full border border-[#E8845F]/30 animate-pulse">
+                        <Loader2 className="w-2.5 h-2.5 animate-spin mr-1" />
+                        Saving...
+                      </span>
+                    ) : isCloudSaved ? (
+                      <span className="inline-flex items-center text-[10px] font-medium text-green-700 bg-green-50 px-2 py-0.5 rounded-full border border-green-200">
+                        <CheckCircle2 className="w-2.5 h-2.5 mr-1 text-green-600" />
+                        Cloud Saved
+                      </span>
+                    ) : (
+                      <span className="inline-flex items-center text-[10px] font-medium text-amber-700 bg-amber-50 px-2 py-0.5 rounded-full border border-amber-200">
+                        <CloudUpload className="w-2.5 h-2.5 mr-1 text-amber-600" />
+                        Unsaved
+                      </span>
+                    )}
+                  </div>
+                </div>
               </div>
+
+              {/* Action Toolbar */}
               <div className="flex items-center space-x-2">
+                {/* Save to Cloud Button */}
+                <button
+                  type="button"
+                  onClick={handleSaveToCloud}
+                  disabled={isSavingCloud || (isCloudSaved && notesState.id)}
+                  className={`sw-btn-secondary !h-9 !px-3 !text-xs inline-flex items-center space-x-1.5 transition-all ${
+                    !isCloudSaved ? '!border-[#E8845F] !text-[#C05A35] bg-[#FFF8F5]' : ''
+                  }`}
+                  title="Save note to cloud storage"
+                >
+                  {isSavingCloud ? (
+                    <>
+                      <Loader2 className="w-3.5 h-3.5 animate-spin text-[#E8845F]" />
+                      <span>Saving...</span>
+                    </>
+                  ) : isCloudSaved ? (
+                    <>
+                      <Cloud className="w-3.5 h-3.5 text-green-600" />
+                      <span>Saved</span>
+                    </>
+                  ) : (
+                    <>
+                      <CloudUpload className="w-3.5 h-3.5 text-[#C05A35]" />
+                      <span className="font-semibold">Save to Cloud</span>
+                    </>
+                  )}
+                </button>
+
+                {/* Cloud Library Drawer Trigger */}
+                <button
+                  type="button"
+                  onClick={() => setShowCloudDrawer(true)}
+                  className="sw-btn-secondary !h-9 !px-3 !text-xs inline-flex items-center space-x-1.5"
+                  title="View your saved notes in cloud storage"
+                >
+                  <FolderOpen className="w-3.5 h-3.5 text-[#E8845F]" />
+                  <span>Cloud Notes ({cloudNotes.length})</span>
+                </button>
+
+                {/* View Mode Toggle: Reader vs Editor ("and change that") */}
+                <div className="flex items-center rounded-xl border border-[#EDE7E1] p-0.5 bg-[#FAF8F5]">
+                  <button
+                    type="button"
+                    onClick={() => setActiveNotesView('reader')}
+                    className={`px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center space-x-1 transition-all ${
+                      activeNotesView === 'reader'
+                        ? 'bg-white text-[#C05A35] shadow-xs'
+                        : 'text-[#8A817B] hover:text-[#1E1B16]'
+                    }`}
+                  >
+                    <Eye className="w-3.5 h-3.5" />
+                    <span>Reader</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setActiveNotesView('editor')}
+                    className={`px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center space-x-1 transition-all ${
+                      activeNotesView === 'editor'
+                        ? 'bg-white text-[#C05A35] shadow-xs'
+                        : 'text-[#8A817B] hover:text-[#1E1B16]'
+                    }`}
+                  >
+                    <Edit3 className="w-3.5 h-3.5" />
+                    <span>Edit Note</span>
+                  </button>
+                </div>
+
+                {/* Copy Button */}
                 <button
                   type="button"
                   onClick={handleCopyNotes}
                   className="sw-btn-secondary !h-9 !px-3 !text-xs inline-flex items-center space-x-1.5"
+                  title="Copy markdown text to clipboard"
                 >
                   {copied ? <Check className="w-3.5 h-3.5 text-green-600" /> : <Copy className="w-3.5 h-3.5" />}
                   <span>{copied ? 'Copied!' : 'Copy'}</span>
                 </button>
-                <button
-                  type="button"
-                  onClick={handleDownloadNotes}
-                  className="sw-btn-secondary !h-9 !px-3 !text-xs inline-flex items-center space-x-1.5"
-                >
-                  <Download className="w-3.5 h-3.5" />
-                  <span>Download .md</span>
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setGeneratedContent(null)}
-                  className="sw-btn-primary !h-9 !px-3.5 !text-xs inline-flex items-center space-x-1.5"
-                >
-                  <FileText className="w-3.5 h-3.5" />
-                  <span>Generate New Notes</span>
-                </button>
+
+                {/* Export / Download Menu ("download in json to pdf") */}
+                <div className="relative">
+                  <button
+                    type="button"
+                    onClick={() => setExportMenuOpen((prev) => !prev)}
+                    className="sw-btn-primary !h-9 !px-3.5 !text-xs inline-flex items-center space-x-1.5 shadow-warm"
+                  >
+                    <Download className="w-3.5 h-3.5" />
+                    <span>Export</span>
+                    <ChevronDown className="w-3 h-3 ml-0.5" />
+                  </button>
+
+                  {exportMenuOpen && (
+                    <div
+                      className="absolute right-0 mt-2 w-56 rounded-2xl bg-white border border-[#EDE7E1] shadow-xl p-1.5 z-30 animate-in fade-in zoom-in-95 duration-150"
+                      onClick={() => setExportMenuOpen(false)}
+                    >
+                      <button
+                        type="button"
+                        onClick={handleExportPdf}
+                        className="w-full text-left p-2.5 rounded-xl hover:bg-[#FFF8F5] flex items-center space-x-2.5 transition-colors text-xs text-[#1E1B16] font-medium group"
+                      >
+                        <div className="w-7 h-7 rounded-lg bg-red-50 text-red-600 flex items-center justify-center shrink-0">
+                          <FileText className="w-4 h-4" />
+                        </div>
+                        <div>
+                          <p className="font-bold text-[#1E1B16] group-hover:text-[#C05A35]">Download PDF (.pdf)</p>
+                          <p className="text-[10px] text-[#8A817B]">Formatted, publication-ready document</p>
+                        </div>
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={handleExportJson}
+                        className="w-full text-left p-2.5 rounded-xl hover:bg-[#FFF8F5] flex items-center space-x-2.5 transition-colors text-xs text-[#1E1B16] font-medium group"
+                      >
+                        <div className="w-7 h-7 rounded-lg bg-amber-50 text-amber-600 flex items-center justify-center shrink-0">
+                          <Code className="w-4 h-4" />
+                        </div>
+                        <div>
+                          <p className="font-bold text-[#1E1B16] group-hover:text-[#C05A35]">Download JSON (.json)</p>
+                          <p className="text-[10px] text-[#8A817B]">Structured schema with parsed sections</p>
+                        </div>
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={handleExportMarkdown}
+                        className="w-full text-left p-2.5 rounded-xl hover:bg-[#FFF8F5] flex items-center space-x-2.5 transition-colors text-xs text-[#1E1B16] font-medium group"
+                      >
+                        <div className="w-7 h-7 rounded-lg bg-blue-50 text-blue-600 flex items-center justify-center shrink-0">
+                          <FileDown className="w-4 h-4" />
+                        </div>
+                        <div>
+                          <p className="font-bold text-[#1E1B16] group-hover:text-[#C05A35]">Download Markdown (.md)</p>
+                          <p className="text-[10px] text-[#8A817B]">Raw markdown formatted file</p>
+                        </div>
+                      </button>
+                    </div>
+                  )}
+                </div>
               </div>
             </div>
 
-            {/* Document Reader Card */}
-            <GlowCard className="p-8 bg-white border border-[#EDE7E1]">
-              <FormattedNotesView text={generatedContent} />
-            </GlowCard>
+            {/* Error banner if any */}
+            {error && (
+              <div className="p-3 rounded-xl bg-red-50 border border-red-200 text-xs text-red-700 flex items-center space-x-2">
+                <AlertCircle className="w-4 h-4 shrink-0 text-red-600" />
+                <span>{error}</span>
+              </div>
+            )}
+
+            {/* View Mode: Reader View */}
+            {activeNotesView === 'reader' && (
+              <GlowCard className="p-8 bg-white border border-[#EDE7E1]">
+                <FormattedNotesView text={generatedContent} />
+              </GlowCard>
+            )}
+
+            {/* View Mode: Live Editor ("and change that") */}
+            {activeNotesView === 'editor' && (
+              <div className="rounded-2xl border border-[#EDE7E1] bg-white p-5 shadow-xs space-y-3">
+                {/* Editor Quick Tools */}
+                <div className="flex flex-wrap items-center justify-between gap-2 pb-2 border-b border-[#EDE7E1] text-xs">
+                  <div className="flex items-center space-x-1">
+                    <span className="text-[11px] font-semibold text-[#8A817B] mr-1">Insert:</span>
+                    <button
+                      type="button"
+                      onClick={() => setGeneratedContent((prev) => prev + '\n\n**Bold Text**')}
+                      className="px-2 py-1 rounded-md bg-[#FAF8F5] border border-[#EDE7E1] hover:border-[#E8845F] text-[11px] font-bold"
+                    >
+                      B
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setGeneratedContent((prev) => prev + '\n\n## Section Heading\n')}
+                      className="px-2 py-1 rounded-md bg-[#FAF8F5] border border-[#EDE7E1] hover:border-[#E8845F] text-[11px] font-bold"
+                    >
+                      H2
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setGeneratedContent((prev) => prev + '\n- Bullet point detail')}
+                      className="px-2 py-1 rounded-md bg-[#FAF8F5] border border-[#EDE7E1] hover:border-[#E8845F] text-[11px]"
+                    >
+                      • Bullet
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setGeneratedContent((prev) => prev + '\n1. Numbered item')}
+                      className="px-2 py-1 rounded-md bg-[#FAF8F5] border border-[#EDE7E1] hover:border-[#E8845F] text-[11px]"
+                    >
+                      1. List
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setGeneratedContent((prev) => prev + '\n\n**Key Term**: Definition and explanation here.\n')}
+                      className="px-2 py-1 rounded-md bg-[#FAF8F5] border border-[#EDE7E1] hover:border-[#E8845F] text-[11px] text-[#C05A35]"
+                    >
+                      + Definition
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setGeneratedContent((prev) => prev + '\n\n> 💡 **Exam Takeaway:** Key concept to remember.')}
+                      className="px-2 py-1 rounded-md bg-[#FAF8F5] border border-[#EDE7E1] hover:border-[#E8845F] text-[11px] text-[#C05A35]"
+                    >
+                      + Takeaway
+                    </button>
+                  </div>
+
+                  <div className="flex items-center space-x-3 text-[11px] text-[#8A817B]">
+                    <span>{wordCount} words</span>
+                    <span>•</span>
+                    <span>{charCount} chars</span>
+                  </div>
+                </div>
+
+                {/* Textarea */}
+                <textarea
+                  value={generatedContent}
+                  onChange={(e) => setGeneratedContent(e.target.value)}
+                  placeholder="Write or edit your study notes here in markdown..."
+                  rows={22}
+                  className="w-full text-xs font-mono p-4 rounded-xl border border-[#EDE7E1] focus:outline-none focus:border-[#E8845F] focus:ring-1 focus:ring-[#E8845F] bg-[#FAF8F5] text-[#1E1B16] leading-relaxed resize-y"
+                />
+
+                {/* Editor Bottom Save Bar */}
+                <div className="flex items-center justify-between pt-2">
+                  <button
+                    type="button"
+                    onClick={() => setActiveNotesView('reader')}
+                    className="sw-btn-secondary !h-9 !px-4 !text-xs inline-flex items-center space-x-1.5"
+                  >
+                    <Eye className="w-3.5 h-3.5" />
+                    <span>Preview in Reader View</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={handleSaveToCloud}
+                    disabled={isSavingCloud || (isCloudSaved && notesState.id)}
+                    className="sw-btn-primary !h-9 !px-5 !text-xs inline-flex items-center space-x-1.5 shadow-warm"
+                  >
+                    {isSavingCloud ? (
+                      <>
+                        <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                        <span>Saving Changes...</span>
+                      </>
+                    ) : (
+                      <>
+                        <CloudUpload className="w-3.5 h-3.5" />
+                        <span>Save Changes to Cloud</span>
+                      </>
+                    )}
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
         </div>
       )
@@ -1577,7 +2114,9 @@ Begin our session by giving a warm 2-sentence welcome, introducing the first fun
 
     // Notes Setup & Material Selection View
     return (
-      <div className="flex-1 overflow-y-auto p-6">
+      <div className="flex-1 overflow-y-auto p-6 relative">
+        {renderCloudDrawer()}
+
         <div className="max-w-3xl mx-auto space-y-6">
           <div className="text-center max-w-xl mx-auto pb-2">
             <div className="w-12 h-12 rounded-2xl bg-[#FDEEE6] text-[#E8845F] flex items-center justify-center mx-auto mb-2.5">
@@ -1593,6 +2132,46 @@ Begin our session by giving a warm 2-sentence welcome, introducing the first fun
             <div className="p-3.5 rounded-xl bg-red-50 border border-red-200 text-xs text-red-700 flex items-center space-x-2">
               <AlertCircle className="w-4 h-4 shrink-0 text-red-600" />
               <span>{error}</span>
+            </div>
+          )}
+
+          {/* Quick Access to Existing Cloud Notes */}
+          {cloudNotes.length > 0 && (
+            <div className="rounded-2xl border border-[#EDE7E1] bg-white p-5 shadow-xs space-y-3">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center space-x-2">
+                  <Cloud className="w-4 h-4 text-[#E8845F]" />
+                  <h4 className="text-sm font-bold text-[#1E1B16]">
+                    Your Cloud Notes Library ({cloudNotes.length})
+                  </h4>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setShowCloudDrawer(true)}
+                  className="text-xs font-semibold text-[#C05A35] hover:underline"
+                >
+                  View All ({cloudNotes.length}) →
+                </button>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 pt-1">
+                {cloudNotes.slice(0, 4).map((note) => (
+                  <button
+                    key={note.id}
+                    type="button"
+                    onClick={() => handleSelectCloudNote(note)}
+                    className="p-3 rounded-xl border border-[#EDE7E1] bg-[#FAF8F5] hover:border-[#E8845F] hover:bg-white text-left transition-all group"
+                  >
+                    <div className="flex items-center justify-between mb-1">
+                      <span className="font-bold text-xs text-[#1E1B16] group-hover:text-[#C05A35] line-clamp-1">
+                        {note.title}
+                      </span>
+                      <ChevronRight className="w-3.5 h-3.5 text-[#8A817B] group-hover:text-[#C05A35] shrink-0" />
+                    </div>
+                    <p className="text-[11px] text-[#8A817B] line-clamp-1">{note.preview || 'Study notes and summary'}</p>
+                  </button>
+                ))}
+              </div>
             </div>
           )}
 
