@@ -7,6 +7,7 @@ import {
 import { useSourceStore } from '../store/sourceStore';
 import { usePlannerStore } from '../store/plannerStore';
 import { useAuthStore } from '../store/authStore';
+import { getWellnessOrCasualResponse } from './chatApi';
 
 /**
  * Format a Date object to YYYY-MM-DD
@@ -553,6 +554,19 @@ Keep up the great momentum! Would you like to review a topic or schedule an upco
     };
   }
 
+  // ─────────────────────────────────────────────────────────────
+  // 8. WELLNESS, FATIGUE, SLEEP & MOOD CHECKS
+  // ─────────────────────────────────────────────────────────────
+  const wellness = getWellnessOrCasualResponse(query);
+  if (wellness) {
+    return {
+      handled: true,
+      role: 'assistant',
+      content: wellness.message,
+    };
+  }
+
   // Not an explicit single command: let fallback or streaming LLM handle with full omni context
   return { handled: false };
 }
+

@@ -40,8 +40,11 @@ Guidelines:
      Direct the user to the "Game Arena" (/puzzles) to play word searches and memory match challenges.
    - For Code Execution ("compiler", "deepcode", "run code"):
      Direct the user to "DeepCode" (/deepcode) for an in-browser code editor and runner.
-   ALWAYS clearly instruct the user to go to that respective dedicated tab or section whenever they ask to access or use these learning features.
-6. DOCUMENT GROUNDING RULE: The "Context:" header before the user question tells you EXACTLY which document(s) are selected. Answer ONLY about those named documents. NEVER substitute or invent other textbooks or materials not in the context. If you lack the document full text, say so honestly and ask the user to share excerpts.`;
+    ALWAYS clearly instruct the user to go to that respective dedicated tab or section whenever they ask to access or use these learning features.
+6. DOCUMENT GROUNDING RULE: The "Context:" header before the user question tells you EXACTLY which document(s) are selected. Answer ONLY about those named documents. NEVER substitute or invent other textbooks or materials not in the context. If you lack the document full text, say so honestly and ask the user to share excerpts.
+7. STUDENT WELLNESS & FATIGUE RULE: If the user expresses fatigue, sleepiness, stress, or needing a break (e.g. "i am sleepy", "i'm tired", "i'm overwhelmed", "can i take a break"):
+   - NEVER treat their physical state or mood as an academic or technical topic in the study materials!
+   - Respond as an intelligent, caring academic mentor. Explain the neuroscience of sleep and memory consolidation, encourage healthy rest or a power nap, and reassure them that their study progress is saved.`;
 
 /**
  * Dedicated Intent Router for SourceWise Features.
@@ -52,6 +55,50 @@ function getFeatureRedirection(question, sourceName = 'your study material') {
     .replace(/^Context:.*?\n+/is, '')
     .trim();
   const qLower = cleanQ.toLowerCase();
+
+  // 0. Sleepiness / Fatigue / Mood / Casual Check
+  if (
+    /\b(i('?m| am)?\s*(so\s*)?(sleepy|tired|exhausted|drowsy|fatigued|drained|burned out|burnt out|falling asleep))\b/i.test(qLower) ||
+    /\b(need\s+(a\s+)?sleep|want\s+to\s+sleep|going\s+to\s+sleep|gonna\s+sleep|can('?t| not)\s+keep\s+my\s+eyes\s+open)\b/i.test(qLower) ||
+    /^(sleepy|tired|exhausted|so tired|so sleepy|good\s*night)[\s!.,?]*$/i.test(qLower)
+  ) {
+    return `### 😴 Listen to Your Body — Time to Rest!
+
+Studying while sleepy leads to rapidly diminishing returns. Cognitive neuroscience shows that your brain needs sleep for **memory consolidation** — the process where newly acquired information is stabilized and shifted from the hippocampus into long-term neocortical memory.
+
+Here is what I recommend right now:
+
+1. **Option A: The 20-Minute Power Nap (Recommended)**
+   - Set an alarm for **20–25 minutes** (prevents entering deep slow-wave sleep and waking up groggy).
+   - A quick nap flushes adenosine buildup and dramatically restores alertness.
+
+2. **Option B: Call It a Day & Sleep**
+   - If it's late at night, close your books! Forcing study when exhausted causes high frustration and minimal retention.
+   - Sleep now — your brain will organize what you reviewed today while you sleep.
+
+3. **Option C: Need to Finish Just One Small Task?**
+   - Stand up, drink a cold glass of water, and take 3 deep breaths.
+   - Switch to lighter active recall (like 5 quick flashcards) instead of dense reading.
+
+💤 **Your progress and materials are safely saved!** Rest up, and whenever you're ready, we'll continue with high energy.`;
+  }
+
+  if (
+    /\b(i('?m| am)?\s*(going to\s*)?(take|need|want)\s*(a\s*)?break)\b/i.test(qLower) ||
+    /\b(can i take a break|time for a break|break time|tired of studying|pause study)\b/i.test(qLower) ||
+    /^(break|taking a break|need a break)[\s!.,?]*$/i.test(qLower)
+  ) {
+    return `### ☕ Take a Well-Deserved Break!
+
+Effective learning follows the **Pomodoro rhythm**: 25–45 minutes of deep focus paired with 5–15 minutes of genuine relaxation. Continuous marathon studying without breaks causes cognitive fatigue and reduced retention.
+
+**Tips for a high-yield break:**
+- 🚶 **Move around**: Stand up, stretch, or take a quick 5-minute walk to boost cerebral blood flow.
+- 💧 **Hydrate**: Drink a full glass of cold water.
+- 📵 **Visual rest**: Avoid scrolling social media — give your eyes and visual processing cortex a real break.
+
+Whenever you return, just type *"I'm back"* and we'll pick up right where you left off!`;
+  }
 
   // 1. Quiz / Practice Test
   if (
