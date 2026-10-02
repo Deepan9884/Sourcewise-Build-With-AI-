@@ -219,9 +219,7 @@ export default function CodeEditor({
             <LanguageIcon lang={language} className="w-3.5 h-3.5 shrink-0" />
             <span className="text-[#3D352E]">main{languageConfig?.extension || '.txt'}</span>
           </div>
-          <span className="text-[11px] text-[#8C827A] font-mono hidden sm:inline">
-            UTF-8
-          </span>
+
           {isFullScreen && (
             <span className="px-2.5 py-0.5 bg-[#FDEEE6] text-[#C05A35] font-bold text-[10px] rounded-full border border-[#FCD8CB]">
               Full Focus Mode
@@ -312,8 +310,15 @@ export default function CodeEditor({
         <div
           ref={lineNumbersRef}
           aria-hidden="true"
-          className="w-12 py-3 bg-[#FAF8F5] border-r border-[#EFEAE4] text-right pr-3 select-none text-[#9E948B] font-mono overflow-hidden shrink-0"
-          style={{ fontSize: `${fontSize}px`, lineHeight: `${fontSize * 1.5}px` }}
+          className="w-12 py-3.5 bg-[#FAF8F5] border-r border-[#EFEAE4] text-right pr-3 select-none text-[#9E948B] font-mono overflow-hidden shrink-0"
+          style={{
+            fontFamily: "'JetBrains Mono', 'Fira Code', 'Cascadia Code', Consolas, Menlo, Monaco, monospace",
+            fontSize: `${fontSize}px`,
+            lineHeight: `${Math.round(fontSize * 1.6)}px`,
+            fontWeight: 450,
+            WebkitFontSmoothing: 'antialiased',
+            MozOsxFontSmoothing: 'grayscale',
+          }}
         >
           {Array.from({ length: lineCount }).map((_, i) => {
             const lineNum = i + 1;
@@ -331,7 +336,7 @@ export default function CodeEditor({
           })}
         </div>
 
-        {/* Code Input Textarea (Clean Light Typography) */}
+        {/* Code Input Textarea (Professional Developer Typography) */}
         <textarea
           ref={textareaRef}
           value={code}
@@ -347,14 +352,19 @@ export default function CodeEditor({
           autoCapitalize="off"
           autoComplete="off"
           autoCorrect="off"
-          className="flex-1 w-full h-full p-3 bg-transparent text-[#1E1B16] font-mono outline-none resize-none overflow-auto leading-relaxed selection:bg-[#FDEEE6] selection:text-[#C05A35] whitespace-pre"
+          className="flex-1 w-full h-full p-3.5 bg-transparent text-[#1E1B16] font-mono outline-none resize-none overflow-auto leading-relaxed selection:bg-[#FDEEE6] selection:text-[#C05A35] whitespace-pre"
           style={{
+            fontFamily: "'JetBrains Mono', 'Fira Code', 'Cascadia Code', Consolas, Menlo, Monaco, monospace",
             fontSize: `${fontSize}px`,
-            lineHeight: `${fontSize * 1.5}px`,
+            lineHeight: `${Math.round(fontSize * 1.6)}px`,
+            fontWeight: 450,
             tabSize: 2,
+            letterSpacing: '-0.015em',
             fontVariantLigatures: 'none',
             fontFeatureSettings: '"liga" 0, "calt" 0, "dlig" 0',
             WebkitFontFeatureSettings: '"liga" 0, "calt" 0, "dlig" 0',
+            WebkitFontSmoothing: 'antialiased',
+            MozOsxFontSmoothing: 'grayscale',
           }}
         />
       </div>

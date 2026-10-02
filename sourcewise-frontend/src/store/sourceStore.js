@@ -51,7 +51,9 @@ export const useSourceStore = create(
           if (res.ok) {
             const data = await res.json();
             const list = Array.isArray(data) ? data : (data.sources || data.data || []);
-            const formatted = list.map((s) => ({
+            const formatted = list
+              .filter(s => (s.type || '').toLowerCase() !== 'note')
+              .map((s) => ({
               id: s.id,
               name: s.name || s.title || 'Untitled Document',
               title: s.title || s.name || 'Untitled Document',

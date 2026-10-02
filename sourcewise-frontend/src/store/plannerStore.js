@@ -38,7 +38,11 @@ export const usePlannerStore = create((set, get) => ({
     set({ isLoading: true, error: '' })
     try {
       const plans = await studyPlansApi.list()
+      const current = get().currentPlan
       set({ plans, isLoading: false })
+      if (!current && plans.length > 0) {
+        await get().loadPlan(plans[0].id).catch(() => {})
+      }
       return plans
     } catch (e) {
       set({ error: e.message, isLoading: false })
@@ -76,14 +80,15 @@ export const usePlannerStore = create((set, get) => ({
     set({ isLoading: true, error: '' })
     try {
       const full = await studyPlansApi.get(id)
-      const [sched, today, replans] = await Promise.all([
+      const [sched, today, replans, pacing] = await Promise.all([
         studyPlansApi.schedule(id).catch(() => []),
         studyPlansApi.today(id).catch(() => ({ slots: [] })),
         studyPlansApi.replans(id).catch(() => []),
+        studyPlansApi.pacing(id).catch(() => null),
       ])
       set({
         currentPlan: full, subjects: full.subjects || [], schedule: sched,
-        todaySlots: today.slots || [], replans, isLoading: false,
+        todaySlots: today.slots || [], replans, pacing, isLoading: false,
       })
       return full
     } catch (e) {

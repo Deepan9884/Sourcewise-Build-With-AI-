@@ -102,8 +102,6 @@ Rules:
 
     "create_quiz": """Create quiz questions that test understanding, not just memorization.
 
-Generate {count} questions about: {topic}
-
 For EACH question, use this EXACT format:
 
 ---
@@ -123,7 +121,6 @@ D) [Plausible but incorrect option]
 ---
 
 Rules:
-- Create {count} questions total
 - Mix difficulty levels: ~30% Easy, ~50% Medium, ~20% Hard
 - Every distractor (wrong answer) should be plausible to someone who hasn't studied
 - Test APPLICATION and ANALYSIS, not just recall
@@ -133,8 +130,6 @@ Rules:
 - STRICTLY FORBIDDEN: NEVER ask meta, trivia, or bibliographic questions about the document itself (e.g. NEVER ask "Who is the author?", "What is the book title?", "What are the section/chapter names?", "Who published this book?", "What is in the table of contents?", or questions about copyright/ISBN/page numbers).""",
 
     "create_flashcards": """Create flashcards optimized for active recall and spaced repetition.
-
-Generate {count} flashcards about: {topic}
 
 For EACH flashcard, use this EXACT format:
 
@@ -149,7 +144,6 @@ For EACH flashcard, use this EXACT format:
 ---
 
 Rules:
-- Create {count} cards total
 - Front should be a QUESTION, not a statement (promotes active recall)
 - Back should be concise but complete
 - Cover key terms, processes, relationships, and comparisons

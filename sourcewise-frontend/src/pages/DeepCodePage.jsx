@@ -229,7 +229,7 @@ export default function DeepCodePage() {
         {/* Left: Branding & Language Selector */}
         <div className="flex flex-wrap items-center gap-3">
           <div className="flex items-center space-x-2.5 pr-2">
-            <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-[#E8845F] via-[#D96F4A] to-[#6366F1] flex items-center justify-center text-white shadow-md shadow-indigo-500/10">
+            <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-[#E8845F] to-[#C05A35] flex items-center justify-center text-white shadow-md shadow-[#C05A35]/20">
               <Code2 className="w-5 h-5" />
             </div>
             <div>
@@ -237,7 +237,7 @@ export default function DeepCodePage() {
                 <h1 className="text-lg font-bold text-[#1E1B16] tracking-tight leading-tight">
                   DeepCode
                 </h1>
-                <span className="px-2 py-0.5 rounded-full text-[10px] font-extrabold bg-indigo-50 text-indigo-700 border border-indigo-200">
+                <span className="px-2 py-0.5 rounded-full text-[10px] font-extrabold bg-[#FDEEE6] text-[#C05A35] border border-[#FCD8CB]">
                   IDE v2.0
                 </span>
               </div>
@@ -252,7 +252,7 @@ export default function DeepCodePage() {
             <button
               type="button"
               onClick={() => setIsLangOpen(!isLangOpen)}
-              className="flex items-center space-x-2.5 pl-3.5 pr-3 py-2 bg-[#F9F7F5] hover:bg-[#F2ECE6] border border-[#E4DDD6] rounded-xl text-xs font-semibold text-[#2C2520] outline-none focus:ring-2 focus:ring-indigo-500/20 cursor-pointer transition-colors shadow-2xs"
+              className="flex items-center space-x-2.5 pl-3.5 pr-3 py-2 bg-[#F9F7F5] hover:bg-[#F2ECE6] border border-[#E4DDD6] rounded-xl text-xs font-semibold text-[#2C2520] outline-none focus:ring-2 focus:ring-[#C05A35]/20 cursor-pointer transition-colors shadow-2xs"
               aria-haspopup="listbox"
               aria-expanded={isLangOpen}
             >

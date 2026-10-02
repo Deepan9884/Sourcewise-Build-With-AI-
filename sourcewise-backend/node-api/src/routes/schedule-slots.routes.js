@@ -9,6 +9,8 @@ const supabase = require('../utils/supabase');
 const { authenticate } = require('../middleware/auth');
 const { requireSlotOwner } = require('../middleware/validatePlanAccess');
 
+const demoService = require('../services/demoAccountService');
+
 router.use(authenticate);
 
 function userIdOf(req) {
@@ -17,6 +19,10 @@ function userIdOf(req) {
 
 router.patch('/:id', requireSlotOwner(), async (req, res) => {
   try {
+    if (demoService.isDemoUser(req)) {
+      const slot = demoService.completeSlot(req.params.id);
+      return res.json(slot || { id: req.params.id, status: req.body?.status || 'completed' });
+    }
     const allowed = ['status', 'topic', 'activity_type', 'completion_data', 'mood_context'];
     const patch = {};
     for (const k of allowed) if (req.body[k] !== undefined) patch[k] = req.body[k];
@@ -31,6 +37,10 @@ router.patch('/:id', requireSlotOwner(), async (req, res) => {
 
 router.post('/:id/complete', requireSlotOwner(), async (req, res) => {
   try {
+    if (demoService.isDemoUser(req)) {
+      const slot = demoService.completeSlot(req.params.id);
+      return res.json(slot || { id: req.params.id, status: 'completed' });
+    }
     const { actualDuration, score, notes, moodAfter } = req.body || {};
     const patch = {
       status: 'completed',

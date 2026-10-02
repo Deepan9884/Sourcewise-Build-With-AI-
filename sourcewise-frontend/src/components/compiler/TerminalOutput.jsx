@@ -178,7 +178,7 @@ export default function TerminalOutput({
                 {/* Compiler Engine Tag */}
                 {outputResult.compiler && (
                   <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-xl bg-white text-[#7C726A] border border-[#E2DAD1] text-[11px] font-mono ml-auto shadow-2xs">
-                    <Cpu className="w-3 h-3 text-[#6366F1]" />
+                    <Cpu className="w-3 h-3 text-[#C05A35]" />
                     <span>{outputResult.compiler}</span>
                   </span>
                 )}
@@ -347,13 +347,28 @@ export default function TerminalOutput({
 
             {/* AI Result Stream / Display */}
             {aiLoading ? (
-              <div className="flex flex-col items-center justify-center p-8 bg-[#FAF8F5] border border-[#EBE4DC] rounded-2xl text-center space-y-3">
+              <div className="flex flex-col items-center justify-center p-8 bg-[#FAF8F5] border border-[#EBE4DC] rounded-3xl text-center space-y-3">
                 <Loader2 className="w-6 h-6 animate-spin text-[#C05A35]" />
                 <p className="text-sm font-bold text-[#1E1B16]">DeepCode AI is inspecting your code...</p>
                 <p className="text-xs text-[#8C827A]">Analyzing algorithmic patterns, syntax trees & time complexity</p>
               </div>
             ) : aiAnalysis ? (
-              <div className="p-4 sm:p-5 bg-[#FAF8F5] border border-[#EBE4DC] rounded-2xl shadow-2xs overflow-hidden">
+              <div className="p-5 sm:p-6 bg-white border border-[#E2DAD1] rounded-3xl shadow-xs overflow-hidden space-y-4">
+                <div className="flex items-center justify-between pb-3 border-b border-[#EFEAE4]">
+                  <div className="flex items-center gap-2">
+                    <div className="w-7 h-7 rounded-xl bg-[#FDEEE6] flex items-center justify-center text-[#C05A35]">
+                      <Bot className="w-4 h-4" />
+                    </div>
+                    <div>
+                      <h4 className="text-xs font-bold text-[#1E1B16] leading-none">Copilot Analysis & Solution</h4>
+                      <span className="text-[10px] text-[#8C827A]">Algorithmic breakdown and verified fixes</span>
+                    </div>
+                  </div>
+                  <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">
+                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                    Complete
+                  </span>
+                </div>
                 <AIReportViewer content={aiAnalysis} onApplyCode={onApplyCode} />
               </div>
             ) : (

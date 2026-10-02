@@ -257,9 +257,9 @@ export default function AIWorkspacePage() {
   const [error, setError] = useState(null)
 
   // Active generating indicator for UI buttons and spinners
-  const isGenerating = Boolean(isGeneratingMap[activeMode]) || (activeMode === 'chat' && chatGenerating)
+  const isGenerating = Boolean(isGeneratingMap[activeMode]) || chatGenerating
   const setIsGenerating = (val) => {
-    if (activeMode === 'chat') setChatGenerating(val)
+    setChatGenerating(val)
   }
 
   const messagesEndRef = useRef(null)
@@ -289,7 +289,7 @@ export default function AIWorkspacePage() {
       if (res.ok) {
         const data = await res.json()
         const localIds = useSourceStore.getState().uploadedSources.map((s) => s.id)
-        const fresh = data.filter((s) => !localIds.includes(s.id)).map((s) => ({
+        const fresh = data.filter((s) => !localIds.includes(s.id) && (s.type || '').toLowerCase() !== 'note').map((s) => ({
           id: s.id,
           name: s.name,
           size: s.size || 0,
@@ -491,7 +491,7 @@ Begin our session by giving a warm 2-sentence welcome, introducing the first fun
         sourceIds: selectedMaterialIds,
         userId: user?.id || 'anonymous',
         history: [],
-        context: { mode: 'tutor', style: tutorStyle, topic: tutorTopic }
+        context: { action: 'tutor', mode: 'tutor', style: tutorStyle, topic: tutorTopic }
       })
 
       const greeting = response.message || response.data?.explanation || "Welcome to your tutoring session! Let's explore your study material together."
@@ -554,7 +554,7 @@ Begin our session by giving a warm 2-sentence welcome, introducing the first fun
           sourceIds: selectedMaterialIds,
           userId: user?.id || 'anonymous',
           history: messages.slice(-6).map(m => ({ role: m.role, content: m.content })),
-          context: { mode: activeMode, style: tutorStyle }
+          context: { action: activeMode === 'tutor' ? 'tutor' : undefined, mode: activeMode, style: tutorStyle }
         })
         const reply = response.message || response.data?.explanation || response.data?.answer || JSON.stringify(response.data)
         const tasks = response.data?.tasks || (response.data?.action === 'list_tasks' ? response.data?.pending_tasks : null) || []

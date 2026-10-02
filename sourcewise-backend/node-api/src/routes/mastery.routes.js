@@ -1,13 +1,18 @@
-﻿const express = require('express');
+const express = require('express');
 const router = express.Router();
 const { authenticate } = require('../middleware/auth');
 const supabase = require('../utils/supabase');
+
+const demoService = require('../services/demoAccountService');
 
 router.use(authenticate);
 
 // GET /mastery - Get all concept mastery
 router.get('/', async (req, res) => {
   try {
+    if (demoService.isDemoUser(req)) {
+      return res.json(demoService.getMastery());
+    }
     const { data, error } = await supabase
       .from('concept_mastery')
       .select('*')
@@ -86,6 +91,9 @@ router.post('/', async (req, res) => {
 // GET /mastery/gaps - Get knowledge gaps
 router.get('/gaps', async (req, res) => {
   try {
+    if (demoService.isDemoUser(req)) {
+      return res.json(demoService.getKnowledgeGaps().filter(g => g.status === 'open'));
+    }
     const { data, error } = await supabase
       .from('knowledge_gaps')
       .select('*')

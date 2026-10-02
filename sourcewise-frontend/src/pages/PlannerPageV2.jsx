@@ -114,11 +114,6 @@ export default function PlannerPageV2() {
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
           <MoodCheckinWidget currentMood={moodState} />
           <div className="space-y-4">
-            <CalendarSyncBanner
-              status={calendarStatus}
-              onConnect={() => store.connectCalendar().catch(() => {})}
-              onSync={() => store.syncCalendar().catch(() => {})}
-            />
             {plans.length > 0 && (
               <ParchmentTexture intensity="subtle" className="shadow-xs">
                 <div className="p-4">
@@ -222,11 +217,6 @@ export default function PlannerPageV2() {
             celebrating={celebrating}
           />
           <MoodCheckinWidget currentMood={moodState} compact />
-          <CalendarSyncBanner
-            status={calendarStatus}
-            onConnect={() => store.connectCalendar().catch(() => {})}
-            onSync={() => store.syncCalendar().catch(() => {})}
-          />
           <div className="space-y-2">
             <p className="text-[11px] font-extrabold uppercase tracking-widest text-[#8A817B] px-1">Chapters</p>
             {subjects.map((s) => (

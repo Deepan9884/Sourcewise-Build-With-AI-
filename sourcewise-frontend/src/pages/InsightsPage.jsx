@@ -28,7 +28,6 @@ export default function InsightsPage({ embedded = false }) {
   const [mood, setMood] = useState(null)
   const [events, setEvents] = useState([])
   const [planRows, setPlanRows] = useState([])
-  const [tablesMissing, setTablesMissing] = useState(false)
 
   useEffect(() => {
     if (!accessToken) return
@@ -53,13 +52,13 @@ export default function InsightsPage({ embedded = false }) {
         }))
         setPlanRows(rows)
       } catch (err) {
-        if (/missing|schema cache/i.test(err.message)) setTablesMissing(true)
+        setPlanRows([])
       }
     })()
     return () => { cancelled = true }
   }, [accessToken])
 
-  // Streak calendar: last 12 weeks of event days.
+  // Streak calendar: last year of event days.
   const weeks = (() => {
     const byDay = new Map()
     for (const ev of events) {
@@ -67,7 +66,7 @@ export default function InsightsPage({ embedded = false }) {
       if (k) byDay.set(k, (byDay.get(k) || 0) + 1)
     }
     const today = new Date()
-    const start = new Date(today); start.setDate(start.getDate() - 83)
+    const start = new Date(today); start.setDate(start.getDate() - 364)
     // align to Monday
     while (start.getDay() !== 1) start.setDate(start.getDate() - 1)
     const cells = []
@@ -77,6 +76,21 @@ export default function InsightsPage({ embedded = false }) {
     }
     return cells
   })()
+
+  // LeetCode-style streak & consistency stats
+  const totalActiveDays = weeks.filter((c) => c.count > 0).length
+  const totalEventsCount = weeks.reduce((sum, c) => sum + c.count, 0)
+  let maxStreak = 0
+  let currentRun = 0
+  for (const c of weeks) {
+    if (c.count > 0) {
+      currentRun++
+      if (currentRun > maxStreak) maxStreak = currentRun
+    } else {
+      currentRun = 0
+    }
+  }
+  const currentStreak = overview?.streak ?? currentRun
 
   const intensity = (c) => !c.count ? 'bg-[#F1ECE6]' : c.count < 3 ? 'bg-teal/30' : c.count < 6 ? 'bg-teal/60' : 'bg-teal'
 
@@ -158,11 +172,7 @@ export default function InsightsPage({ embedded = false }) {
       {/* Deviation table */}
       <div className="p-4 rounded-2xl bg-white border border-line shadow-xs">
         <h3 className="text-sm font-bold text-ink mb-2">Plan deviation</h3>
-        {tablesMissing ? (
-          <p className="text-sm text-amberbrand bg-amberbrand-soft border border-amberbrand/20 rounded-xl px-3 py-2">
-            Study-plan tables are missing in Supabase. Run <code>sourcewise-backend/node-api/v13_study_organizer_schema.sql</code> in the SQL Editor, then reload.
-          </p>
-        ) : planRows.length === 0 ? (
+        {planRows.length === 0 ? (
           <p className="text-sm text-faint">No study plans yet — create one from <b>My Plan</b>.</p>
         ) : (
           <div className="overflow-x-auto">
@@ -191,15 +201,103 @@ export default function InsightsPage({ embedded = false }) {
         )}
       </div>
 
-      {/* Streak calendar */}
-      <div className="p-4 rounded-2xl bg-white border border-line shadow-xs">
-        <h3 className="text-sm font-bold text-ink mb-2">Consistency · last 12 weeks</h3>
-        <div className="flex flex-wrap gap-1" data-testid="streak-calendar">
-          {weeks.map((c) => (
-            <span key={c.date} title={`${c.date}: ${c.count} events`} className={`w-3 h-3 rounded-[3px] ${intensity(c)}`} />
-          ))}
+      {/* Streak calendar (LeetCode style) */}
+      <div className="p-5 rounded-2xl bg-white border border-line shadow-xs overflow-hidden">
+        <div className="flex flex-col xl:flex-row items-stretch justify-between gap-6">
+          
+          {/* Left / Heatmap Section */}
+          <div className="flex-1 min-w-0">
+            <div className="flex items-center justify-between mb-3">
+              <h3 className="text-sm font-bold text-ink flex items-center gap-2">
+                Study Consistency
+                <span className="text-xs font-normal text-faint">· Past 52 weeks</span>
+              </h3>
+            </div>
+
+            {/* Heatmap with day-of-week labels */}
+            <div className="overflow-x-auto pb-2 pt-1 px-1 scrollbar-hide">
+              <div className="flex gap-2 min-w-max pr-6">
+                <div className="flex flex-col justify-between text-[10px] text-faint font-medium py-0.5 select-none pr-1">
+                  <span>Mon</span>
+                  <span className="opacity-0">Tue</span>
+                  <span>Wed</span>
+                  <span className="opacity-0">Thu</span>
+                  <span>Fri</span>
+                  <span className="opacity-0">Sat</span>
+                  <span>Sun</span>
+                </div>
+
+                <div className="grid grid-rows-7 grid-flow-col gap-[3px] w-max pr-2" data-testid="streak-calendar">
+                  {weeks.map((c) => (
+                    <span
+                      key={c.date}
+                      title={`${c.date}: ${c.count} study activities`}
+                      className={`w-3 h-3 rounded-full ${intensity(c)} transition-all hover:scale-125 hover:ring-2 hover:ring-teal/40 cursor-pointer`}
+                    />
+                  ))}
+                </div>
+              </div>
+            </div>
+
+            {/* Legend */}
+            <div className="flex items-center justify-between mt-3 text-[11px] text-faint">
+              <div className="flex items-center gap-1.5 font-medium">
+                <span>Less</span>
+                <span className="w-2.5 h-2.5 rounded-full bg-[#F1ECE6]" />
+                <span className="w-2.5 h-2.5 rounded-full bg-teal/30" />
+                <span className="w-2.5 h-2.5 rounded-full bg-teal/60" />
+                <span className="w-2.5 h-2.5 rounded-full bg-teal" />
+                <span>More</span>
+              </div>
+              <span className="text-faint text-[10px] hidden sm:inline">
+                Hover circle to view details
+              </span>
+            </div>
+          </div>
+
+          {/* Right / LeetCode-style Stats Panel (Clean sans-serif typography) */}
+          <div className="xl:w-72 shrink-0 flex flex-col justify-between pt-1 xl:border-l xl:border-line/70 xl:pl-6 space-y-3">
+            <div className="grid grid-cols-2 gap-2.5">
+              <div className="p-3 rounded-2xl bg-stone-50 border border-line/70 flex flex-col justify-between">
+                <span className="text-[10px] font-bold text-faint block uppercase tracking-wider">Total Active</span>
+                <div className="mt-1 flex items-baseline gap-1">
+                  <span className="text-2xl font-extrabold text-ink font-sans tracking-tight">{totalActiveDays}</span>
+                  <span className="text-xs font-semibold text-faint font-sans">days</span>
+                </div>
+              </div>
+
+              <div className="p-3 rounded-2xl bg-teal-soft/50 border border-teal/20 flex flex-col justify-between">
+                <span className="text-[10px] font-bold text-teal block uppercase tracking-wider">Current Streak</span>
+                <div className="mt-1 flex items-baseline gap-1">
+                  <span className="text-2xl font-extrabold text-teal font-sans tracking-tight">{currentStreak}</span>
+                  <span className="text-xs font-semibold text-teal/70 font-sans">days</span>
+                </div>
+              </div>
+
+              <div className="p-3 rounded-2xl bg-amberbrand-soft/50 border border-amberbrand/20 flex flex-col justify-between">
+                <span className="text-[10px] font-bold text-amber-800 block uppercase tracking-wider">Max Streak</span>
+                <div className="mt-1 flex items-baseline gap-1">
+                  <span className="text-2xl font-extrabold text-amber-900 font-sans tracking-tight">{Math.max(maxStreak, currentStreak)}</span>
+                  <span className="text-xs font-semibold text-amber-800/70 font-sans">days</span>
+                </div>
+              </div>
+
+              <div className="p-3 rounded-2xl bg-stone-50 border border-line/70 flex flex-col justify-between">
+                <span className="text-[10px] font-bold text-faint block uppercase tracking-wider">Activities</span>
+                <div className="mt-1 flex items-baseline gap-1">
+                  <span className="text-2xl font-extrabold text-ink font-sans tracking-tight">{totalEventsCount}</span>
+                  <span className="text-xs font-semibold text-faint font-sans">total</span>
+                </div>
+              </div>
+            </div>
+
+            <div className="p-2.5 rounded-xl bg-stone-50/70 border border-line/60 text-xs text-body font-sans flex items-center justify-between">
+              <span className="text-faint font-medium">Past 365 days coverage</span>
+              <span className="font-bold text-ink font-sans">{Math.round((totalActiveDays / 365) * 100)}%</span>
+            </div>
+          </div>
+
         </div>
-        <p className="text-xs text-faint mt-2">Darker = more study activity that day.</p>
       </div>
 
       {/* Weak topics + next */}

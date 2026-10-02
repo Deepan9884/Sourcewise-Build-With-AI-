@@ -6,11 +6,15 @@ const express = require('express');
 const router = express.Router();
 const { authenticate } = require('../middleware/auth');
 const moodService = require('../services/moodService');
+const demoService = require('../services/demoAccountService');
 
 router.use(authenticate);
 
 router.post('/checkin', async (req, res) => {
   try {
+    if (demoService.isDemoUser(req)) {
+      return res.status(201).json(demoService.recordMoodCheckin(req.body));
+    }
     const userId = req.user.userId || req.user.id || req.user._id;
     const data = await moodService.recordCheckin(userId, req.body);
     res.status(201).json(data);
@@ -21,6 +25,9 @@ router.post('/checkin', async (req, res) => {
 
 router.get('/history', async (req, res) => {
   try {
+    if (demoService.isDemoUser(req)) {
+      return res.json(demoService.getMoodHistory());
+    }
     const userId = req.user.userId || req.user.id || req.user._id;
     const hours = parseInt(req.query.hours, 10) || 24 * 7;
     const limit = Math.min(parseInt(req.query.limit, 10) || 50, 200);
@@ -33,6 +40,9 @@ router.get('/history', async (req, res) => {
 
 router.get('/current', async (req, res) => {
   try {
+    if (demoService.isDemoUser(req)) {
+      return res.json(demoService.getMoodCurrent());
+    }
     const userId = req.user.userId || req.user.id || req.user._id;
     const state = await moodService.getCurrentMoodState(userId);
     res.json(state);
@@ -43,6 +53,9 @@ router.get('/current', async (req, res) => {
 
 router.get('/insights', async (req, res) => {
   try {
+    if (demoService.isDemoUser(req)) {
+      return res.json(demoService.getMoodInsights());
+    }
     const userId = req.user.userId || req.user.id || req.user._id;
     const days = parseInt(req.query.days, 10) || 14;
     const [corr, current] = await Promise.all([

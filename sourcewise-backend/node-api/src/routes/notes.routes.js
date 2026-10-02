@@ -31,11 +31,16 @@ function normalizeNote(row) {
   };
 }
 
+const demoService = require('../services/demoAccountService');
+
 /**
  * GET /notes - List all notes for the authenticated user
  */
 router.get('/', async (req, res) => {
   try {
+    if (demoService.isDemoUser(req)) {
+      return res.json(demoService.getNotes());
+    }
     const { data, error } = await supabase
       .from('sources')
       .select('*')

@@ -67,6 +67,7 @@ async def agent_chat(req: AgentRequest):
                     count=req.context.get("count") or None,
                     difficulty=req.context.get("difficulty") or "medium",
                     focus=req.context.get("focus") or None,
+                    mode=req.context.get("style") or req.context.get("mode") or "direct",
                     question=req.message,
                     source_ids=req.source_ids,
                 )

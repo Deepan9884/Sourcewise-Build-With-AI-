@@ -3,10 +3,15 @@ const router = express.Router();
 const { authenticate } = require('../middleware/auth');
 const supabase = require('../utils/supabase');
 
+const demoService = require('../services/demoAccountService');
+
 router.use(authenticate);
 
 // GET /planner - List all planners
 router.get('/', async (req, res) => {
+  if (demoService.isDemoUser(req)) {
+    return res.json(demoService.getPlans());
+  }
   const { data, error } = await supabase
     .from('planners')
     .select('*')

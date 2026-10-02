@@ -19,6 +19,143 @@ export const CATEGORIES = [
 
 export const INITIAL_EVENTS = [
   {
+    id: 'evt-oct-hackathon',
+    title: 'SourceWise AI Hackathon - Final Evaluation & Judging',
+    category: 'Hackathon',
+    mode: 'Hybrid',
+    startDate: '2026-10-02',
+    endDate: '2026-10-03',
+    venue: 'Main Innovation Arena / Virtual Demo',
+    organizer: 'Google Cloud & AI Study Alliance',
+    role: 'Lead Architect',
+    outcome: 'Grand Finalist',
+    prizeAward: 'Hackathon Excellence Trophy + Cloud Grants',
+    projectName: 'SourceWise AI Study Copilot',
+    projectDescription: 'Architected an autonomous AI study planner and multi-modal knowledge synthesis engine for undergraduate engineering students.',
+    techStack: ['React 19', 'FastAPI', 'ChromaDB', 'Gemini AI', 'TailwindCSS'],
+    teamMembers: 'Alex Morgan (Lead), Priya K., Arun S.',
+    keyLearnings: 'Optimized RAG vector retrieval, client-side state hydration, and adaptive mood study scheduling.',
+    skillsGained: ['Generative AI', 'Full-Stack Architecture', 'Pitching', 'Team Leadership'],
+    rating: 5,
+    certificateUrl: 'https://example.com/certificates/sih-2026-winner.pdf',
+    projectRepoUrl: 'https://github.com/sourcewise/sourcewise-ai',
+    liveDemoUrl: 'https://sourcewise.dev',
+    socialPostUrl: 'https://linkedin.com/in/alexmorgan',
+    createdAt: '2026-10-01T10:00:00Z'
+  },
+  {
+    id: 'evt-oct-workshop',
+    title: 'Google Cloud GenAI Builders Workshop',
+    category: 'Workshop',
+    mode: 'In-Person',
+    startDate: '2026-10-06',
+    endDate: '2026-10-06',
+    venue: 'Google Developer Space & Campus Hall 2',
+    organizer: 'Google Cloud Team',
+    role: 'Participant',
+    outcome: 'Completed & Certified',
+    prizeAward: 'Verified GenAI Cloud Badge',
+    keyLearnings: 'Deep dive into semantic chunking strategies, sentence-transformers, embedding caching, and containerized FastAPI pipelines on Google Cloud Run.',
+    techStack: ['Python', 'LangChain', 'Docker', 'Google Cloud Platform'],
+    skillsGained: ['Vector Databases', 'Prompt Engineering', 'Cloud Deployment'],
+    rating: 5,
+    createdAt: '2026-10-01T14:30:00Z'
+  },
+  {
+    id: 'evt-oct-midterm',
+    title: 'Linear Algebra & Spectral Theory Midterm Examination',
+    category: 'Exam',
+    mode: 'In-Person',
+    startDate: '2026-10-12',
+    endDate: '2026-10-12',
+    venue: 'Hall 4B, Mathematics Department',
+    organizer: 'Department of Mathematics',
+    role: 'Student',
+    outcome: 'Scheduled Midterm',
+    skillsGained: ['Eigenvalues', 'Spectral Theorem', 'Linear Maps'],
+    rating: 5,
+    createdAt: '2026-10-01T09:00:00Z'
+  },
+  {
+    id: 'evt-oct-symp',
+    title: 'IEEE International Cloud & Distributed Systems Symposium',
+    category: 'Symposium',
+    mode: 'In-Person',
+    startDate: '2026-10-16',
+    endDate: '2026-10-17',
+    venue: 'Convention Center, Anna University',
+    organizer: 'IEEE Computer Society',
+    role: 'Attendee & Presenter',
+    outcome: 'Paper Accepted',
+    prizeAward: 'Best Student Paper Honorable Mention',
+    projectName: 'High-Throughput Vector Indexing for RAG',
+    techStack: ['ChromaDB', 'Python', 'FastAPI'],
+    skillsGained: ['Distributed Systems', 'Vector Search', 'Technical Defense'],
+    rating: 5,
+    createdAt: '2026-10-01T12:00:00Z'
+  },
+  {
+    id: 'evt-oct-comp',
+    title: 'ACM ICPC Regional Algorithm Contest',
+    category: 'Competition',
+    mode: 'In-Person',
+    startDate: '2026-10-20',
+    endDate: '2026-10-20',
+    venue: 'Computing Complex, Tech Campus',
+    organizer: 'ACM Student Chapter',
+    role: 'Contestant',
+    outcome: 'Regional Rank #4',
+    prizeAward: 'Certificate of Distinction',
+    skillsGained: ['Dynamic Programming', 'Graph Theory', 'Speed Coding'],
+    rating: 5,
+    createdAt: '2026-10-01T08:00:00Z'
+  },
+  {
+    id: 'evt-oct-dsa',
+    title: 'CLRS Advanced Data Structures & Algorithms Lab Exam',
+    category: 'Exam',
+    mode: 'In-Person',
+    startDate: '2026-10-22',
+    endDate: '2026-10-22',
+    venue: 'Computing Lab 3',
+    organizer: 'School of Computer Science',
+    role: 'Student',
+    outcome: 'Final Lab Exam',
+    skillsGained: ['Red-Black Trees', 'Graph Traversal', 'DP Optimization'],
+    rating: 5,
+    createdAt: '2026-10-01T11:00:00Z'
+  },
+  {
+    id: 'evt-oct-webinar',
+    title: 'Transformer Architecture & LLM Alignment Masterclass',
+    category: 'Webinar',
+    mode: 'Virtual',
+    startDate: '2026-10-26',
+    endDate: '2026-10-26',
+    venue: 'Live Stream / Google Meet',
+    organizer: 'DeepLearning.AI',
+    role: 'Attendee',
+    outcome: 'Completed Masterclass',
+    skillsGained: ['RLHF', 'Attention Mechanisms', 'Quantization'],
+    rating: 5,
+    createdAt: '2026-10-01T16:00:00Z'
+  },
+  {
+    id: 'evt-oct-ml-final',
+    title: 'Stanford CS229 Machine Learning Comprehensive Final',
+    category: 'Exam',
+    mode: 'In-Person',
+    startDate: '2026-10-30',
+    endDate: '2026-10-30',
+    venue: 'Main Examination Hall A',
+    organizer: 'Stanford Online / Academic Council',
+    role: 'Student',
+    outcome: 'Final Exam',
+    skillsGained: ['Supervised Learning', 'Neural Networks', 'SVMs', 'PCA'],
+    rating: 5,
+    createdAt: '2026-10-01T09:30:00Z'
+  },
+  {
     id: 'evt-1',
     title: 'Smart India Hackathon 2026 - Regional Finals',
     category: 'Hackathon',
@@ -33,54 +170,15 @@ export const INITIAL_EVENTS = [
     projectName: 'SourceWise AI Study Copilot',
     projectDescription: 'Architected an autonomous AI study planner and multi-modal knowledge synthesis engine for undergraduate engineering students.',
     techStack: ['React 19', 'FastAPI', 'ChromaDB', 'Gemini AI', 'TailwindCSS'],
-    teamMembers: 'Deepan D. (Lead), Priya K., Arun S.',
+    teamMembers: 'Alex Morgan (Lead), Priya K., Arun S.',
     keyLearnings: 'Learned vector similarity retrieval optimization, client-side state hydration, and delivering high-impact pitch decks to industry judges within 3 minutes.',
     skillsGained: ['Generative AI', 'Full-Stack Architecture', 'Pitching', 'Team Leadership'],
     rating: 5,
     certificateUrl: 'https://example.com/certificates/sih-2026-winner.pdf',
     projectRepoUrl: 'https://github.com/sourcewise/sourcewise-ai',
     liveDemoUrl: 'https://sourcewise.dev',
-    socialPostUrl: 'https://linkedin.com/in/deepand',
+    socialPostUrl: 'https://linkedin.com/in/alexmorgan',
     createdAt: '2026-03-16T10:00:00Z'
-  },
-  {
-    id: 'evt-2',
-    title: 'Advanced GenAI & Cloud RAG Workshop',
-    category: 'Workshop',
-    mode: 'In-Person',
-    startDate: '2026-02-20',
-    venue: 'Department Seminar Hall 3, Tech Campus',
-    organizer: 'Google Developer Groups (GDG) on Campus',
-    role: 'Participant',
-    outcome: 'Completed & Certified',
-    prizeAward: 'Verified Cloud Skill Badge',
-    keyLearnings: 'Deep dive into semantic chunking strategies, sentence-transformers, embedding caching, and containerized FastAPI pipelines on Google Cloud Run.',
-    techStack: ['Python', 'LangChain', 'Docker', 'Google Cloud Platform'],
-    skillsGained: ['Vector Databases', 'Prompt Engineering', 'Cloud Deployment'],
-    rating: 5,
-    certificateUrl: 'https://example.com/certificates/gdg-genai-badge.pdf',
-    createdAt: '2026-02-21T14:30:00Z'
-  },
-  {
-    id: 'evt-3',
-    title: 'National Level Tech Symposium: TechVeda 2026',
-    category: 'Symposium',
-    mode: 'In-Person',
-    startDate: '2026-01-28',
-    venue: 'Auditorium Block, PSG Tech, Coimbatore',
-    organizer: 'Department of Computer Science & Engineering',
-    role: 'Solo Contestant',
-    outcome: '1st Runner-Up',
-    prizeAward: 'Silver Medal & ₹10,000 Merit Award',
-    projectName: 'Real-time Autonomous Edge Vision',
-    projectDescription: 'Presented low-latency edge AI object detection models compiled for embedded microcontroller systems with sub-15ms inference latency.',
-    techStack: ['Python', 'OpenCV', 'TensorFlow Lite', 'Raspberry Pi'],
-    keyLearnings: 'Tackled aggressive technical Q&A defense from IEEE reviewers, live hardware sensor debugging under stage lighting, and concise scientific slide design.',
-    skillsGained: ['Edge AI', 'Computer Vision', 'Technical Defense', 'Hardware Debugging'],
-    rating: 4,
-    certificateUrl: 'https://example.com/certificates/techveda-runnerup.pdf',
-    projectRepoUrl: 'https://github.com/sourcewise/edge-vision',
-    createdAt: '2026-01-29T18:00:00Z'
   }
 ];
 
@@ -96,7 +194,16 @@ export function getStoredEvents() {
       return INITIAL_EVENTS;
     }
     const parsed = JSON.parse(raw);
-    return Array.isArray(parsed) ? parsed : INITIAL_EVENTS;
+    const list = Array.isArray(parsed) ? parsed : INITIAL_EVENTS;
+    // Auto-merge new October 2026 initial events if missing from localStorage
+    const existingIds = new Set(list.map(e => e.id));
+    const missing = INITIAL_EVENTS.filter(e => !existingIds.has(e.id));
+    if (missing.length > 0) {
+      const merged = [...missing, ...list];
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(merged));
+      return merged;
+    }
+    return list;
   } catch (err) {
     console.warn('[studentEvents] Failed to load events from storage:', err);
     return INITIAL_EVENTS;

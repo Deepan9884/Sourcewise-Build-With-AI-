@@ -7,16 +7,37 @@ import { usePlannerStore } from '../../store/plannerStore'
 
 function parseTime(dt) {
   if (!dt) return ''
-  try { return new Date(dt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) }
-  catch { return '' }
+  if (/^\d{1,2}:\d{2}(:\d{2})?$/.test(dt)) {
+    const [h, m] = dt.split(':')
+    const d = new Date()
+    d.setHours(Number(h), Number(m), 0, 0)
+    return d.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })
+  }
+  try {
+    const d = new Date(dt)
+    if (isNaN(d.getTime())) return dt
+    return d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+  } catch {
+    return dt
+  }
 }
 
 function isNow(slot) {
   try {
-    const now = Date.now()
-    const start = new Date(slot.start_time || slot.scheduled_start).getTime()
-    const end = new Date(slot.end_time || slot.scheduled_end).getTime()
-    return Number.isFinite(start) && Number.isFinite(end) && now >= start && now <= end
+    const now = new Date()
+    const nowMin = now.getHours() * 60 + now.getMinutes()
+    const parseM = (t) => {
+      if (!t) return null
+      if (/^\d{1,2}:\d{2}/.test(t)) {
+        const [h, m] = t.split(':')
+        return Number(h) * 60 + Number(m)
+      }
+      const d = new Date(t)
+      return isNaN(d.getTime()) ? null : d.getHours() * 60 + d.getMinutes()
+    }
+    const sm = parseM(slot.start_time || slot.scheduled_start)
+    const em = parseM(slot.end_time || slot.scheduled_end)
+    return sm !== null && em !== null && nowMin >= sm && nowMin <= em
   } catch { return false }
 }
 

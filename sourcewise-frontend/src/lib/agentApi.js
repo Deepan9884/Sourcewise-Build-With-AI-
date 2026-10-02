@@ -47,6 +47,7 @@ export async function sendAgentMessage({
     source_ids: cleanSourceIds,
     user_id: String(userId || 'anonymous'),
     conversation_history: cleanHistory,
+    context: context,
   }
   
   // Only add context if it has data
@@ -61,12 +62,12 @@ export async function sendAgentMessage({
       headers: gatewayHeaders(),
       body: JSON.stringify(body),
     });
-  } catch {
-    return buildFallbackAgentResponse(message, context);
+  } catch (err) {
+    throw new Error(`Failed to connect to backend: ${err.message}. Please ensure the node-api is running on ${API_URL}`);
   }
 
   if (res.status === 404) {
-    // Old backend without the gateway proxy — fall back to direct python-ai
+    // Old backend without the gateway proxy - fall back to direct python-ai
     try {
       const direct = await fetch(`${AI_BASE}/agent`, {
         method: 'POST',
@@ -74,17 +75,17 @@ export async function sendAgentMessage({
         body: JSON.stringify(body),
       });
       if (!direct.ok) {
-        return buildFallbackAgentResponse(message, context);
+        throw new Error(`Python AI Agent returned status ${direct.status}`);
       }
       return direct.json();
-    } catch {
-      return buildFallbackAgentResponse(message, context);
+    } catch (err) {
+      throw new Error(`Failed to connect to Python AI: ${err.message}. Please ensure the python-ai is running on ${AI_BASE}`);
     }
   }
 
   if (!res.ok) {
     if (res.status === 503 || res.status === 502) {
-      return buildFallbackAgentResponse(message, context);
+      throw new Error('AI Backend is unreachable. Please ensure the python-ai service is running.');
     }
     const err = await res.json().catch(() => ({ error: res.statusText }));
     throw new Error(err.error || err.detail || `Agent request failed with status ${res.status}`);

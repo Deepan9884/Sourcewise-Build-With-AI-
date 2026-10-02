@@ -82,6 +82,16 @@ router.post('/login', async (req, res) => {
       return res.status(400).json({ error: 'Email and password are required' });
     }
 
+    // Dedicated Hackathon Demo Account Shortcut
+    if (email.toLowerCase().trim() === 'demo@gmail.com' && password === '123456') {
+      const demoId = '098ac993-cd75-446e-9ccd-b0ff77d8278c';
+      const token = jwt.sign({ userId: demoId }, process.env.JWT_SECRET, { expiresIn: '7d' });
+      return res.json({
+        token,
+        user: { id: demoId, email: 'demo@gmail.com', name: 'Alex Morgan' },
+      });
+    }
+
     // Get user with password hash
     const { data: user, error } = await supabase
       .from('users')

@@ -30,7 +30,7 @@ export default function SourcesPage() {
         const data = await res.json()
         // Merge with local store
         const localIds = uploadedSources.map(s => s.id)
-        const newSources = data.filter(s => !localIds.includes(s.id)).map(s => ({
+        const newSources = data.filter(s => !localIds.includes(s.id) && (s.type || '').toLowerCase() !== 'note').map(s => ({
           id: s.id,
           name: s.name,
           size: s.size || 0,

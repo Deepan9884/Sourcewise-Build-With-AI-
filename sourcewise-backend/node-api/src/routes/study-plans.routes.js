@@ -65,14 +65,45 @@ router.post('/', async (req, res) => {
   }
 });
 
+const demoService = require('../services/demoAccountService');
+
 // GET /study-plans — list
 router.get('/', async (req, res) => {
   try {
+    if (demoService.isDemoUser(req)) {
+      return res.json(demoService.getPlans());
+    }
+    const userId = userIdOf(req);
     const { data, error } = await supabase.from('study_plans').select('*')
-      .eq('user_id', userIdOf(req)).order('created_at', { ascending: false });
-    if (error) throw error;
+      .eq('user_id', userId).order('created_at', { ascending: false });
+    if (error) {
+      if (/schema cache|relation .* does not exist|not found/i.test(error.message)) {
+        // Graceful fallback to legacy planners table
+        const { data: legacy } = await supabase.from('planners').select('*')
+          .eq('user_id', userId).order('created_at', { ascending: false });
+        const mapped = (legacy || []).map((p) => ({
+          id: p.id,
+          name: p.title || p.subject || 'Study Plan',
+          exam_period_start: p.created_at,
+          exam_period_end: p.exam_date,
+          status: p.status || 'active',
+          completedSlots: 0,
+          expectedSlots: 0,
+          pacePct: 100,
+          deviationDays: 0,
+          onTrack: true,
+          subjects: [{ subject_name: p.subject || 'General' }],
+          _legacy: true,
+        }));
+        return res.json(mapped);
+      }
+      throw error;
+    }
     res.json(data || []);
   } catch (error) {
+    if (/schema cache|relation .* does not exist|not found/i.test(error.message)) {
+      return res.json([]);
+    }
     res.status(500).json({ error: error.message });
   }
 });
@@ -80,6 +111,9 @@ router.get('/', async (req, res) => {
 // GET /study-plans/:id — full plan + subjects + upcoming slots
 router.get('/:id', requirePlanOwner(), async (req, res) => {
   try {
+    if (demoService.isDemoUser(req)) {
+      return res.json(demoService.getPlanById(req.params.id));
+    }
     const { data: plan } = await supabase.from('study_plans').select('*').eq('id', req.planId).single();
     const { data: subjects } = await supabase.from('plan_subjects').select('*').eq('plan_id', req.planId);
     const today = new Date().toISOString().slice(0, 10);
@@ -205,6 +239,9 @@ router.post('/:id/replan', requirePlanOwner(), async (req, res) => {
 // GET /study-plans/:id/schedule?from&to — range of slots
 router.get('/:id/schedule', requirePlanOwner(), async (req, res) => {
   try {
+    if (demoService.isDemoUser(req)) {
+      return res.json(demoService.getSchedule(req.planId, req.query.from, req.query.to));
+    }
     let q = supabase.from('schedule_slots').select('*, plan_subjects(subject_name, color, exam_date)')
       .eq('plan_id', req.planId).order('date', { ascending: true }).order('start_time', { ascending: true }).limit(1000);
     if (req.query.from) q = q.gte('date', req.query.from);
@@ -220,6 +257,9 @@ router.get('/:id/schedule', requirePlanOwner(), async (req, res) => {
 // GET /study-plans/:id/today — today's slots + mood context
 router.get('/:id/today', requirePlanOwner(), async (req, res) => {
   try {
+    if (demoService.isDemoUser(req)) {
+      return res.json(demoService.getTodaySlots(req.planId));
+    }
     const today = new Date().toISOString().slice(0, 10);
     const { data: slots } = await supabase.from('schedule_slots').select('*, plan_subjects(subject_name, color)')
       .eq('plan_id', req.planId).eq('date', today).order('start_time', { ascending: true });
@@ -234,6 +274,9 @@ router.get('/:id/today', requirePlanOwner(), async (req, res) => {
 // GET /study-plans/:id/replans — history
 router.get('/:id/replans', requirePlanOwner(), async (req, res) => {
   try {
+    if (demoService.isDemoUser(req)) {
+      return res.json(demoService.getReplans(req.planId));
+    }
     const { data } = await supabase.from('replan_events').select('*')
       .eq('plan_id', req.planId).order('created_at', { ascending: false }).limit(50);
     res.json(data || []);
@@ -245,6 +288,9 @@ router.get('/:id/replans', requirePlanOwner(), async (req, res) => {
 // GET /study-plans/:id/pacing — completed-vs-expected, deviation, milestones
 router.get('/:id/pacing', requirePlanOwner(), async (req, res) => {
   try {
+    if (demoService.isDemoUser(req)) {
+      return res.json(demoService.getPacing(req.planId));
+    }
     const today = new Date().toISOString().slice(0, 10);
     const [{ data: slots }, { data: subjects }] = await Promise.all([
       supabase.from('schedule_slots').select('id,date,status,duration_minutes,slot_type').eq('plan_id', req.planId),

@@ -345,16 +345,6 @@ export default function DashboardPage() {
   const totalXp = quests.filter((q) => q.completed).reduce((sum, q) => sum + q.xp, 0)
   const currentCard = INITIAL_FLASHCARDS[currentCardIndex]
 
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center min-h-[50vh]">
-        <div className="flex flex-col items-center gap-3">
-          <div className="w-10 h-10 border-3 border-primary-container border-t-transparent rounded-full animate-spin" />
-          <span className="text-sm font-medium text-on-surface-variant">Calibrating study feed...</span>
-        </div>
-      </div>
-    )
-  }
 
   return (
     <div className="max-w-7xl mx-auto space-y-7 pb-16">
@@ -389,17 +379,6 @@ export default function DashboardPage() {
               {greeting.sub}
             </p>
           </div>
-        </div>
-
-        {/* Header Action Buttons */}
-        <div className="flex items-center gap-2.5 shrink-0">
-          <button
-            onClick={() => navigate('/workspace')}
-            className="h-11 px-5 rounded-full bg-primary-container hover:bg-primary text-on-primary font-semibold text-sm shadow-[0_4px_16px_-4px_rgba(224,122,95,0.4)] transition-all flex items-center gap-2"
-          >
-            <Brain className="w-4 h-4" />
-            <span>Open AI Workspace</span>
-          </button>
         </div>
       </motion.div>
 

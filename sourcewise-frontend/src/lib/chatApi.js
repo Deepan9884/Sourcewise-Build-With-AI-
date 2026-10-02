@@ -193,12 +193,11 @@ export async function streamChat({
   const isHttps = typeof window !== 'undefined' && window.location.protocol === 'https:';
   const isHttpTarget = AI_BASE.startsWith('http://');
 
-  // If in HTTPS production and AI_BASE is HTTP localhost (or if Python AI is unavailable):
-  // Gracefully simulate real-time token streaming from the intelligent study assistant
+  // Gracefully handle mixed content issues
   if (isHttps && isHttpTarget) {
-    console.warn('[streamChat] Using intelligent study assistant (mixed-content safeguard):', AI_BASE);
-    const reply = buildStudyAssistantResponse(question, sourceIds);
-    await simulateStreamResponse(reply, sourceIds, { onToken, onDone, onCitations });
+    console.warn('[streamChat] Skipping unencrypted Python AI request from HTTPS context:', AI_BASE);
+    onError?.('Cannot connect to local HTTP AI backend from a secure HTTPS site. Please configure a secure AI_BASE or run the frontend locally.');
+    onDone?.();
     return;
   }
 
@@ -249,9 +248,9 @@ export async function streamChat({
       }
     }
   } catch (err) {
-    console.warn('[streamChat] Real-time stream failed or offline, falling back to assistant:', err?.message);
-    const reply = buildStudyAssistantResponse(question, sourceIds);
-    await simulateStreamResponse(reply, sourceIds, { onToken, onDone, onCitations });
+    console.error('[streamChat] Real-time stream failed:', err?.message);
+    onError?.(`AI Backend is unreachable or returned an error: ${err?.message}. Please ensure the python-ai service is running and accessible.`);
+    onDone?.();
   }
 }
 

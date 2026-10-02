@@ -172,7 +172,7 @@ export default {
       fontFamily: {
         sans: ['Plus Jakarta Sans', 'Inter', 'sans-serif'],
         display: ['Epilogue', 'Playfair Display', 'serif'],
-        mono: ['JetBrains Mono', 'monospace'],
+        mono: ['"JetBrains Mono"', '"Fira Code"', '"Cascadia Code"', 'Consolas', 'Menlo', 'Monaco', '"Source Code Pro"', 'monospace'],
         "title-md": ["Plus Jakarta Sans", "sans-serif"],
         "display-hero-mobile": ["Epilogue", "sans-serif"],
         "label-sm": ["Plus Jakarta Sans", "sans-serif"],

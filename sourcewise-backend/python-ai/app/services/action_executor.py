@@ -197,7 +197,7 @@ Create exactly {count} questions. Be direct and factual."""
                 continue
             
             # Match Q: or **Q**: or similar patterns
-            q_match = re.search(r'(?:Q:|Question:)\s*(.+?)(?:\n|$)', block)
+            q_match = re.search(r'\*?\*?(?:Q|Question)(?:\s*\d+)?\*?\*?:\s*(.+?)(?:\n|$)', block, re.IGNORECASE)
             if not q_match:
                 # Try to find first line as question
                 lines = block.strip().split('\n')
@@ -303,8 +303,8 @@ Create exactly {count} cards. Be concise and factual."""
             if not block.strip():
                 continue
             
-            front_match = re.search(r'(?:FRONT|Term|Question):\s*(.+?)(?:\n|$)', block)
-            back_match = re.search(r'(?:BACK|Answer|Definition):\s*(.+?)(?:\n|$)', block)
+            front_match = re.search(r'\*?\*?(?:FRONT|Term|Question|Front)\*?\*?:\s*(.+?)(?:\n|$)', block, re.IGNORECASE)
+            back_match = re.search(r'\*?\*?(?:BACK|Answer|Definition|Back)\*?\*?:\s*(.+?)(?:\n|$)', block, re.IGNORECASE)
             
             if front_match and back_match:
                 cards.append({
@@ -518,7 +518,7 @@ Rules:
         mode_str = intent.mode or "direct"
         
         try:
-            mode = TutoringMode(mode_str)
+            mode = TutoringMode(mode_str.lower())
         except ValueError:
             mode = TutoringMode.DIRECT
         

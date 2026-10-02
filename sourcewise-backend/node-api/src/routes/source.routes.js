@@ -13,11 +13,16 @@ const aiHeaders = () => (process.env.INTERNAL_API_KEY
   ? { 'X-Internal-Key': process.env.INTERNAL_API_KEY }
   : {});
 
+const demoService = require('../services/demoAccountService');
+
 router.use(authenticate);
 
 // GET /sources - List all user sources
 router.get('/', async (req, res) => {
   try {
+    if (demoService.isDemoUser(req)) {
+      return res.json(demoService.getSources());
+    }
     const { data, error } = await supabase
       .from('sources')
       .select('*')
@@ -34,6 +39,32 @@ router.get('/', async (req, res) => {
 router.post('/', async (req, res) => {
   try {
     const { name, type, size, status, chunks_indexed } = req.body;
+
+    if (demoService.isDemoUser(req)) {
+      const newSource = {
+        id: `src-demo-${Date.now()}`,
+        user_id: req.user._id,
+        name: name || 'Untitled',
+        title: name || 'Untitled',
+        type: type || 'pdf',
+        size: size || 102400,
+        status: status || 'ready',
+        chunks_count: chunks_indexed || 12,
+        chunks_indexed: chunks_indexed || 12,
+        chunksIndexed: chunks_indexed || 12,
+        created_at: new Date().toISOString(),
+        summary: 'Demo study material uploaded and indexed.',
+        concepts: ['Key Principles', 'Optimization Methods', 'System Overview'],
+        analysis: {
+          overview: 'Demo study material uploaded and indexed.',
+          key_concepts: ['Key Principles', 'Optimization Methods', 'System Overview'],
+          difficulty_assessment: 'medium',
+          estimated_study_time: 45
+        }
+      };
+      demoService.addSource(newSource);
+      return res.status(201).json(newSource);
+    }
 
     const { data, error } = await supabase
       .from('sources')
@@ -72,6 +103,11 @@ router.post('/', async (req, res) => {
 // GET /sources/:id - Get single source
 router.get('/:id', async (req, res) => {
   try {
+    if (demoService.isDemoUser(req)) {
+      const src = demoService.getSourceById(req.params.id);
+      if (src) return res.json(src);
+    }
+
     const { data, error } = await supabase
       .from('sources')
       .select('*')
@@ -105,6 +141,11 @@ router.patch('/:id', async (req, res) => {
 // DELETE /sources/:id - Delete source and cleanup vectors
 router.delete('/:id', async (req, res) => {
   try {
+    if (demoService.isDemoUser(req)) {
+      demoService.deleteSource(req.params.id);
+      return res.json({ message: 'Source deleted' });
+    }
+
     const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(req.params.id);
 
     // Delete from Supabase if this is a database UUID
@@ -149,6 +190,10 @@ router.delete('/:id', async (req, res) => {
 // POST /sources/:id/analyze - Trigger source analysis
 router.post('/:id/analyze', async (req, res) => {
   try {
+    if (demoService.isDemoUser(req)) {
+      const src = demoService.getSourceById(req.params.id);
+      if (src) return res.json(src.analysis || {});
+    }
     const { data: source, error: fetchError } = await supabase
       .from('sources')
       .select('*')

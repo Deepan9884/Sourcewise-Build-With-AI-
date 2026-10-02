@@ -93,7 +93,7 @@ export default function KnowledgeHubPage() {
       if (res.ok) {
         const data = await res.json()
         const localIds = useSourceStore.getState().uploadedSources.map((s) => s.id)
-        const fresh = data.filter((s) => !localIds.includes(s.id)).map((s) => ({
+        const fresh = data.filter((s) => !localIds.includes(s.id) && (s.type || '').toLowerCase() !== 'note').map((s) => ({
           id: s.id, name: s.name, size: s.size || 0, type: s.type || 'pdf',
           status: s.status || 'ready', chunksIndexed: s.chunks_indexed || 0,
         }))
@@ -250,10 +250,6 @@ export default function KnowledgeHubPage() {
                 <Database className="w-3.5 h-3.5 text-coral" />
                 <strong className="text-ink font-bold">{uploadedSources.length}</strong> source{uploadedSources.length === 1 ? '' : 's'}
               </span>
-              <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-medium bg-white border border-line text-body shadow-2xs">
-                <Layers className="w-3.5 h-3.5 text-teal" />
-                <strong className="text-ink font-bold">{totalChunks.toLocaleString()}</strong> indexed chunks
-              </span>
               {activeSourceIds.length > 0 && (
                 <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-medium bg-teal-soft text-teal border border-teal/20">
                   <span className="h-1.5 w-1.5 rounded-full bg-teal" />
@@ -278,15 +274,6 @@ export default function KnowledgeHubPage() {
                 <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-coral" />
               </span>
             )}
-          </motion.button>
-          <motion.button
-            whileHover={!synthWorking && chatIds.length ? { y: -2, scale: 1.02 } : {}}
-            whileTap={!synthWorking && chatIds.length ? { scale: 0.98 } : {}}
-            onClick={runSynthesis}
-            disabled={synthWorking || !chatIds.length}
-            className="sw-btn-secondary !h-10 !text-[13px] disabled:opacity-40 shadow-2xs"
-          >
-            <Link2 className="w-3.5 h-3.5" /> {synthWorking ? 'Synthesizing…' : 'Synthesize'}
           </motion.button>
         </div>
       </div>
@@ -514,30 +501,6 @@ export default function KnowledgeHubPage() {
                       )}
                     </div>
                   </div>
-                </div>
-
-                {/* Bottom Action Toolbar */}
-                <div className="flex items-center gap-2 mt-4 pt-3.5 border-t border-line/80">
-                  <motion.button
-                    whileHover={{ scale: 1.01 }}
-                    whileTap={{ scale: 0.98 }}
-                    onClick={() => setOpenSource(s)}
-                    className="flex-1 h-9 px-4 rounded-xl bg-coral hover:bg-coral-dark text-white text-xs font-semibold flex items-center justify-center gap-1.5 shadow-2xs hover:shadow-warm transition-all cursor-pointer"
-                  >
-                    <BookOpen className="w-3.5 h-3.5 text-white/90" />
-                    <span>Open Studio</span>
-                  </motion.button>
-
-                  <motion.button
-                    whileHover={{ rotate: 8, scale: 1.05 }}
-                    whileTap={{ scale: 0.95 }}
-                    onClick={() => setOpenSource(s)}
-                    aria-label={`Quiz and study on ${s.name}`}
-                    title="Practice & Quiz (in detail panel)"
-                    className="h-9 w-9 rounded-xl border border-stone-200 bg-stone-50/70 hover:bg-coral-soft/60 hover:border-coral/40 text-stone-500 hover:text-coral-deep flex items-center justify-center transition-all shadow-2xs shrink-0 cursor-pointer"
-                  >
-                    <FlaskConical className="w-3.5 h-3.5" />
-                  </motion.button>
                 </div>
               </motion.div>
             )

@@ -350,15 +350,9 @@ export default function PuzzleArenePage() {
             <h1 className="text-3xl md:text-4xl font-extrabold text-[#1E1B16] tracking-tight">
               Study Arena
             </h1>
-            <div className="flex flex-wrap items-center gap-2 mt-1.5">
-              <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200">
-                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
-                Active Recall Ready
-              </span>
-              <span className="text-xs sm:text-sm text-[#7A7167] font-medium">
-                Interactive retrieval challenges powered by your course documents
-              </span>
-            </div>
+            <p className="text-xs sm:text-sm text-[#7A7167] font-medium mt-1">
+              Interactive retrieval challenges powered by your course documents
+            </p>
           </div>
         </div>
       </motion.div>

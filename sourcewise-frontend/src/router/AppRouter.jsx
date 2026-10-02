@@ -21,6 +21,7 @@ const PuzzleArenePage = lazy(() => import('../pages/PuzzleArenePage'));
 const EventsPage = lazy(() => import('../pages/EventsPage'));
 const DeepCodePage = lazy(() => import('../pages/DeepCodePage'));
 const LearningPage = lazy(() => import('../pages/LearningPage'));
+const AnalysisPage = lazy(() => import('../pages/AnalysisPage'));
 
 // Loading fallback
 const PageLoader = () => (
@@ -143,6 +144,10 @@ export const router = createBrowserRouter([
       {
         path: '/settings',
         element: <SuspenseWrapper><SettingsPage /></SuspenseWrapper>,
+      },
+      {
+        path: '/analysis',
+        element: <SuspenseWrapper><AnalysisPage /></SuspenseWrapper>,
       },
     ],
   },

@@ -1,9 +1,10 @@
 import { useState, useEffect, useMemo, useRef } from 'react'
-import { ChevronLeft, ChevronRight, Plus, Trash2, Trophy, X } from 'lucide-react'
+import { ChevronLeft, ChevronRight, Plus, Trash2, Trophy, BookOpen, X } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { subjectStyle } from '../planner/utils/subjectPalette'
 import { studyPlansApi } from '../../lib/studyPlansApi'
 import { useStudentEvents, getCategoryStyle } from '../../lib/studentEvents'
+import { usePlannerStore } from '../../store/plannerStore'
 import CalendarActionMenu from './CalendarActionMenu'
 import AddEventModal from './AddEventModal'
 
@@ -22,8 +23,19 @@ function fmt(date) {
 
 function parseTime(dt) {
   if (!dt) return ''
-  try { return new Date(dt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) }
-  catch { return '' }
+  if (/^\d{1,2}:\d{2}(:\d{2})?$/.test(dt)) {
+    const [h, m] = dt.split(':')
+    const d = new Date()
+    d.setHours(Number(h), Number(m), 0, 0)
+    return d.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })
+  }
+  try {
+    const d = new Date(dt)
+    if (isNaN(d.getTime())) return dt
+    return d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+  } catch {
+    return dt
+  }
 }
 
 /**
@@ -32,6 +44,9 @@ function parseTime(dt) {
  * Supports tapping calendar icon to add/delete events, and quick delete/add right on any date.
  */
 export default function StudyCalendar({ planId }) {
+  const store = usePlannerStore()
+  const effectivePlanId = planId || store.currentPlan?.id || store.plans?.[0]?.id || 'plan-demo-ml-2026'
+
   const today = useMemo(() => new Date(), [])
   const [viewYear, setViewYear] = useState(() => today.getFullYear())
   const [viewMonth, setViewMonth] = useState(() => today.getMonth())
@@ -81,12 +96,12 @@ export default function StudyCalendar({ planId }) {
 
   // Fetch schedule for the visible month
   useEffect(() => {
-    if (!planId) return
+    if (!effectivePlanId) return
     let cancelled = false
     const fetchSchedule = async () => {
       setLoading(true)
       try {
-        const data = await studyPlansApi.schedule(planId, from, to)
+        const data = await studyPlansApi.schedule(effectivePlanId, from, to)
         if (!cancelled) {
           const arr = Array.isArray(data) ? data : (data?.slots || [])
           setScheduleData(arr)
@@ -99,7 +114,7 @@ export default function StudyCalendar({ planId }) {
     }
     fetchSchedule()
     return () => { cancelled = true }
-  }, [planId, from, to])
+  }, [effectivePlanId, from, to])
 
   // Index study slots by date
   const slotsByDate = useMemo(() => {
@@ -350,6 +365,32 @@ export default function StudyCalendar({ planId }) {
                   {dayEvents.length > 1 && (
                     <span className="text-[9px] font-bold text-emerald-700 block px-0.5 leading-none">
                       +{dayEvents.length - 1} more event{dayEvents.length - 1 !== 1 ? 's' : ''}
+                    </span>
+                  )}
+                </div>
+              )}
+
+              {/* Study session chips when no event */}
+              {!hasEvents && slots.length > 0 && (
+                <div className="mt-1 space-y-0.5">
+                  {slots.slice(0, 1).map((s) => {
+                    const subjName = s.plan_subjects?.subject_name || s.subject_name || 'Study'
+                    const st = subjectStyle(subjName)
+                    return (
+                      <div
+                        key={s.id}
+                        className="px-1.5 py-0.5 rounded text-[10px] font-semibold border truncate flex items-center gap-1 shadow-2xs"
+                        style={{ background: st.bg, borderColor: st.border, color: st.primary }}
+                        title={`${subjName}: ${s.topic}`}
+                      >
+                        <BookOpen className="w-2.5 h-2.5 shrink-0" />
+                        <span className="truncate">{s.topic || subjName}</span>
+                      </div>
+                    )
+                  })}
+                  {slots.length > 1 && (
+                    <span className="text-[9px] font-medium text-[#8A817B] block px-0.5 leading-none">
+                      +{slots.length - 1} more session{slots.length - 1 !== 1 ? 's' : ''}
                     </span>
                   )}
                 </div>

@@ -20,6 +20,19 @@ const authenticate = async (req, res, next) => {
       return res.status(401).json({ error: 'Invalid token' });
     }
     
+    // Fast path for Hackathon Demo Account
+    const DEMO_USER_ID = '098ac993-cd75-446e-9ccd-b0ff77d8278c';
+    if (decoded.userId === DEMO_USER_ID) {
+      req.user = {
+        _id: DEMO_USER_ID,
+        userId: DEMO_USER_ID,
+        id: DEMO_USER_ID,
+        name: 'Alex Morgan',
+        email: 'demo@gmail.com',
+      };
+      return next();
+    }
+    
     // Select only columns that are guaranteed to exist
     const { data: user, error } = await supabase
       .from('users')

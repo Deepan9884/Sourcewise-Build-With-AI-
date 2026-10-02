@@ -22,45 +22,123 @@ function stripEmojis(str) {
 }
 
 /**
- * Format inline markdown tokens: **bold**, `code`, *italic*
+ * Strips and formats LaTeX math notation (e.g. $\mathcal{O}(1)$, $O(N \log N)$) into clean text
+ */
+function cleanLatexMath(mathStr) {
+  if (!mathStr) return '';
+  let s = mathStr.trim();
+  if (s.startsWith('$$') && s.endsWith('$$')) s = s.slice(2, -2).trim();
+  else if (s.startsWith('$') && s.endsWith('$')) s = s.slice(1, -1).trim();
+
+  // Replace common LaTeX symbols & macros
+  s = s.replace(/\\mathcal\{([A-Za-z])\}/g, '$1');
+  s = s.replace(/\\mathbf\{([^}]+)\}/g, '$1');
+  s = s.replace(/\\mathbb\{([A-Za-z])\}/g, '$1');
+  s = s.replace(/\\mathrm\{([^}]+)\}/g, '$1');
+  s = s.replace(/\\text\{([^}]+)\}/g, '$1');
+  s = s.replace(/\\log/g, 'log');
+  s = s.replace(/\\ln/g, 'ln');
+  s = s.replace(/\\sqrt\{([^}]+)\}/g, '√($1)');
+  s = s.replace(/\\cdot/g, '·');
+  s = s.replace(/\\times/g, '×');
+  s = s.replace(/\\le(q)?/g, '≤');
+  s = s.replace(/\\ge(q)?/g, '≥');
+  s = s.replace(/\\ne(q)?/g, '≠');
+  s = s.replace(/\\approx/g, '≈');
+  s = s.replace(/\\infty/g, '∞');
+  s = s.replace(/\^2/g, '²');
+  s = s.replace(/\^3/g, '³');
+  s = s.replace(/\{([^{}]+)\}/g, '$1'); // unwrap remaining single braces
+  return s.trim();
+}
+
+/**
+ * Format inline markdown tokens: **bold**, `code`, $math$, *italic*
  */
 function renderInline(text) {
   if (!text) return '';
   const cleaned = stripEmojis(text);
-  // Split on bold, inline code, and italics
-  const tokens = cleaned.split(/(\*\*.*?\*\*|`.*?`|\*.*?\*)/g);
+  // Split on bold, inline code, latex math ($...$ or $$...$$), and italics
+  const tokens = cleaned.split(/(\*\*.*?\*\*|`.*?`|\$\$.*?\$\$|\$[^$\n]+?\$|\*.*?\*)/g);
 
   return tokens.map((part, i) => {
+    if (!part) return null;
+
+    // Bold: **text**
     if (part.startsWith('**') && part.endsWith('**') && part.length >= 4) {
+      const inner = part.slice(2, -2);
+      if (inner.includes('$')) {
+        return (
+          <strong key={i} className="font-bold text-[#1C1814]">
+            {cleanLatexMath(inner.replace(/\$/g, ''))}
+          </strong>
+        );
+      }
       return (
-        <strong key={i} className="font-semibold text-[#1C1814]">
-          {part.slice(2, -2)}
+        <strong key={i} className="font-bold text-[#1C1814]">
+          {inner}
         </strong>
       );
     }
+
+    // Inline Code: `code`
     if (part.startsWith('`') && part.endsWith('`') && part.length >= 2) {
       return (
         <code
           key={i}
-          className="px-1.5 py-0.5 rounded-md bg-[#EDE6DF] text-[#C05A35] font-mono text-[11px] font-semibold"
+          className="px-1.5 py-0.5 mx-0.5 rounded-md bg-[#FAF4EE] text-[#C05A35] font-mono text-[11px] font-bold border border-[#EDE4DC]"
         >
           {part.slice(1, -1)}
         </code>
       );
     }
+
+    // LaTeX Math: $...$ or $$...$$
+    if (part.startsWith('$') && part.endsWith('$') && part.length >= 2) {
+      const math = cleanLatexMath(part);
+      return (
+        <span
+          key={i}
+          className="inline-flex items-center px-1.5 py-0.5 mx-0.5 rounded-md font-mono text-[11px] font-bold bg-[#FAF4EE] text-[#C05A35] border border-[#E8DED6] shadow-2xs"
+        >
+          {math}
+        </span>
+      );
+    }
+
+    // Italic: *text*
     if (part.startsWith('*') && part.endsWith('*') && part.length >= 2) {
       return (
-        <em key={i} className="text-[#6E6359] italic">
+        <em key={i} className="text-[#6E6359] italic font-medium">
           {part.slice(1, -1)}
         </em>
       );
     }
+
+    // Handle any stray unescaped math expressions like $\mathcal{O}(1)$ inside raw strings
+    if (part.includes('$')) {
+      const subparts = part.split(/(\$[^$\n]+?\$)/g);
+      return subparts.map((sub, j) => {
+        if (sub.startsWith('$') && sub.endsWith('$')) {
+          return (
+            <span
+              key={`${i}-${j}`}
+              className="inline-flex items-center px-1.5 py-0.5 mx-0.5 rounded-md font-mono text-[11px] font-bold bg-[#FAF4EE] text-[#C05A35] border border-[#E8DED6] shadow-2xs"
+            >
+              {cleanLatexMath(sub)}
+            </span>
+          );
+        }
+        return sub.replace(/\*/g, '');
+      });
+    }
+
     return part ? part.replace(/\*/g, '') : '';
   });
 }
 
 /**
- * Clean Code Block Component with Copy and Apply buttons
+ * Clean, Professional Code Block Component with Copy and Apply buttons
  */
 function CodeBlock({ code, language = 'text', onApplyCode }) {
   const [copied, setCopied] = useState(false);
@@ -72,44 +150,53 @@ function CodeBlock({ code, language = 'text', onApplyCode }) {
   };
 
   return (
-    <div className="my-3 rounded-xl overflow-hidden border border-[#2E2822] bg-[#1A1613] shadow-sm">
-      <div className="flex items-center justify-between px-3.5 py-2 bg-[#25201C] border-b border-[#2E2822] text-[11px]">
-        <div className="flex items-center gap-1.5 text-[#A3968A] font-mono font-medium">
-          <Code2 className="w-3.5 h-3.5 text-[#E8845F]" />
-          <span>{language || 'code'}</span>
+    <div className="my-3.5 rounded-2xl overflow-hidden border border-[#2D2721] bg-[#161311] shadow-sm ring-1 ring-white/5">
+      <div className="flex items-center justify-between px-4 py-2.5 bg-[#201C18] border-b border-[#2D2721] text-xs">
+        <div className="flex items-center gap-2 text-[#A89C91] font-mono text-xs font-semibold">
+          <Code2 className="w-3.5 h-3.5 text-[#C05A35]" />
+          <span className="capitalize">{language || 'code'}</span>
         </div>
         <div className="flex items-center gap-2">
           {onApplyCode && (
             <button
               onClick={() => onApplyCode(code)}
-              className="flex items-center gap-1 px-2.5 py-1 rounded-lg bg-[#C05A35] hover:bg-[#A94A28] text-white text-[11px] font-semibold transition-colors shadow-2xs cursor-pointer"
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-[#C05A35] hover:bg-[#A94A28] text-white text-xs font-bold transition-all shadow-xs cursor-pointer active:scale-95"
               title="Replace current editor content with this fixed code"
             >
-              <ArrowRight className="w-3 h-3" />
+              <ArrowRight className="w-3.5 h-3.5" />
               <span>Apply Fix</span>
             </button>
           )}
           <button
             onClick={handleCopy}
-            className="flex items-center gap-1 px-2.5 py-1 rounded-lg bg-[#332D27] hover:bg-[#403831] text-[#E8DDD4] text-[11px] font-medium transition-colors cursor-pointer"
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-[#2D2721] hover:bg-[#3D352E] text-[#EDE4DC] text-xs font-medium transition-all cursor-pointer active:scale-95"
           >
             {copied ? (
               <>
-                <Check className="w-3 h-3 text-emerald-400" />
-                <span className="text-emerald-400">Copied!</span>
+                <Check className="w-3.5 h-3.5 text-emerald-400" />
+                <span className="text-emerald-400 font-semibold">Copied</span>
               </>
             ) : (
               <>
-                <Copy className="w-3 h-3 text-[#A3968A]" />
+                <Copy className="w-3.5 h-3.5 text-[#A89C91]" />
                 <span>Copy</span>
               </>
             )}
           </button>
         </div>
       </div>
-      <pre className="p-3.5 text-[#F3EDE6] font-mono text-xs leading-relaxed overflow-x-auto selection:bg-[#C05A35]/40 selection:text-white">
-        <code>{code}</code>
-      </pre>
+      <div
+        className="p-4 overflow-x-auto text-[13px] font-mono leading-relaxed selection:bg-[#C05A35]/30 text-[#EDE6E0]"
+        style={{
+          fontFamily: "'JetBrains Mono', 'Fira Code', 'Cascadia Code', Consolas, Menlo, monospace",
+          scrollbarWidth: 'thin',
+          scrollbarColor: '#4A4036 transparent',
+        }}
+      >
+        <pre className="!m-0 !p-0 bg-transparent text-[#EDE6E0]">
+          <code>{code}</code>
+        </pre>
+      </div>
     </div>
   );
 }

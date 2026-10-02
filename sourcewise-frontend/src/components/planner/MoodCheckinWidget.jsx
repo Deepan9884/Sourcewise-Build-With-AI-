@@ -102,36 +102,37 @@ export default function MoodCheckinWidget({ currentMood, compact = false }) {
         </span>
       </div>
 
-      {/* Main State Card */}
       <motion.div
         initial={{ opacity: 0, y: 4 }}
         animate={{ opacity: 1, y: 0 }}
-        className={`p-3 rounded-xl border bg-gradient-to-r ${profile.tint} ${profile.border} space-y-2`}
+        className={`p-4 sm:p-5 rounded-[2rem] border bg-gradient-to-r ${profile.tint} ${profile.border} space-y-3`}
       >
         <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <span className="text-2xl leading-none">{profile.emoji}</span>
+          <div className="flex items-center gap-3.5">
+            <span className="text-3xl sm:text-4xl leading-none drop-shadow-sm">{profile.emoji}</span>
             <div>
-              <span className={`text-sm font-bold block ${profile.text}`}>
+              <span className={`text-base sm:text-lg font-bold block ${profile.text}`}>
                 {profile.label}
               </span>
-              <span className="text-[10px] font-semibold uppercase tracking-wider text-[#6B625C]">
+              <span className="text-xs font-semibold uppercase tracking-wider text-[#6B625C]">
                 {profile.badge}
               </span>
             </div>
           </div>
-          <div className="text-right">
-            <span className="text-[10px] font-bold text-[#8A817B] block">AI Confidence</span>
-            <span className="text-xs font-mono font-extrabold text-[#1E1B16]">
+          <div className="text-right bg-white/50 backdrop-blur-sm px-3.5 py-2 rounded-2xl border border-white/60 shadow-xs">
+            <span className="text-[10px] font-bold text-[#8A817B] block uppercase tracking-wide mb-0.5">Confidence</span>
+            <span className="text-sm font-mono font-extrabold text-[#1E1B16]">
               {Math.round((currentMood?.confidence ?? 0.88) * 100)}%
             </span>
           </div>
         </div>
 
         {/* Dynamic AI Advice */}
-        <p className="text-xs text-[#443D37] leading-relaxed pt-1 border-t border-black/5">
-          {note}
-        </p>
+        <div className="pt-3 mt-2 border-t border-black/10">
+          <p className="text-sm text-[#443D37] leading-relaxed font-medium">
+            {note}
+          </p>
+        </div>
       </motion.div>
 
       {/* Subtle indicator footnote */}

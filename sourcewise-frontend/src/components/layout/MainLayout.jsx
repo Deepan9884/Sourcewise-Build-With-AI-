@@ -10,7 +10,7 @@ import GlobalChatPanel from '../knowledge/GlobalChatPanel'
 import {
   Home, BookCopy, MessageSquare, Calendar, Settings,
   LogOut, ChevronLeft, ChevronRight, Puzzle, CalendarDays, Code2,
-  GraduationCap
+  GraduationCap, BarChart3
 } from 'lucide-react'
 import { EVENTS_CHANGED_EVENT } from '../../lib/studentEvents'
 
@@ -106,6 +106,22 @@ const NAV_SECTIONS = [
 
   // Growth & Planning Group (Track the work)
   {
+    name: 'Analysis',
+    path: '/analysis',
+    icon: BarChart3,
+    group: 'growth',
+    accent: {
+      color: '#F43F5E',
+      activeBg: 'bg-[#FFF1F3]',
+      activeText: 'text-[#BE123C]',
+      activeBar: 'bg-[#F43F5E]',
+      hoverBg: 'hover:bg-[#FFF5F7]',
+      iconActive: 'text-[#F43F5E]',
+    },
+    badge: 'analysis_pulse',
+    matcher: (pathname) => pathname.startsWith('/analysis'),
+  },
+  {
     name: 'Game Arena',
     path: '/puzzles',
     icon: Puzzle,
@@ -143,12 +159,12 @@ const NAV_SECTIONS = [
     icon: Code2,
     group: 'growth',
     accent: {
-      color: '#6366F1',
-      activeBg: 'bg-[#EEF2FF]',
-      activeText: 'text-[#4338CA]',
-      activeBar: 'bg-[#6366F1]',
-      hoverBg: 'hover:bg-[#F5F7FF]',
-      iconActive: 'text-[#6366F1]',
+      color: '#C05A35',
+      activeBg: 'bg-[#FDEEE6]',
+      activeText: 'text-[#C05A35]',
+      activeBar: 'bg-[#C05A35]',
+      hoverBg: 'hover:bg-[#FFF5F0]',
+      iconActive: 'text-[#C05A35]',
     },
     badge: 'deepcode_badge',
     matcher: (pathname) => pathname.startsWith('/deepcode') || pathname.startsWith('/compiler'),
@@ -351,8 +367,16 @@ export default function MainLayout() {
             {/* Live Badge: DeepCode Live Pulse Dot */}
             {item.badge === 'deepcode_badge' && (
               <span className="absolute -top-1 -right-1 flex h-2.5 w-2.5">
-                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#6366F1] opacity-75" />
-                <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-[#6366F1] ring-2 ring-white" />
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#C05A35] opacity-75" />
+                <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-[#C05A35] ring-2 ring-white" />
+              </span>
+            )}
+
+            {/* Live Badge: Analysis Pulse Dot */}
+            {item.badge === 'analysis_pulse' && (
+              <span className="absolute -top-1 -right-1 flex h-2.5 w-2.5">
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#F43F5E] opacity-75" />
+                <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-[#F43F5E] ring-2 ring-white" />
               </span>
             )}
           </div>

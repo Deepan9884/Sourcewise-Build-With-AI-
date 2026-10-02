@@ -31,32 +31,34 @@ function CodeBlock({ code, lang }) {
   }, [code])
 
   return (
-    <div className="my-3 rounded-xl overflow-hidden border border-[#EDE7E1] bg-[#1E1B16] text-[#F3EFEB] shadow-sm">
-      <div className="flex items-center justify-between px-3.5 py-1.5 bg-[#2A2620] border-b border-[#3D3730] text-xs font-mono">
-        <span className="flex items-center gap-1.5 text-[#B0A8A0] font-medium lowercase">
-          <Terminal className="w-3.5 h-3.5 text-[#E8845F]" />
+    <div className="my-4 rounded-xl overflow-hidden border border-[#2E2822] bg-[#1A1613] text-[#E8E2DD] shadow-md ring-1 ring-white/5">
+      <div className="flex items-center justify-between px-3.5 py-2 bg-[#25201C] border-b border-[#2E2822] text-[11px] font-mono">
+        <span className="flex items-center gap-1.5 text-[#A3968A] font-medium lowercase tracking-wide">
+          <Terminal className="w-3.5 h-3.5 text-[#C05A35]" />
           {lang || 'code'}
         </span>
         <button
           type="button"
           onClick={handleCopy}
-          className="flex items-center gap-1 text-[11px] text-[#D0C8C0] hover:text-white px-2 py-0.5 rounded hover:bg-[#3D3730] transition-colors"
+          className="flex items-center gap-1.5 text-[11px] text-[#A89D93] hover:text-[#F3EFEB] px-2 py-0.5 rounded hover:bg-[#332D27] transition-colors cursor-pointer"
         >
           {copied ? (
             <>
-              <Check className="w-3 h-3 text-[#2D9D78]" />
-              <span className="text-[#2D9D78] font-medium">Copied</span>
+              <Check className="w-3.5 h-3.5 text-emerald-400" />
+              <span className="text-emerald-400 font-medium">Copied!</span>
             </>
           ) : (
             <>
-              <Copy className="w-3 h-3" />
+              <Copy className="w-3.5 h-3.5" />
               <span>Copy</span>
             </>
           )}
         </button>
       </div>
-      <div className="p-3.5 overflow-x-auto text-xs font-mono leading-relaxed selection:bg-[#E8845F]/30">
-        <pre><code>{code}</code></pre>
+      <div className="p-4 overflow-x-auto text-[13px] font-mono leading-relaxed">
+        <pre className="!m-0 !p-0 bg-transparent">
+          <code>{code}</code>
+        </pre>
       </div>
     </div>
   )
@@ -471,3 +473,4 @@ export function RichMessageContent({ content, isUser = false, className = '' }) 
 }
 
 export default RichMessageContent
+

@@ -3,12 +3,17 @@ const router = express.Router();
 const { authenticate } = require('../middleware/auth');
 const supabase = require('../utils/supabase');
 
+const demoService = require('../services/demoAccountService');
+
 router.use(authenticate);
 
 // GET /progress/events - Get progress events with filters
 router.get('/events', async (req, res) => {
   try {
     const { type, limit = 50, offset = 0 } = req.query;
+    if (demoService.isDemoUser(req)) {
+      return res.json(demoService.getProgressEvents(parseInt(limit, 10) || 50, parseInt(offset, 10) || 0, type));
+    }
     let query = supabase
       .from('progress_events')
       .select('*')
@@ -181,6 +186,9 @@ async function updateMasteryFromEvent(userId, concept, correct, score, sourceId)
 // GET /progress/summary - Get progress summary for dashboard
 router.get('/summary', async (req, res) => {
   try {
+    if (demoService.isDemoUser(req)) {
+      return res.json(demoService.getProgressSummary());
+    }
     const userId = req.user._id;
     const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString();
 
@@ -263,6 +271,9 @@ router.get('/summary', async (req, res) => {
 // GET /progress/streak - Get study streak
 router.get('/streak', async (req, res) => {
   try {
+    if (demoService.isDemoUser(req)) {
+      return res.json(demoService.getProgressStreak());
+    }
     const userId = req.user._id;
 
     const { data: events, error } = await supabase
@@ -297,6 +308,9 @@ router.get('/streak', async (req, res) => {
 // GET /progress/revision-stats - Get revision statistics
 router.get('/revision-stats', async (req, res) => {
   try {
+    if (demoService.isDemoUser(req)) {
+      return res.json(demoService.getReviewStats());
+    }
     const userId = req.user._id;
     const today = new Date().toISOString().split('T')[0];
 
@@ -404,6 +418,9 @@ router.post('/snapshot', async (req, res) => {
 // GET /progress/trends - Get learning trends
 router.get('/trends', async (req, res) => {
   try {
+    if (demoService.isDemoUser(req)) {
+      return res.json(demoService.getTrends());
+    }
     const userId = req.user._id;
     const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString();
 

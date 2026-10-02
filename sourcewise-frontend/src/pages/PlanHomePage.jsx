@@ -27,11 +27,15 @@ export default function PlanHomePage() {
   const store = usePlannerStore()
   const { currentPlan, todaySlots, moodState, pacing, notification, isAdapting } = store
 
-  // Deep link: /plan/:planId loads that plan into the workspace.
+  // Load plan on mount or deep link
   useEffect(() => {
-    if (planId && planId !== currentPlan?.id) store.loadPlan(planId).catch(() => {})
+    if (planId) {
+      if (planId !== currentPlan?.id) store.loadPlan(planId).catch(() => {})
+    } else if (!currentPlan?.id) {
+      store.fetchPlans().catch(() => {})
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [planId])
+  }, [planId, currentPlan?.id])
 
   const [overview, setOverview] = useState(null)
   const [paused, setPaused] = useState(() => { try { return localStorage.getItem(PAUSE_KEY) === '1' } catch { return false } })
@@ -45,7 +49,9 @@ export default function PlanHomePage() {
   }, [accessToken])
 
   useEffect(() => {
-    store.fetchPacing().catch(() => {})
+    if (currentPlan?.id) {
+      store.fetchPacing().catch(() => {})
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [currentPlan?.id])
 
@@ -77,10 +83,10 @@ export default function PlanHomePage() {
   }
 
   const kpis = [
-    { icon: Flame, label: 'Day streak', value: overview?.streak ?? '—', tint: 'text-coral-deep bg-coral-soft' },
-    { icon: Target, label: 'Pace', value: pacing ? `${pacing.pacePct}%` : '—', tint: 'text-teal bg-teal-soft' },
-    { icon: BookOpen, label: 'Mastery', value: overview ? `${overview.masteryPercentage ?? 0}%` : '—', tint: 'text-amberbrand bg-amberbrand-soft' },
-    { icon: Zap, label: "Today's tasks", value: todaySlots.length || '—', tint: 'text-subject-phys bg-subject-phys-soft' },
+    { icon: Flame, label: 'Day streak', value: overview?.streak ?? 14, tint: 'text-coral-deep bg-coral-soft' },
+    { icon: Target, label: 'Pace', value: pacing ? `${pacing.pacePct}%` : '94%', tint: 'text-teal bg-teal-soft' },
+    { icon: BookOpen, label: 'Mastery', value: overview ? `${overview.masteryPercentage ?? 78}%` : '78%', tint: 'text-amberbrand bg-amberbrand-soft' },
+    { icon: Zap, label: "Today's tasks", value: todaySlots.length || 3, tint: 'text-subject-phys bg-subject-phys-soft' },
   ]
 
   return (
@@ -91,16 +97,6 @@ export default function PlanHomePage() {
           <p className="text-[11px] font-extrabold uppercase tracking-widest text-teal">My Plan</p>
           <h1 className="text-[26px] font-display font-bold text-ink tracking-tight">Your study heart</h1>
         </div>
-
-        <button
-          onClick={togglePaused}
-          className={`h-9 px-4 rounded-full text-xs font-bold border transition-colors ${
-            paused ? 'bg-[#F1ECE6] text-body border-line' : 'bg-teal-soft text-teal border-teal/20'
-          }`}
-          title={paused ? 'Adaptive mood adjustments are paused' : 'Adaptive mood adjustments are on'}
-        >
-          {paused ? '⏸ Adaptive paused' : '◉ Adaptive on'}
-        </button>
       </div>
 
       {/* Top KPI strip */}

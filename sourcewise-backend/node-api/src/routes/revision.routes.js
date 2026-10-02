@@ -1,13 +1,18 @@
-﻿const express = require('express');
+const express = require('express');
 const router = express.Router();
 const { authenticate } = require('../middleware/auth');
 const supabase = require('../utils/supabase');
+
+const demoService = require('../services/demoAccountService');
 
 router.use(authenticate);
 
 // GET /revision/today - Get today's review items
 router.get('/today', async (req, res) => {
   try {
+    if (demoService.isDemoUser(req)) {
+      return res.json(demoService.getReviewsToday());
+    }
     const userId = req.user._id;
     const today = new Date().toISOString().split('T')[0];
 
@@ -77,6 +82,10 @@ router.post('/complete', async (req, res) => {
       return res.status(400).json({ error: 'concept is required' });
     }
 
+    if (demoService.isDemoUser(req)) {
+      return res.json(demoService.completeReview(concept, score || 90));
+    }
+
     // Get current review schedule
     const { data: current, error: fetchError } = await supabase
       .from('review_schedule')
@@ -125,6 +134,10 @@ router.post('/complete', async (req, res) => {
 // GET /revision/upcoming - Get upcoming reviews
 router.get('/upcoming', async (req, res) => {
   try {
+    if (demoService.isDemoUser(req)) {
+      const today = new Date().toISOString().split('T')[0];
+      return res.json(demoService.getReviewSchedule().filter(r => r.next_review_date > today));
+    }
     const userId = req.user._id;
     const today = new Date().toISOString().split('T')[0];
     const nextWeek = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];

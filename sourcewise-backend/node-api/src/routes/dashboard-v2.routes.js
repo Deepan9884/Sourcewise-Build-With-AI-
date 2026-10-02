@@ -3,11 +3,16 @@ const router = express.Router();
 const { authenticate } = require('../middleware/auth');
 const supabase = require('../utils/supabase');
 
+const demoService = require('../services/demoAccountService');
+
 router.use(authenticate);
 
 // GET /dashboard/overview - Get comprehensive dashboard data
 router.get('/overview', async (req, res) => {
   try {
+    if (demoService.isDemoUser(req)) {
+      return res.json(demoService.getDashboardOverview());
+    }
     const userId = req.user._id;
     const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString();
     const today = new Date().toISOString().split('T')[0];

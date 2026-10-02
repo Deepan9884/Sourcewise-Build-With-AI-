@@ -2,6 +2,16 @@ import { useState, useRef } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Layers } from 'lucide-react'
 
+function getCardTextClass(text, cardType) {
+  if (cardType === 'term') {
+    return 'text-xs sm:text-sm font-bold tracking-tight'
+  }
+  const len = (text || '').length
+  if (len > 80) return 'text-[10px] sm:text-[10.5px] leading-tight font-medium'
+  if (len > 45) return 'text-[11px] sm:text-xs leading-snug font-medium'
+  return 'text-xs sm:text-sm leading-snug font-medium'
+}
+
 export default function MemoryFlipGame({ puzzleData, onComplete }) {
   const { cards = [], pair_count = 0 } = puzzleData || {}
 
@@ -73,7 +83,7 @@ export default function MemoryFlipGame({ puzzleData, onComplete }) {
 
       <div
         className="grid gap-3 mx-auto w-full"
-        style={{ gridTemplateColumns: `repeat(${cols}, minmax(0, 1fr))`, maxWidth: cols * 130 }}
+        style={{ gridTemplateColumns: `repeat(${cols}, minmax(0, 1fr))`, maxWidth: cols * 155 }}
       >
         {cards.map((card) => {
           const faceUp   = isFaceUp(card)
@@ -92,12 +102,12 @@ export default function MemoryFlipGame({ puzzleData, onComplete }) {
               <motion.div
                 animate={{ rotateY: faceUp ? 180 : 0 }}
                 transition={{ duration: 0.4, ease: 'easeInOut' }}
-                style={{ transformStyle: 'preserve-3d', position: 'relative', height: 120 }}
+                style={{ transformStyle: 'preserve-3d', position: 'relative', height: 145 }}
               >
                 {/* Card Back (Tactile Arcade Tile) */}
                 <div
                   className="absolute inset-0 rounded-2xl border-2 border-[#DCD3C7] bg-gradient-to-br from-[#FAF7F2] to-[#EAE3D9] flex items-center justify-center shadow-xs hover:border-emerald-500 hover:shadow-md hover:bg-[#F3ECE2] transition-all"
-                  style={{ backfaceVisibility: 'hidden' }}
+                  style={{ backfaceVisibility: 'hidden', WebkitBackfaceVisibility: 'hidden' }}
                 >
                   <div className="w-9 h-9 rounded-xl border border-[#D5CCC0] bg-white flex items-center justify-center shadow-xs">
                     <Layers className="w-4 h-4 text-[#8A8177]" />
@@ -106,7 +116,7 @@ export default function MemoryFlipGame({ puzzleData, onComplete }) {
 
                 {/* Card Front */}
                 <div
-                  className={`absolute inset-0 rounded-2xl border-2 flex items-center justify-center p-3 text-center shadow-xs overflow-hidden bg-white ${
+                  className={`absolute inset-0 rounded-2xl border-2 flex items-center justify-center p-2.5 text-center shadow-xs overflow-hidden select-none bg-white ${
                     isMatch
                       ? 'border-emerald-500 bg-emerald-50'
                       : isWrong
@@ -115,22 +125,28 @@ export default function MemoryFlipGame({ puzzleData, onComplete }) {
                       ? 'border-indigo-400 bg-white'
                       : 'border-cyan-400 bg-white'
                   }`}
-                  style={{ backfaceVisibility: 'hidden', transform: 'rotateY(180deg)' }}
+                  style={{
+                    backfaceVisibility: 'hidden',
+                    WebkitBackfaceVisibility: 'hidden',
+                    transform: 'rotateY(180deg)',
+                  }}
                 >
-                  {isMatch && <div className="absolute inset-0 bg-emerald-500/10" />}
-                  <span
-                    className={`leading-snug z-10 ${
-                      isMatch
-                        ? 'text-emerald-800 font-semibold opacity-90'
-                        : isWrong
-                        ? 'text-rose-700 font-semibold'
-                        : card.card_type === 'term'
-                        ? 'text-sm font-bold text-indigo-950'
-                        : 'text-xs font-medium text-cyan-950'
-                    }`}
-                  >
-                    {card.content}
-                  </span>
+                  {isMatch && <div className="absolute inset-0 bg-emerald-500/10 pointer-events-none" />}
+                  <div className="w-full max-h-full overflow-y-auto scrollbar-hide flex items-center justify-center px-1">
+                    <span
+                      className={`break-words z-10 ${getCardTextClass(card.content, card.card_type)} ${
+                        isMatch
+                          ? 'text-emerald-800 font-semibold opacity-90'
+                          : isWrong
+                          ? 'text-rose-700 font-semibold'
+                          : card.card_type === 'term'
+                          ? 'text-indigo-950'
+                          : 'text-cyan-950'
+                      }`}
+                    >
+                      {card.content}
+                    </span>
+                  </div>
                 </div>
               </motion.div>
 

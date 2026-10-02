@@ -9,8 +9,29 @@ const { authenticate } = require('../middleware/auth');
 
 const PYTHON_AI_URL = process.env.PYTHON_AI_URL || 'http://localhost:8000';
 
+const demoService = require('../services/demoAccountService');
+
 // ── Helper: Get or create learning profile ────────────────────────────
 async function getOrCreateProfile(userId) {
+  if (userId === demoService.DEMO_USER_ID) {
+    return {
+      user_id: demoService.DEMO_USER_ID,
+      concept_mastery: demoService.getMastery(),
+      knowledge_gaps: demoService.getKnowledgeGaps(),
+      preferences: {
+        tutoring_mode: 'socratic',
+        explanation_verbosity: 'detailed',
+        preferred_explanation_styles: ['visual', 'worked-examples'],
+        daily_goal_minutes: 120
+      },
+      study_patterns: {
+        total_study_time: 3140,
+        sessions_completed: 42,
+        current_streak: 14,
+      }
+    };
+  }
+
   let { data: profile, error: fetchError } = await supabase
     .from('learning_profiles')
     .select('*')

@@ -49,8 +49,13 @@ router.post('/sync', async (req, res) => {
   }
 });
 
+const demoService = require('../services/demoAccountService');
+
 router.get('/events', async (req, res) => {
   try {
+    if (demoService.isDemoUser(req)) {
+      return res.json(demoService.getCalendarEvents());
+    }
     const userId = req.user.userId || req.user.id || req.user._id;
     const data = await calendarService.getEvents(userId, { from: req.query.from, to: req.query.to });
     res.json(data);
@@ -61,6 +66,9 @@ router.get('/events', async (req, res) => {
 
 router.post('/conflicts', async (req, res) => {
   try {
+    if (demoService.isDemoUser(req)) {
+      return res.json({ conflicts: [], count: 0 });
+    }
     const userId = req.user.userId || req.user.id || req.user._id;
     const conflicts = await calendarService.getConflicts(userId, req.body.slots || []);
     res.json({ conflicts, count: conflicts.length });
@@ -71,6 +79,9 @@ router.post('/conflicts', async (req, res) => {
 
 router.get('/status', async (req, res) => {
   try {
+    if (demoService.isDemoUser(req)) {
+      return res.json(demoService.getCalendarStatus());
+    }
     const userId = req.user.userId || req.user.id || req.user._id;
     const integ = await calendarService.getIntegration(userId);
     res.json({
