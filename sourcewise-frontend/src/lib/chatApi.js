@@ -146,6 +146,15 @@ export function getFeatureRedirectionResponse(question, sourceName = 'your study
     .trim();
   const qLower = cleanQ.toLowerCase();
 
+  // CRITICAL: Never intercept structured generation requests or long prompts!
+  if (
+    cleanQ.length > 100 ||
+    /^(create|generate|synthesize|produce|build|return|draft|format)\b/i.test(cleanQ) ||
+    /\b(critical requirements|strictly forbidden|front:|back:|options|option a|specify the correct answer)\b/i.test(cleanQ)
+  ) {
+    return null;
+  }
+
   // 1. Quiz / Practice Test
   if (
     /\b(quiz|quiz me|give me a quiz|test me|practice quiz|practice test|generate a quiz|take a quiz|exam questions|test my knowledge|quizzes|mcq|mcqs)\b/i.test(qLower) ||

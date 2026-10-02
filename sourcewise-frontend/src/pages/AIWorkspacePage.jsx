@@ -11,7 +11,7 @@ import {
 import { useSourceStore } from '../store/sourceStore'
 import { useAuthStore } from '../store/authStore'
 import { useWorkspaceStore } from '../store/workspaceStore'
-import { streamChat, getFeatureRedirectionResponse } from '../lib/chatApi'
+import { streamChat, getFeatureRedirectionResponse, getWellnessOrCasualResponse } from '../lib/chatApi'
 import { sendAgentMessage } from '../lib/agentApi'
 import { exportNotesAsJson, exportNotesAsPdf, exportNotesAsMarkdown } from '../lib/notesExport'
 import { GlowCard } from '../components/ui/glow-card'
@@ -531,6 +531,17 @@ Begin our session by giving a warm 2-sentence welcome, introducing the first fun
         content: featureRedir.message,
         targetSection: featureRedir.target,
         actionType: featureRedir.target
+      }])
+      setIsGenerating(false)
+      return
+    }
+
+    // Check student wellness, fatigue & casual inquiries
+    const wellness = getWellnessOrCasualResponse(userMessage)
+    if (wellness) {
+      setMessages(prev => [...prev, {
+        role: 'assistant',
+        content: wellness.message,
       }])
       setIsGenerating(false)
       return

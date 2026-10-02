@@ -56,6 +56,16 @@ function getFeatureRedirection(question, sourceName = 'your study material') {
     .trim();
   const qLower = cleanQ.toLowerCase();
 
+  // CRITICAL: Never intercept structured generation requests or long prompts!
+  // Generation prompts for quizzes, flashcards, or notes must pass through to Gemini.
+  if (
+    cleanQ.length > 100 ||
+    /^(create|generate|synthesize|produce|build|return|draft|format)\b/i.test(cleanQ) ||
+    /\b(critical requirements|strictly forbidden|front:|back:|options|option a|specify the correct answer)\b/i.test(cleanQ)
+  ) {
+    return null;
+  }
+
   // 0. Sleepiness / Fatigue / Mood / Casual Check
   if (
     /\b(i('?m| am)?\s*(so\s*)?(sleepy|tired|exhausted|drowsy|fatigued|drained|burned out|burnt out|falling asleep))\b/i.test(qLower) ||
@@ -329,20 +339,22 @@ function buildGeminiContents(question, history = [], sources = []) {
 /**
  * Generate a complete text response via Gemini with multi-model fallback
  */
-async function generateText({ question, sourceIds = [], history = [], personalContext = {}, userId = null, sourceNameHints = [] }) {
+async function generateText({ question, sourceIds = [], history = [], personalContext = {}, userId = null, sourceNameHints = [], skipRedirection = false }) {
   if (!GEMINI_API_KEY) {
     throw new Error('GEMINI_API_KEY environment variable is not configured');
   }
 
   const sources = await getSourcesMetadata(sourceIds, userId, sourceNameHints);
   const primarySourceName = sources[0]?.name || 'your study material';
-  const redirection = getFeatureRedirection(question, primarySourceName);
-  if (redirection) {
-    return {
-      text: redirection,
-      model: 'system-intent-router',
-      sources: sources.map(s => s.name || s.id),
-    };
+  if (!skipRedirection) {
+    const redirection = getFeatureRedirection(question, primarySourceName);
+    if (redirection) {
+      return {
+        text: redirection,
+        model: 'system-intent-router',
+        sources: sources.map(s => s.name || s.id),
+      };
+    }
   }
   const contents = buildGeminiContents(question, history, sources);
 

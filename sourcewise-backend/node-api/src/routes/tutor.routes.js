@@ -866,12 +866,16 @@ router.post('/agent', authenticate, tokenBudget({ endpoint: 'tutor/agent' }), as
     // If Gemini Cloud LLM is configured or Python AI is localhost, generate directly with zero latency
     if (process.env.GEMINI_API_KEY || !PYTHON_AI_URL || PYTHON_AI_URL.includes('localhost')) {
       try {
+        const isGenAction = payload.context?.action && ['create_quiz', 'create_flashcards', 'generate_notes', 'notes', 'quiz', 'flashcards'].includes(payload.context.action);
+        const skipRedir = Boolean(isGenAction || text.length > 100 || /^(create|generate|synthesize|format)\b/i.test(text.trim()));
+
         const aiTextResult = await llmService.generateText({
           question: text,
           sourceIds: payload.source_ids,
           history: payload.conversation_history,
           personalContext,
           userId,
+          skipRedirection: skipRedir,
         });
         return res.json({
           type: 'agent_response',
