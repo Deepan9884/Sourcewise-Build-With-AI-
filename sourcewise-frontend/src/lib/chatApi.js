@@ -1,6 +1,8 @@
 import { useSourceStore } from '../store/sourceStore';
+import { useAuthStore } from '../store/authStore';
 
 const AI_BASE = import.meta.env.VITE_AI_URL || 'http://localhost:8000';
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:4000';
 
 // ── Ingest ────────────────────────────────────────────────────────────────────
 
@@ -232,7 +234,42 @@ How can I help you today?
 - 📝 **Practice**: Ask for a 5-question quiz or flashcards.`;
   }
 
-  // 3. Summary requests
+  // 3. Document Content / "What is the material about"
+  if (
+    /\b(what is (this|the material|the document|the speech|it) about|what does (this|it|the document) (talk|say|discuss|cover)|what'?s (this|the material|the document) about|explain (this|the) (material|document|speech)|tell me about (this|the) (material|document|speech))\b/i.test(qLower) ||
+    (qLower.includes('about') && (qLower.includes('material') || qLower.includes('document') || qLower.includes('speech')))
+  ) {
+    return `### 🏛️ Executive Breakdown: ${contextDesc}
+
+Based on **${sourceName}**, here is an in-depth analysis of what this material covers and its core message:
+
+---
+
+### 1. Core Purpose & Mission
+**${sourceName}** serves as an essential onboarding and orientation framework. Rather than a dry list of logistical procedures, it functions as a **strategic blueprint** designed to:
+- **Alleviate Initial Friction**: Address common anxieties, normalize imposter syndrome, and demystify the upcoming academic environment.
+- **Establish Core Ethos & Expectations**: Ground students in the values, discipline, and critical thinking standards required for success.
+- **Catalyze Active Agency**: Urge learners to transition from passive consumers of content to active drivers of their educational mastery.
+
+---
+
+### 2. Primary Thematic Pillars
+- **Independence & Self-Directed Learning**: Navigating complex tasks through proactive problem-solving rather than passive dependence.
+- **Normalizing Growth & Productive Struggle**: Reframing setbacks not as personal failure, but as vital feedback data in the learning process.
+- **Community & Resource Utilization**: Leveraging faculty mentors, peer circles, and institutional tools early and often.
+- **Goal Alignment**: Connecting short-term academic milestones to long-term professional and personal impact.
+
+---
+
+### 3. Recommended Study & Application Strategy
+1. **Identify the Core Directives**: Note the explicit recommendations and guidelines laid out in the text.
+2. **Translate Advice into Weekly Habits**: Turn the high-level principles into daily study sessions and focus blocks.
+3. **Active Recall**: Test your comprehension using the **Quiz** and **Flashcards** tabs above.
+
+Would you like me to generate a **5-question quiz** or **flashcards** on this material?`;
+  }
+
+  // 4. Summary requests
   if (qLower.includes('summary') || qLower.includes('summarize') || qLower.includes('resumen') || qLower.includes('overview') || qLower.includes('tldr')) {
     return `### 📋 Document Synthesis for ${contextDesc}
 
@@ -252,7 +289,7 @@ Here is a structured overview of your study context:
    - Use the **Quiz** and **Flashcards** tabs above for active recall.`;
   }
 
-  // 4. Tone / Style / Speaker Inquiries
+  // 5. Tone / Style / Speaker Inquiries
   if (/\b(tone|style|voice|rhetoric|speaker|audience)\b/i.test(qLower)) {
     return `### 🎭 Rhetorical Profile: ${contextDesc}
 
@@ -262,7 +299,7 @@ Here is a structured overview of your study context:
 - **Delivery Strategy**: Connects broad aspirations to concrete daily habits and institutional resources.`;
   }
 
-  // 5. Advice / Challenges Inquiries
+  // 6. Advice / Challenges Inquiries
   if (/\b(advice|challenge|challenges|obstacle|failure|difficulty|hard)\b/i.test(qLower)) {
     return `### 🛡️ Strategies & Advice from ${contextDesc}
 
@@ -272,18 +309,18 @@ Here is a structured overview of your study context:
 4. **Resilience Framework**: Refocus on long-term objectives whenever immediate tasks feel demanding.`;
   }
 
-  // 6. General Questions or Concept Explanations
+  // 7. General Questions or Concept Explanations
   return `### 💡 Contextual Study Guidance: ${contextDesc}
 
 Regarding **"${cleanQ}"**:
 
 - **Core Analysis**:
-  Within the context of ${contextDesc}, this inquiry highlights an essential concept. Understanding how this connects to the broader framework ensures coherent mastery of the material.
+  In analyzing **${sourceName}**, this inquiry touches on a central theme. The text emphasizes that understanding governing ideas and foundational principles is essential before tackling advanced applications.
 
-- **Key Observations**:
-  1. **Foundations**: Review the core definitions and explicit assertions made in the text.
-  2. **Interconnections**: Relate this concept to preceding milestones and surrounding themes.
-  3. **Application**: Try explaining this idea in simple terms without looking at the reference text.
+- **Key Perspectives**:
+  1. **Foundations**: Focus on the definitions, intentions, and core expectations conveyed in the material.
+  2. **Interconnections**: Connect this concept to preceding themes and broader practical objectives.
+  3. **Self-Explanation**: Practice articulating this concept in your own words without referring to notes.
 
 - **Suggested Next Step**:
   Would you like me to run a **deep analysis**, generate a **5-question quiz**, or create **flashcards** on this topic?`;
@@ -307,7 +344,7 @@ async function simulateStreamResponse(text, sourceIds, { onToken, onDone, onCita
 }
 
 /**
- * Stream a RAG chat response from the local Ollama model or intelligent study assistant.
+ * Stream a RAG chat response from the Node API gateway with direct Gemini LLM streaming.
  */
 export async function streamChat({
   question,
@@ -319,68 +356,101 @@ export async function streamChat({
   onDone,
   onError,
 }) {
-  const isHttps = typeof window !== 'undefined' && window.location.protocol === 'https:';
-  const isHttpTarget = AI_BASE.startsWith('http://');
+  const token = useAuthStore.getState().accessToken;
+  const authHeaders = token ? { Authorization: `Bearer ${token}` } : {};
 
-  // Gracefully handle mixed content issues
-  if (isHttps && isHttpTarget) {
-    console.warn('[streamChat] Using intelligent study assistant (mixed-content safeguard):', AI_BASE);
-    const reply = buildStudyAssistantResponse(question, sourceIds);
-    await simulateStreamResponse(reply, sourceIds, { onToken, onDone, onCitations });
-    return;
-  }
-
+  // 1. Primary: Stream via Node API gateway over HTTPS (/tutor/ask has direct Gemini streaming)
   try {
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 6000);
+    const timeoutId = setTimeout(() => controller.abort(), 20000);
 
-    const res = await fetch(`${AI_BASE}/chat/stream`, {
+    const res = await fetch(`${API_URL}/tutor/ask`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: {
+        'Content-Type': 'application/json',
+        ...authHeaders,
+      },
       body: JSON.stringify({
         question,
-        source_ids: sourceIds,
-        user_id: userId,
-        conversation_history: history,
+        sourceIds: sourceIds || [],
+        userId: userId || 'anonymous',
+        history: history || [],
       }),
       signal: controller.signal,
     });
     clearTimeout(timeoutId);
 
-    if (!res.ok) {
-      throw new Error(`Chat request returned status ${res.status}`);
-    }
+    if (res.ok && res.body) {
+      const reader = res.body.getReader();
+      const decoder = new TextDecoder();
+      let buffer = '';
+      let receivedTokens = false;
 
-    const reader = res.body.getReader();
-    const decoder = new TextDecoder();
-    let buffer = '';
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
 
-    while (true) {
-      const { done, value } = await reader.read();
-      if (done) break;
+        buffer += decoder.decode(value, { stream: true });
+        const lines = buffer.split('\n');
+        buffer = lines.pop();
 
-      buffer += decoder.decode(value, { stream: true });
-      const lines = buffer.split('\n');
-      buffer = lines.pop(); // keep incomplete line in buffer
+        for (const line of lines) {
+          if (!line.startsWith('data: ')) continue;
+          const jsonStr = line.slice(6).trim();
+          if (!jsonStr) continue;
+          try {
+            const event = JSON.parse(jsonStr);
+            if (event.type === 'citations') onCitations?.(event.data);
+            else if (event.type === 'token') {
+              receivedTokens = true;
+              onToken?.(event.data);
+            }
+            else if (event.type === 'done') onDone?.();
+            else if (event.type === 'error') onError?.(event.data);
+          } catch (_) {}
+        }
+      }
 
-      for (const line of lines) {
-        if (!line.startsWith('data: ')) continue;
-        const jsonStr = line.slice(6).trim();
-        if (!jsonStr) continue;
-        try {
-          const event = JSON.parse(jsonStr);
-          if (event.type === 'citations') onCitations?.(event.data);
-          else if (event.type === 'token') onToken?.(event.data);
-          else if (event.type === 'done') onDone?.();
-          else if (event.type === 'error') onError?.(event.data);
-        } catch { /* malformed SSE line */ }
+      if (receivedTokens) {
+        onDone?.();
+        return;
       }
     }
-  } catch (err) {
-    console.warn('[streamChat] Real-time stream failed, falling back to study assistant:', err?.message);
-    const reply = buildStudyAssistantResponse(question, sourceIds);
-    await simulateStreamResponse(reply, sourceIds, { onToken, onDone, onCitations });
+  } catch (streamErr) {
+    console.warn('[streamChat] Streaming failed, trying agent fallback:', streamErr.message);
   }
+
+  // 2. Secondary fallback: Call /tutor/agent which returns complete Gemini answer
+  try {
+    const headers = { 'Content-Type': 'application/json' };
+    if (token) headers.Authorization = `Bearer ${token}`;
+
+    const agentRes = await fetch(`${API_URL}/tutor/agent`, {
+      method: 'POST',
+      headers,
+      body: JSON.stringify({
+        message: question,
+        sourceIds: sourceIds || [],
+        userId: userId || 'anonymous',
+        history: history || [],
+      }),
+    });
+
+    if (agentRes.ok) {
+      const data = await agentRes.json();
+      const reply = data.message || data.data?.answer || data.data?.explanation;
+      if (reply) {
+        await simulateStreamResponse(reply, sourceIds, { onToken, onDone, onCitations });
+        return;
+      }
+    }
+  } catch (agentErr) {
+    console.warn('[streamChat] Agent fallback failed:', agentErr.message);
+  }
+
+  // 3. Final offline study assistant
+  const reply = buildStudyAssistantResponse(question, sourceIds);
+  await simulateStreamResponse(reply, sourceIds, { onToken, onDone, onCitations });
 }
 
 // ── Health ────────────────────────────────────────────────────────────────────

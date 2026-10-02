@@ -11,6 +11,7 @@ const { tokenBudget } = require('../middleware/tokenBudget');
 const creditService = require('../services/creditService');
 const tokenService = require('../services/tokenService');
 const personalContextService = require('../services/personalContextService');
+const llmService = require('../services/llmService');
 const { v4: uuidv4 } = (() => { try { return require('uuid'); } catch (e) { return { v4: () => `${Date.now()}-${Math.random().toString(36).slice(2)}` }; } })();
 
 const PYTHON_AI_URL = process.env.PYTHON_AI_URL || 'http://localhost:8000';
@@ -29,147 +30,133 @@ router.post('/ask', authenticate, tokenBudget({ endpoint: 'tutor/ask' }), async 
   const budget = req.tokenBudget || {};
   const { provider: activeProvider, model: activeModel } = tokenService.currentProvider();
   try {
-    const { question, sourceIds, mode, sessionId } = req.body;
-    const userId = req.user.userId;
+    const { question, sourceIds, source_ids, mode, sessionId } = req.body;
+    const userId = req.user.userId || req.user.id;
+    const sIds = Array.isArray(sourceIds) ? sourceIds : (Array.isArray(source_ids) ? source_ids : []);
 
-    if (!question || !sourceIds || sourceIds.length === 0) {
+    if (!question || !String(question).trim()) {
       return res.status(400).json({ 
-        error: 'Question and at least one source ID are required' 
+        error: 'Question is required' 
       });
     }
 
     // Get or create tutoring session
     let session;
     if (sessionId) {
-      const { data } = await supabase
-        .from('tutoring_sessions')
+      try {
+        const { data } = await supabase
+          .from('tutoring_sessions')
+          .select('*')
+          .eq('id', sessionId)
+          .eq('user_id', userId)
+          .single();
+        session = data;
+      } catch (_) {}
+    }
+    if (!session) {
+      try {
+        const { data } = await supabase
+          .from('tutoring_sessions')
+          .insert({
+            user_id: userId,
+            source_ids: sIds,
+            mode: mode || 'direct',
+            conversation_history: [],
+            created_at: new Date().toISOString(),
+          })
+          .select()
+          .single();
+        session = data;
+      } catch (_) {}
+      if (!session) {
+        session = { id: uuidv4(), conversation_history: [] };
+      }
+    }
+
+    // Get user's learning profile (best effort)
+    let learningProfile = {};
+    try {
+      const { data: profile } = await supabase
+        .from('learning_profiles')
         .select('*')
-        .eq('id', sessionId)
         .eq('user_id', userId)
         .single();
-      session = data;
-      if (!session) {
-        return res.status(404).json({ error: 'Session not found' });
-      }
-    } else {
-      const { data } = await supabase
-        .from('tutoring_sessions')
-        .insert({
-          user_id: userId,
-          source_ids: sourceIds,
-          mode: mode || 'direct',
-          conversation_history: [],
-          created_at: new Date().toISOString(),
-        })
-        .select()
-        .single();
-      session = data;
-    }
-
-    // Get user's learning profile
-    let { data: learningProfile } = await supabase
-      .from('learning_profiles')
-      .select('*')
-      .eq('user_id', userId)
-      .single();
-
-    if (!learningProfile) {
-      const { data } = await supabase
-        .from('learning_profiles')
-        .insert({ user_id: userId })
-        .select()
-        .single();
-      learningProfile = data;
-    }
+      learningProfile = profile || {};
+    } catch (_) {}
 
     // Log user interaction
     const history = session.conversation_history || [];
     history.push({ role: 'user', content: question, timestamp: new Date().toISOString() });
 
-    await supabase
-      .from('tutoring_sessions')
-      .update({ conversation_history: history })
-      .eq('id', session.id);
-
-    // Forward request to Python AI service with SSE
-    const response = await axios.post(
-      `${PYTHON_AI_URL}/tutor/explain`,
-      {
-        question,
-        source_ids: sourceIds,
-        user_profile: learningProfile,
-        mode: mode || 'direct',
-        history: history.slice(-10),
-        session_id: session.id,
-      },
-      {
-        responseType: 'stream',
-        headers: { 'Accept': 'text/event-stream', ...aiHeaders() },
-      }
-    );
-
-    res.setHeader('Content-Type', 'text/event-stream');
-    res.setHeader('Cache-Control', 'no-cache');
-    res.setHeader('Connection', 'keep-alive');
-
-    let fullResponse = '';
-
-    response.data.on('data', (chunk) => {
-      const lines = chunk.toString().split('\n');
-      for (const line of lines) {
-        if (line.startsWith('data: ')) {
-          const data = line.slice(6);
-          res.write(`data: ${data}\n\n`);
-          try {
-            const parsed = JSON.parse(data);
-            if (parsed.type === 'token') fullResponse += parsed.data;
-          } catch (e) {}
+    // Try Python AI service first if available, otherwise use Gemini LLM service
+    try {
+      const response = await axios.post(
+        `${PYTHON_AI_URL}/tutor/explain`,
+        {
+          question,
+          source_ids: sIds,
+          user_profile: learningProfile,
+          mode: mode || 'direct',
+          history: history.slice(-10),
+          session_id: session.id,
+        },
+        {
+          responseType: 'stream',
+          headers: { 'Accept': 'text/event-stream', ...aiHeaders() },
+          timeout: 5000,
         }
-      }
-    });
+      );
 
-    response.data.on('end', async () => {
-      res.end();
+      res.setHeader('Content-Type', 'text/event-stream');
+      res.setHeader('Cache-Control', 'no-cache');
+      res.setHeader('Connection', 'keep-alive');
+
+      let fullResponse = '';
+
+      response.data.on('data', (chunk) => {
+        const lines = chunk.toString().split('\n');
+        for (const line of lines) {
+          if (line.startsWith('data: ')) {
+            const data = line.slice(6);
+            res.write(`data: ${data}\n\n`);
+            try {
+              const parsed = JSON.parse(data);
+              if (parsed.type === 'token') fullResponse += parsed.data;
+            } catch (e) {}
+          }
+        }
+      });
+
+      response.data.on('end', async () => {
+        res.end();
+        history.push({ role: 'assistant', content: fullResponse, timestamp: new Date().toISOString() });
+        try {
+          await supabase
+            .from('tutoring_sessions')
+            .update({ conversation_history: history })
+            .eq('id', session.id);
+        } catch (_) {}
+      });
+
+    } catch (aiErr) {
+      console.log('[TutorRoutes] Python AI unavailable, streaming via Gemini Cloud LLM...');
+      const fullResponse = await llmService.streamText(res, {
+        question,
+        sourceIds: sIds,
+        history,
+      });
+
       history.push({ role: 'assistant', content: fullResponse, timestamp: new Date().toISOString() });
-      await supabase
-        .from('tutoring_sessions')
-        .update({ conversation_history: history })
-        .eq('id', session.id);
-      // Token accounting (actual completion tokens from streamed response)
       try {
-        const promptTokens = budget.estimated || tokenService.estimateTokensFor(question);
-        const completionTokens = tokenService.estimateTokensFor(fullResponse);
-        await tokenService.logUsage({
-          userId, sessionId: session.id, requestId, endpoint: 'tutor/ask',
-          provider: activeProvider, model: activeModel,
-          promptTokens, completionTokens, contextChunks: sourceIds.length,
-          success: true, latencyMs: Date.now() - startedAt,
-        });
-        await creditService.commitUsage(userId, promptTokens + completionTokens, {
-          reserved: budget.reserved || 0, requestId, endpoint: 'tutor/ask',
-          provider: activeProvider, promptTokens, completionTokens,
-        });
-      } catch (e) { console.error('[TutorRoutes] token accounting failed:', e.message); }
-    });
-
-    response.data.on('error', (error) => {
-      console.error('[TutorRoutes] Stream error:', error);
-      res.write(`data: ${JSON.stringify({ type: 'error', data: 'Stream error' })}\n\n`);
-      res.end();
-    });
+        await supabase
+          .from('tutoring_sessions')
+          .update({ conversation_history: history })
+          .eq('id', session.id);
+      } catch (_) {}
+    }
 
   } catch (error) {
     console.error('[TutorRoutes] Error in /ask:', error);
-    try {
-      const promptTokens = (req.tokenBudget && req.tokenBudget.estimated) || 0;
-      await tokenService.logUsage({
-        userId: req.user?.userId, requestId, endpoint: 'tutor/ask',
-        provider: activeProvider, model: activeModel,
-        promptTokens, completionTokens: 0, success: false,
-        errorMessage: error.message, latencyMs: Date.now() - startedAt,
-      });
-      if (req.tokenBudget?.reserved) await creditService.releaseReservation(req.user.userId, req.tokenBudget.reserved);
-    } catch (e) { /* ignore */ }
     if (!res.headersSent) {
       res.status(500).json({ error: 'Failed to process tutoring request' });
     }
@@ -842,8 +829,29 @@ router.post('/agent', authenticate, tokenBudget({ endpoint: 'tutor/agent' }), as
       } catch (_) { /* ignore */ }
 
       if (aiDown) {
-        const fallbackData = buildNodeFallbackAgentResponse(text, payload.context, personalContext);
-        return res.json(fallbackData);
+        try {
+          const aiTextResult = await llmService.generateText({
+            question: text,
+            sourceIds: payload.source_ids,
+            history: payload.conversation_history,
+            personalContext,
+          });
+          return res.json({
+            type: 'agent_response',
+            message: aiTextResult.text,
+            data: {
+              topic: (payload.source_ids?.[0] || 'study material'),
+              model: aiTextResult.model,
+              answer: aiTextResult.text,
+              citations: (aiTextResult.sources || []).map(s => ({ source_id: s, title: s })),
+            },
+            personal_context: personalContext,
+          });
+        } catch (llmErr) {
+          console.warn('[TutorRoutes] LLM service fallback failed:', llmErr.message);
+          const fallbackData = buildNodeFallbackAgentResponse(text, payload.context, personalContext);
+          return res.json(fallbackData);
+        }
       }
       return res.status(status).json({
         error: `Agent request failed: ${detail}`,
