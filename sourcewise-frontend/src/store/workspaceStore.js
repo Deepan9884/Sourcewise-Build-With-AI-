@@ -94,17 +94,27 @@ export function parseFlashcardsText(text) {
   if (!text || typeof text !== 'string') return []
   const cards = []
 
-  // Split on --- or Card markers
+  // 1. Primary parser: global regex matching FRONT / BACK pairs across the entire text
+  const pairRegex = /(?:^|\n)\s*(?:FRONT|Term|Question|Concept)\s*[:\.-]\s*([\s\S]+?)\s*(?:\n\s*(?:BACK|Answer|Definition|Explanation)\s*[:\.-]\s*)([\s\S]+?)(?=(?:\n\s*(?:FRONT|Term|Question|Concept)\s*[:\.-])|(?:\n\s*(?:---|___|\*\*\*))|$)/gi
+  let match
+  while ((match = pairRegex.exec(text)) !== null) {
+    const front = match[1].replace(/^(?:Card\s*\d+[:\.]?\s*)/i, '').replace(/\*\*/g, '').replace(/\*/g, '').trim()
+    const back = match[2].replace(/\*\*/g, '').replace(/\*/g, '').trim()
+    if (front && back && !front.toLowerCase().includes('switch to the') && !front.toLowerCase().includes('workspace tab')) {
+      cards.push({ front, back })
+    }
+  }
+
+  if (cards.length > 0) return cards
+
+  // 2. Secondary fallback: split on --- or Card markers
   const rawBlocks = text.split(/(?:^|\n)\s*(?:---|___|\*\*\*)\s*(?:\n|$)|(?=(?:^|\n)\s*(?:\*{0,2}Card\s*\d+\*{0,2})\s*(?:\n|$))/mi)
 
   for (const block of rawBlocks) {
     const trimmed = block.trim()
     if (!trimmed) continue
 
-    // Clean markdown bold and italics from the block for rock-solid extraction
     const cleanBlock = trimmed.replace(/\*\*/g, '').replace(/\*/g, '').trim()
-
-    // Must match FRONT/Term/Question with a required colon or delimiter
     const frontMatch = cleanBlock.match(/(?:^|\n)\s*(?:FRONT|Term|Question|Concept)\s*[:\.-]\s*([\s\S]+?)(?=(?:\n\s*(?:BACK|Answer|Definition|Explanation)\s*[:\.-])|$)/i)
     const backMatch = cleanBlock.match(/(?:^|\n)\s*(?:BACK|Answer|Definition|Explanation)\s*[:\.-]\s*([\s\S]+?)(?=(?:\n\s*(?:---|___))|$)/i)
 

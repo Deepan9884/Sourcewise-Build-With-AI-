@@ -799,6 +799,152 @@ Provide an in-depth, pedagogical explanation, identify any syntax/runtime bugs, 
   }
 }
 
+/**
+ * Generate structured flashcards JSON directly via Gemini
+ */
+async function generateFlashcardsJson({ sourceIds = [], userId = null, count = 5, focus = 'key terms and definitions', topic = '' }) {
+  const sources = await getSourcesMetadata(sourceIds, userId);
+  const sourceContext = sources.map(s => {
+    let details = `Document: "${s.name}"\nSummary: ${s.summary || 'N/A'}`;
+    if (s.analysis?.extracted_text) {
+      details += `\nExtracted Content:\n${s.analysis.extracted_text.slice(0, 4000)}`;
+    }
+    if (s.analysis?.key_concepts) {
+      const concepts = Array.isArray(s.analysis.key_concepts)
+        ? s.analysis.key_concepts.map(c => typeof c === 'object' ? `${c.name}: ${c.description || ''}` : c).join('; ')
+        : JSON.stringify(s.analysis.key_concepts);
+      details += `\nKey Concepts: ${concepts}`;
+    }
+    return details;
+  }).join('\n\n---\n\n');
+
+  const topicText = topic ? `focusing specifically on "${topic}"` : '';
+  const prompt = `You are an expert educational study tool generator.
+Create EXACTLY ${count} high-yield, interactive flashcards based on the following study materials ${topicText}.
+Card focus: ${focus}.
+
+CRITICAL REQUIREMENTS:
+- You MUST create EXACTLY ${count} distinct flashcards (not more, not fewer).
+- Every card MUST test specific facts, terms, definitions, formulas, rules, or questions directly found in the materials.
+- DO NOT test document metadata (author name, file format, page counts).
+- Return a valid JSON object matching this schema:
+{
+  "cards": [
+    {
+      "front": "Question or key term",
+      "back": "Clear definition, explanation, or answer"
+    }
+  ]
+}
+
+Study Materials:
+${sourceContext || 'General study material'}`;
+
+  try {
+    const jsonResult = await generateJson({ prompt });
+    if (jsonResult && Array.isArray(jsonResult.cards) && jsonResult.cards.length > 0) {
+      return {
+        cards: jsonResult.cards.slice(0, count).map((c, i) => ({
+          id: i,
+          front: String(c.front || c.term || c.question || `Concept ${i + 1}`).trim(),
+          back: String(c.back || c.definition || c.answer || '').trim()
+        }))
+      };
+    }
+  } catch (err) {
+    console.warn('[llmService.generateFlashcardsJson] JSON generation error:', err.message);
+  }
+
+  // Fallback to text generation if JSON mode failed
+  try {
+    const textPrompt = `Create ${count} flashcards based on the material.\nFRONT: [Term]\nBACK: [Definition]`;
+    const textResult = await generateText({ question: textPrompt, sourceIds, userId });
+    const parsed = [];
+    const regex = /(?:^|\n)\s*(?:FRONT|Term|Question|Concept)\s*[:\.-]\s*([\s\S]+?)\s*(?:\n\s*(?:BACK|Answer|Definition|Explanation)\s*[:\.-]\s*)([\s\S]+?)(?=(?:\n\s*(?:FRONT|Term|Question|Concept)\s*[:\.-])|(?:\n\s*(?:---|___|\*\*\*))|$)/gi;
+    let match;
+    while ((match = regex.exec(textResult.text)) !== null) {
+      const front = match[1].replace(/^(?:Card\s*\d+[:\.]?\s*)/i, '').replace(/\*\*/g, '').trim();
+      const back = match[2].replace(/\*\*/g, '').trim();
+      if (front && back) parsed.push({ id: parsed.length, front, back });
+    }
+    if (parsed.length > 0) return { cards: parsed.slice(0, count) };
+  } catch (_) {}
+
+  return {
+    cards: Array.from({ length: count }, (_, i) => ({
+      id: i,
+      front: `Core Principle ${i + 1}`,
+      back: 'Review the source material for key takeaways.'
+    }))
+  };
+}
+
+/**
+ * Generate structured quiz JSON directly via Gemini
+ */
+async function generateQuizJson({ sourceIds = [], userId = null, count = 5, difficulty = 'medium', topic = '' }) {
+  const sources = await getSourcesMetadata(sourceIds, userId);
+  const sourceContext = sources.map(s => {
+    let details = `Document: "${s.name}"\nSummary: ${s.summary || 'N/A'}`;
+    if (s.analysis?.extracted_text) {
+      details += `\nExtracted Content:\n${s.analysis.extracted_text.slice(0, 4000)}`;
+    }
+    if (s.analysis?.key_concepts) {
+      const concepts = Array.isArray(s.analysis.key_concepts)
+        ? s.analysis.key_concepts.map(c => typeof c === 'object' ? `${c.name}: ${c.description || ''}` : c).join('; ')
+        : JSON.stringify(s.analysis.key_concepts);
+      details += `\nKey Concepts: ${concepts}`;
+    }
+    return details;
+  }).join('\n\n---\n\n');
+
+  const topicText = topic ? `focusing specifically on "${topic}"` : '';
+  const prompt = `You are an expert examination quiz author.
+Create EXACTLY ${count} multiple-choice quiz questions based strictly on the following study materials ${topicText}.
+Difficulty level: ${difficulty}.
+
+CRITICAL REQUIREMENTS:
+- You MUST create EXACTLY ${count} questions.
+- Each question must have 4 distinct, plausible options.
+- The "correct" field MUST be the 0-based index of the correct option (0 for first, 1 for second, 2 for third, 3 for fourth).
+- Provide a clear explanation for why the answer is correct.
+- Return a valid JSON object matching this schema:
+{
+  "questions": [
+    {
+      "question": "Question text here?",
+      "options": ["Option A", "Option B", "Option C", "Option D"],
+      "correct": 0,
+      "explanation": "Detailed explanation here.",
+      "concept": "Concept name"
+    }
+  ]
+}
+
+Study Materials:
+${sourceContext || 'General study material'}`;
+
+  try {
+    const jsonResult = await generateJson({ prompt });
+    if (jsonResult && Array.isArray(jsonResult.questions) && jsonResult.questions.length > 0) {
+      return {
+        questions: jsonResult.questions.slice(0, count).map((q, i) => ({
+          id: i,
+          question: String(q.question || `Question ${i + 1}`).trim(),
+          options: Array.isArray(q.options) && q.options.length >= 2 ? q.options.slice(0, 4) : ['Option A', 'Option B', 'Option C', 'Option D'],
+          correct: typeof q.correct === 'number' && q.correct >= 0 && q.correct < 4 ? q.correct : 0,
+          explanation: String(q.explanation || 'Refer to your study material for details.').trim(),
+          concept: String(q.concept || 'Key Concept').trim()
+        }))
+      };
+    }
+  } catch (err) {
+    console.warn('[llmService.generateQuizJson] JSON generation error:', err.message);
+  }
+
+  return { questions: [] };
+}
+
 module.exports = {
   generateText,
   generateJson,
@@ -808,4 +954,6 @@ module.exports = {
   analyzeDocument,
   synthesizeCrossSource,
   explainCode,
+  generateFlashcardsJson,
+  generateQuizJson,
 };

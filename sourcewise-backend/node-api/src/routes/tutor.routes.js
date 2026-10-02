@@ -865,8 +865,51 @@ router.post('/agent', authenticate, tokenBudget({ endpoint: 'tutor/agent' }), as
     };
     // If Gemini Cloud LLM is configured or Python AI is localhost, generate directly with zero latency
     if (process.env.GEMINI_API_KEY || !PYTHON_AI_URL || PYTHON_AI_URL.includes('localhost')) {
-      try {
-        const isGenAction = payload.context?.action && ['create_quiz', 'create_flashcards', 'generate_notes', 'notes', 'quiz', 'flashcards'].includes(payload.context.action);
+        if (payload.context?.action === 'create_flashcards') {
+          const count = Number(payload.context?.count) || 5;
+          const focus = payload.context?.focus || 'key terms and definitions';
+          const topic = payload.context?.topic || '';
+          const result = await llmService.generateFlashcardsJson({
+            sourceIds: payload.source_ids,
+            userId,
+            count,
+            focus,
+            topic
+          });
+          return res.json({
+            type: 'flashcards',
+            message: `Created ${result.cards.length} flashcards from your material`,
+            data: {
+              topic: topic || (payload.source_ids?.[0] || 'study material'),
+              cards: result.cards,
+            },
+            personal_context: personalContext,
+          });
+        }
+
+        if (payload.context?.action === 'create_quiz') {
+          const count = Number(payload.context?.count) || 5;
+          const difficulty = payload.context?.difficulty || 'medium';
+          const topic = payload.context?.topic || '';
+          const result = await llmService.generateQuizJson({
+            sourceIds: payload.source_ids,
+            userId,
+            count,
+            difficulty,
+            topic
+          });
+          return res.json({
+            type: 'quiz',
+            message: `Created ${result.questions.length} quiz questions from your material`,
+            data: {
+              topic: topic || (payload.source_ids?.[0] || 'study material'),
+              questions: result.questions,
+            },
+            personal_context: personalContext,
+          });
+        }
+
+        const isGenAction = payload.context?.action && ['generate_notes', 'notes', 'quiz', 'flashcards'].includes(payload.context.action);
         const skipRedir = Boolean(isGenAction || text.length > 100 || /^(create|generate|synthesize|format)\b/i.test(text.trim()));
 
         const aiTextResult = await llmService.generateText({

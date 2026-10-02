@@ -310,7 +310,11 @@ export default function AIWorkspacePage() {
         uploadedSources: st.uploadedSources.map((s) => (s.id === sourceId ? { ...s, id: realId, chunksIndexed: chunksCount, status: 'ready' } : s)),
         activeSourceIds: st.activeSourceIds.map((id) => (id === sourceId ? realId : id)),
       }))
-      toggleMaterialSelection(realId)
+      setSelectedMaterialIds([realId])
+      setFlashcards([])
+      setCurrentCardIndex(0)
+      setIsFlipped(false)
+      setQuizQuestions([])
     } catch (err) {
       console.error('[AIWorkspace] Quick upload error:', err)
       setError(`Failed to upload ${file.name}: ${err.message}`)
@@ -1549,9 +1553,10 @@ Begin our session by giving a warm 2-sentence welcome, introducing the first fun
               <button
                 type="button"
                 onClick={() => { setFlashcards([]); setCurrentCardIndex(0); setIsFlipped(false) }}
-                className="text-xs text-[#8A817B] hover:text-[#C05A35] transition-colors"
+                className="text-xs font-semibold px-3 py-1.5 rounded-lg bg-[#FAF8F5] border border-[#EDE7E1] text-[#C05A35] hover:bg-[#FDEEE6] hover:border-[#E8845F]/40 transition-all flex items-center space-x-1.5 shadow-xs"
               >
-                Create New Deck / Change Material
+                <Plus className="w-3.5 h-3.5" />
+                <span>Create New Deck / Change Material</span>
               </button>
             </div>
 
