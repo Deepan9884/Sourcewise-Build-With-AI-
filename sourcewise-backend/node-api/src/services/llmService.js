@@ -24,27 +24,21 @@ Guidelines:
    - Suggest concrete next steps (e.g. key recall questions, reflection prompts).
 3. Format with clean GitHub markdown, bold highlights, clear section headers, and bullet points.
 4. NEVER provide generic, empty filler phrases. Deliver genuine, substantive academic substance.
-5. CRITICAL DIRECTIVE FOR LEARNING FEATURE REQUESTS:
-   The SourceWise platform provides dedicated, specialized UI tabs and sections for specific learning activities:
-   - For Quizzes / Practice Tests ("quiz me", "give me a quiz", "test me", "generate quiz"):
-     Direct the user to the "Quiz" tab right above in this workspace. Explain that the Quiz tab has interactive multiple-choice & short-answer questions, customizable difficulty, instant grading, and progress tracking.
-   - For Flashcards / Spaced Repetition ("flashcards", "flashcard", "flip cards", "memorize"):
-     Direct the user to the "Flashcards" tab right above in this workspace for active-recall flip cards and spaced-repetition ratings.
-   - For 1-on-1 Tutoring / Socratic Method ("tutor me", "socratic tutoring", "teach me"):
-     Direct the user to the "Tutor" tab right above in this workspace for guided step-by-step dialogue.
-   - For Structured Notes / Summaries ("make notes", "generate notes", "study notes"):
-     Direct the user to the "Notes" tab right above in this workspace to generate, edit, cloud-save, and export formatted notes (PDF/Markdown/JSON).
-   - For Study Plan / Schedule / Calendar ("study plan", "make a schedule", "roadmap"):
-     Direct the user to the "My Plan" section (/plan) to track daily pacing and schedule study blocks.
-   - For Brain Games / Puzzles ("games", "puzzles", "crossword", "arena"):
-     Direct the user to the "Game Arena" (/puzzles) to play word searches and memory match challenges.
-   - For Code Execution ("compiler", "deepcode", "run code"):
-     Direct the user to "DeepCode" (/deepcode) for an in-browser code editor and runner.
-    ALWAYS clearly instruct the user to go to that respective dedicated tab or section whenever they ask to access or use these learning features.
+5. EDUCATIONAL CONTENT GENERATION VS CASUAL INQUIRIES:
+   - When asked to "create", "generate", "produce", or build quizzes, flashcards, or study notes: ALWAYS generate the complete educational content directly! For quizzes: output questions, multiple-choice options A/B/C/D, answers, and explanations. For flashcards: output FRONT: [term] and BACK: [definition]. NEVER tell the user to switch tabs when asked to generate educational material!
+   - ONLY when a user in casual chat asks a short inquiry without creation requirements (e.g. "quiz me", "where are flashcards"): briefly guide them to the dedicated tab in this workspace.
 6. DOCUMENT GROUNDING RULE: The "Context:" header before the user question tells you EXACTLY which document(s) are selected. Answer ONLY about those named documents. NEVER substitute or invent other textbooks or materials not in the context. If you lack the document full text, say so honestly and ask the user to share excerpts.
 7. STUDENT WELLNESS & FATIGUE RULE: If the user expresses fatigue, sleepiness, stress, or needing a break (e.g. "i am sleepy", "i'm tired", "i'm overwhelmed", "can i take a break"):
    - NEVER treat their physical state or mood as an academic or technical topic in the study materials!
    - Respond as an intelligent, caring academic mentor. Explain the neuroscience of sleep and memory consolidation, encourage healthy rest or a power nap, and reassure them that their study progress is saved.`;
+
+const GENERATION_SYSTEM_INSTRUCTION = `You are SourceWise AI, a world-class academic content generator and pedagogical engine.
+Your sole mission is to generate high-quality, rigorous educational content (quizzes, flashcards, study notes) strictly adhering to the user's instructions.
+CRITICAL REQUIREMENTS:
+1. ALWAYS generate the full, detailed educational content directly (questions, multiple-choice options A/B/C/D, correct answers, explanations, or flashcards with FRONT and BACK).
+2. NEVER output navigation instructions or tell the user to switch tabs. Output the actual questions and educational materials immediately.
+3. Content must test actual educational concepts, rules, vocabulary, techniques, and lessons taught in the provided study material.
+4. Format strictly so parsers can extract the questions and flashcards flawlessly.`;
 
 /**
  * Dedicated Intent Router for SourceWise Features.
@@ -357,6 +351,7 @@ async function generateText({ question, sourceIds = [], history = [], personalCo
     }
   }
   const contents = buildGeminiContents(question, history, sources);
+  const systemPrompt = skipRedirection ? GENERATION_SYSTEM_INSTRUCTION : DEFAULT_SYSTEM_INSTRUCTION;
 
   let lastError = null;
 
@@ -368,7 +363,7 @@ async function generateText({ question, sourceIds = [], history = [], personalCo
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           contents,
-          systemInstruction: { parts: [{ text: DEFAULT_SYSTEM_INSTRUCTION }] },
+          systemInstruction: { parts: [{ text: systemPrompt }] },
           generationConfig: {
             temperature: 0.7,
             maxOutputTokens: 2048,
@@ -439,31 +434,34 @@ async function generateJson({ prompt, systemPrompt = '' }) {
 /**
  * Stream response tokens directly to an Express response using Server-Sent Events (SSE)
  */
-async function streamText(res, { question, sourceIds = [], history = [], userId = null, sourceNameHints = [] }) {
+async function streamText(res, { question, sourceIds = [], history = [], userId = null, sourceNameHints = [], skipRedirection = false }) {
   const sources = await getSourcesMetadata(sourceIds, userId, sourceNameHints);
   const primarySourceName = sources[0]?.name || 'your study material';
-  const redirection = getFeatureRedirection(question, primarySourceName);
-  if (redirection) {
-    res.setHeader('Content-Type', 'text/event-stream');
-    res.setHeader('Cache-Control', 'no-cache');
-    res.setHeader('Connection', 'keep-alive');
-    if (sources.length > 0) {
-      const citations = sources.map(s => ({
-        source_id: s.id,
-        title: s.name,
-        snippet: `Active material: ${s.name}`,
-      }));
-      res.write(`data: ${JSON.stringify({ type: 'citations', data: citations })}\n\n`);
+  if (!skipRedirection) {
+    const redirection = getFeatureRedirection(question, primarySourceName);
+    if (redirection) {
+      res.setHeader('Content-Type', 'text/event-stream');
+      res.setHeader('Cache-Control', 'no-cache');
+      res.setHeader('Connection', 'keep-alive');
+      if (sources.length > 0) {
+        const citations = sources.map(s => ({
+          source_id: s.id,
+          title: s.name,
+          snippet: `Active material: ${s.name}`,
+        }));
+        res.write(`data: ${JSON.stringify({ type: 'citations', data: citations })}\n\n`);
+      }
+      const tokens = redirection.split(/(\s+)/);
+      for (const tok of tokens) {
+        res.write(`data: ${JSON.stringify({ type: 'token', data: tok })}\n\n`);
+      }
+      res.write(`data: ${JSON.stringify({ type: 'done' })}\n\n`);
+      res.end();
+      return redirection;
     }
-    const tokens = redirection.split(/(\s+)/);
-    for (const tok of tokens) {
-      res.write(`data: ${JSON.stringify({ type: 'token', data: tok })}\n\n`);
-    }
-    res.write(`data: ${JSON.stringify({ type: 'done' })}\n\n`);
-    res.end();
-    return redirection;
   }
   const contents = buildGeminiContents(question, history, sources);
+  const systemPrompt = skipRedirection ? GENERATION_SYSTEM_INSTRUCTION : DEFAULT_SYSTEM_INSTRUCTION;
 
   res.setHeader('Content-Type', 'text/event-stream');
   res.setHeader('Cache-Control', 'no-cache');
@@ -490,7 +488,7 @@ async function streamText(res, { question, sourceIds = [], history = [], userId 
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           contents,
-          systemInstruction: { parts: [{ text: DEFAULT_SYSTEM_INSTRUCTION }] },
+          systemInstruction: { parts: [{ text: systemPrompt }] },
           generationConfig: {
             temperature: 0.7,
             maxOutputTokens: 2048,

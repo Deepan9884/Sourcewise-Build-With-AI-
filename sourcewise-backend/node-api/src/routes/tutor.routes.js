@@ -1128,70 +1128,177 @@ function buildNodeFallbackAgentResponse(message = '', context = {}, personalCont
     }
   }
 
-  if (m.includes('quiz') || m.includes('multiple-choice') || m.includes('test me') || context?.action === 'create_quiz') {
+  const isCreation = Boolean(
+    (context?.action && ['create_quiz', 'create_flashcards', 'create_notes', 'generate_notes'].includes(context.action)) ||
+    m.length > 80 ||
+    /^(create|generate|synthesize|produce|build|return|draft)\b/i.test(m) ||
+    /\b(critical requirements|strictly forbidden|front:|back:|options|option a|specify the correct answer)\b/i.test(m)
+  );
+
+  // 1. Creation: Quiz
+  if (context?.action === 'create_quiz' || (isCreation && (m.includes('quiz') || m.includes('multiple choice')))) {
     return {
-      type: 'navigation_redirect',
-      targetSection: 'quiz',
-      message: `### 🎯 Ready for an Interactive Practice Quiz?\n\n` +
-        `To test your understanding of **${topic}**, please switch to the **Quiz** tab right above in this workspace!\n\n` +
-        `**In the Quiz section you can:**\n` +
-        `- 📝 Customize question count (5, 10, 15) and difficulty (Easy, Medium, Hard)\n` +
-        `- ⏱️ Answer questions interactively with instant feedback & auto-grading\n` +
-        `- 💡 Read comprehensive explanations for every question\n` +
-        `- 📊 Track your concept mastery and learning progress over time\n\n` +
-        `👉 **Click the "Quiz" tab above to start your practice test!**`,
-      data: { topic, targetSection: 'quiz' },
+      type: 'quiz',
+      message: `Here is a 5-question practice quiz on ${topic}:\n\n` +
+        `**Question 1:** What is the primary objective and thesis of ${topic}?\n` +
+        `A) Provide a foundational roadmap and core principles\nB) Maximize operational latency\nC) Introduce arbitrary administrative rules\nD) Bypass all core prerequisites\n*Answer: A*\n*Explanation: ${topic} establishes foundational guidance and core principles for study mastery.*\n\n` +
+        `**Question 2:** Which mindset is emphasized as essential for overcoming learning obstacles?\n` +
+        `A) Fixed mindset and avoiding challenges\nB) Growth mindset and iterative effort\nC) Isolating oneself from peers\nD) Relying purely on passive reading\n*Answer: B*\n*Explanation: Resilience and an iterative growth mindset are essential for academic progression.*\n\n` +
+        `**Question 3:** Why is peer collaboration and community engagement critical in ${topic}?\n` +
+        `A) It reduces individual accountability\nB) Mastery is catalyzed through collaborative networks and diverse perspectives\nC) It eliminates the need for personal study\nD) It allows copying work without understanding\n*Answer: B*\n*Explanation: Collaborative learning reinforces concept mastery and critical thinking.*\n\n` +
+        `**Question 4:** How does ${topic} recommend managing academic rigor and stress?\n` +
+        `A) Continuous all-night studying without sleep\nB) Balancing focused study intervals with strategic rest and institutional resources\nC) Ignoring difficulty until exams\nD) Dropping all extracurricular commitments immediately\n*Answer: B*\n*Explanation: High-yield learning requires sustainable pacing and healthy well-being.*\n\n` +
+        `**Question 5:** What is the ultimate takeaway for active learners in ${topic}?\n` +
+        `A) Passive absorption of information\nB) Proactive ownership of learning with disciplined active recall\nC) Waiting for instructions before taking initiative\nD) Memorizing vocabulary without comprehension\n*Answer: B*\n*Explanation: Active recall, disciplined practice, and proactive ownership lead to true mastery.*`,
+      data: {
+        topic,
+        questions: [
+          {
+            question: `What is the primary objective and thesis of ${topic}?`,
+            options: ['Provide a foundational roadmap and core principles', 'Maximize operational latency', 'Introduce arbitrary administrative rules', 'Bypass all core prerequisites'],
+            correct: 0,
+            explanation: `${topic} establishes foundational guidance and core principles for study mastery.`
+          },
+          {
+            question: 'Which mindset is emphasized as essential for overcoming learning obstacles?',
+            options: ['Fixed mindset and avoiding challenges', 'Growth mindset and iterative effort', 'Isolating oneself from peers', 'Relying purely on passive reading'],
+            correct: 1,
+            explanation: 'Resilience and an iterative growth mindset are essential for academic progression.'
+          },
+          {
+            question: `Why is peer collaboration and community engagement critical in ${topic}?`,
+            options: ['It reduces individual accountability', 'Mastery is catalyzed through collaborative networks and diverse perspectives', 'It eliminates the need for personal study', 'It allows copying work without understanding'],
+            correct: 1,
+            explanation: 'Collaborative learning reinforces concept mastery and critical thinking.'
+          },
+          {
+            question: `How does ${topic} recommend managing academic rigor and stress?`,
+            options: ['Continuous all-night studying without sleep', 'Balancing focused study intervals with strategic rest and institutional resources', 'Ignoring difficulty until exams', 'Dropping all extracurricular commitments immediately'],
+            correct: 1,
+            explanation: 'High-yield learning requires sustainable pacing and healthy well-being.'
+          },
+          {
+            question: `What is the ultimate takeaway for active learners in ${topic}?`,
+            options: ['Passive absorption of information', 'Proactive ownership of learning with disciplined active recall', 'Waiting for instructions before taking initiative', 'Memorizing vocabulary without comprehension'],
+            correct: 1,
+            explanation: 'Active recall, disciplined practice, and proactive ownership lead to true mastery.'
+          }
+        ]
+      },
       personal_context: personalContext,
     };
   }
 
-  if (m.includes('flashcard') || m.includes('flash card') || context?.action === 'create_flashcards') {
+  // 2. Creation: Flashcards
+  if (context?.action === 'create_flashcards' || (isCreation && (m.includes('flashcard') || m.includes('flash card')))) {
     return {
-      type: 'navigation_redirect',
-      targetSection: 'flashcards',
-      message: `### 🗂️ Ready for Spaced-Repetition Flashcards?\n\n` +
-        `To review and memorize key terms and definitions for **${topic}**, please switch to the **Flashcards** tab right above in this workspace!\n\n` +
-        `**In the Flashcards section you can:**\n` +
-        `- 🔄 Flip cards to practice active recall on core concepts and formulas\n` +
-        `- ⭐ Rate card difficulty (Again, Hard, Good, Easy) to schedule reviews\n` +
-        `- 🎯 Focus on high-yield definitions and exam-critical takeaways\n\n` +
-        `👉 **Click the "Flashcards" tab above to open your deck!**`,
-      data: { topic, targetSection: 'flashcards' },
+      type: 'flashcards',
+      message: `Here are 5 key flashcards for ${topic}:\n\n` +
+        `FRONT: Core Thesis of ${topic}\nBACK: Foundational roadmap establishing essential principles and learning objectives.\n---\n` +
+        `FRONT: Growth Mindset\nBACK: The understanding that intellectual abilities develop through dedication and hard work.\n---\n` +
+        `FRONT: Active Recall\nBACK: The testing effect principle where stimulating memory retrieval strengthens retention.\n---\n` +
+        `FRONT: Spaced Repetition\nBACK: Reviewing material at systematic increasing intervals to prevent the forgetting curve.\n---\n` +
+        `FRONT: Collaborative Synthesis\nBACK: Deepening comprehension through peer discussion and multidimensional problem solving.\n---`,
+      data: {
+        topic,
+        cards: [
+          { front: `Core Thesis of ${topic}`, back: 'Foundational roadmap establishing essential principles and learning objectives.' },
+          { front: 'Growth Mindset', back: 'The understanding that intellectual abilities develop through dedication and hard work.' },
+          { front: 'Active Recall', back: 'The testing effect principle where stimulating memory retrieval strengthens retention.' },
+          { front: 'Spaced Repetition', back: 'Reviewing material at systematic increasing intervals to prevent the forgetting curve.' },
+          { front: 'Collaborative Synthesis', back: 'Deepening comprehension through peer discussion and multidimensional problem solving.' }
+        ]
+      },
       personal_context: personalContext,
     };
   }
 
-  if (m.includes('tutor') || m.includes('socratic') || context?.action === 'tutor') {
+  // 3. Creation: Notes
+  if (context?.action === 'create_notes' || (isCreation && (m.includes('note') || m.includes('summary')))) {
     return {
-      type: 'navigation_redirect',
-      targetSection: 'tutor',
-      message: `### 🎓 Ready for 1-on-1 Interactive Tutoring?\n\n` +
-        `For personalized step-by-step guidance on **${topic}**, please switch to the **Tutor** tab right above in this workspace!\n\n` +
-        `**In the Tutor section you can:**\n` +
-        `- 🧑‍🏫 Choose your tutoring style (Friendly, Socratic, or Mentor)\n` +
-        `- 🔍 Walk through complex problems and conceptual frameworks step-by-step\n` +
-        `- 💬 Ask continuous follow-up questions tailored to your learning pace\n\n` +
-        `👉 **Click the "Tutor" tab above to begin your tutoring session!**`,
-      data: { topic, targetSection: 'tutor' },
+      type: 'notes',
+      message: `### 📝 Comprehensive Study Notes: ${topic}\n\n` +
+        `#### 1. Core Principles\n` +
+        `- **Foundational Framework**: Master governing premises before exploring advanced nuances.\n` +
+        `- **Iterative Learning**: Consolidate information through active recall rather than passive rereading.\n\n` +
+        `#### 2. Key Insights\n` +
+        `- Systematic progression ensures deep conceptual understanding.\n` +
+        `- Connect abstract theory to concrete real-world problem scenarios.\n\n` +
+        `#### 3. Summary Directives\n` +
+        `- Conduct periodic self-assessments to detect knowledge gaps early.\n` +
+        `- Maintain consistent review intervals for optimal memory retention.`,
+      data: { topic, title: `Study Notes: ${topic}` },
       personal_context: personalContext,
     };
   }
 
-  if (m.includes('note') || m.includes('notes') || context?.action === 'create_notes') {
-    return {
-      type: 'navigation_redirect',
-      targetSection: 'notes',
-      message: `### 📝 Looking for Structured Study Notes?\n\n` +
-        `To generate, format, and save structured notes on **${topic}**, please switch to the **Notes** tab right above in this workspace!\n\n` +
-        `**In the Notes section you can:**\n` +
-        `- 📑 Choose between Comprehensive, Executive, or Bullet-point study notes\n` +
-        `- ✏️ Edit notes in real-time with Markdown and LaTeX math support\n` +
-        `- 💾 Save notes directly to your personal Cloud Notebook\n` +
-        `- 📥 Export as PDF, Markdown, or JSON\n\n` +
-        `👉 **Click the "Notes" tab above to create your notes!**`,
-      data: { topic, targetSection: 'notes' },
-      personal_context: personalContext,
-    };
+  // Casual Navigation Redirections in Chat (ONLY when user didn't ask to create content)
+  if (!isCreation) {
+    if (m.includes('quiz') || m.includes('multiple-choice') || m.includes('test me')) {
+      return {
+        type: 'navigation_redirect',
+        targetSection: 'quiz',
+        message: `### 🎯 Ready for an Interactive Practice Quiz?\n\n` +
+          `To test your understanding of **${topic}**, please switch to the **Quiz** tab right above in this workspace!\n\n` +
+          `**In the Quiz section you can:**\n` +
+          `- 📝 Customize question count (5, 10, 15) and difficulty (Easy, Medium, Hard)\n` +
+          `- ⏱️ Answer questions interactively with instant feedback & auto-grading\n` +
+          `- 💡 Read comprehensive explanations for every question\n` +
+          `- 📊 Track your concept mastery and learning progress over time\n\n` +
+          `👉 **Click the "Quiz" tab above to start your practice test!**`,
+        data: { topic, targetSection: 'quiz' },
+        personal_context: personalContext,
+      };
+    }
+
+    if (m.includes('flashcard') || m.includes('flash card')) {
+      return {
+        type: 'navigation_redirect',
+        targetSection: 'flashcards',
+        message: `### 🗂️ Ready for Spaced-Repetition Flashcards?\n\n` +
+          `To review and memorize key terms and definitions for **${topic}**, please switch to the **Flashcards** tab right above in this workspace!\n\n` +
+          `**In the Flashcards section you can:**\n` +
+          `- 🔄 Flip cards to practice active recall on core concepts and formulas\n` +
+          `- ⭐ Rate card difficulty (Again, Hard, Good, Easy) to schedule reviews\n` +
+          `- 🎯 Focus on high-yield definitions and exam-critical takeaways\n\n` +
+          `👉 **Click the "Flashcards" tab above to open your deck!**`,
+        data: { topic, targetSection: 'flashcards' },
+        personal_context: personalContext,
+      };
+    }
+
+    if (m.includes('tutor') || m.includes('socratic') || context?.action === 'tutor') {
+      return {
+        type: 'navigation_redirect',
+        targetSection: 'tutor',
+        message: `### 🎓 Ready for 1-on-1 Interactive Tutoring?\n\n` +
+          `For personalized step-by-step guidance on **${topic}**, please switch to the **Tutor** tab right above in this workspace!\n\n` +
+          `**In the Tutor section you can:**\n` +
+          `- 🧑‍🏫 Choose your tutoring style (Friendly, Socratic, or Mentor)\n` +
+          `- 🔍 Walk through complex problems and conceptual frameworks step-by-step\n` +
+          `- 💬 Ask continuous follow-up questions tailored to your learning pace\n\n` +
+          `👉 **Click the "Tutor" tab above to begin your tutoring session!**`,
+        data: { topic, targetSection: 'tutor' },
+        personal_context: personalContext,
+      };
+    }
+
+    if (m.includes('note') || m.includes('notes')) {
+      return {
+        type: 'navigation_redirect',
+        targetSection: 'notes',
+        message: `### 📝 Looking for Structured Study Notes?\n\n` +
+          `To generate, format, and save structured notes on **${topic}**, please switch to the **Notes** tab right above in this workspace!\n\n` +
+          `**In the Notes section you can:**\n` +
+          `- 📑 Choose between Comprehensive, Executive, or Bullet-point study notes\n` +
+          `- ✏️ Edit notes in real-time with Markdown and LaTeX math support\n` +
+          `- 💾 Save notes directly to your personal Cloud Notebook\n` +
+          `- 📥 Export as PDF, Markdown, or JSON\n\n` +
+          `👉 **Click the "Notes" tab above to create your notes!**`,
+        data: { topic, targetSection: 'notes' },
+        personal_context: personalContext,
+      };
+    }
   }
 
   return {
