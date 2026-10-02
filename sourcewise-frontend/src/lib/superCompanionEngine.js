@@ -497,6 +497,10 @@ You can ask me to explain any of these topics or test you with quick quiz questi
   // 6. APP NAVIGATION COMMANDS
   // ─────────────────────────────────────────────────────────────
   const navMap = [
+    { regex: /\b(?:(?:go to|take me to|open|show|navigate to)\s+(?:the\s+)?quiz(?:zes)?|quiz\s*me|give\s*me\s*a\s*quiz|test\s*me)\b/i, path: '/workspace/quiz', name: 'Practice Quizzes' },
+    { regex: /\b(?:(?:go to|take me to|open|show|navigate to)\s+(?:the\s+)?flashcards?|flashcards?|flash\s*cards?)\b/i, path: '/workspace/flashcards', name: 'Spaced-Repetition Flashcards' },
+    { regex: /\b(?:(?:go to|take me to|open|show|navigate to)\s+(?:the\s+)?tutor(?:ing)?|tutor\s*me|socratic\s*tutor)\b/i, path: '/workspace/tutor', name: 'Interactive AI Tutor' },
+    { regex: /\b(?:(?:go to|take me to|open|show|navigate to)\s+(?:the\s+)?notes?|make\s*notes|study\s*notes)\b/i, path: '/workspace/notes', name: 'Structured Study Notes' },
     { regex: /\b(?:go to|take me to|open|show|navigate to)\s+(?:my\s+)?(?:plan|calendar|timetable)\b/i, path: '/plan', name: 'My Plan & Study Calendar' },
     { regex: /\b(?:go to|take me to|open|show|navigate to)\s+(?:my\s+)?events\b/i, path: '/events', name: 'Events & Extracurricular Portfolio' },
     { regex: /\b(?:go to|take me to|open|show|navigate to)\s+(?:my\s+)?(?:knowledge|sources|documents|hub)\b/i, path: '/knowledge', name: 'Knowledge Hub' },

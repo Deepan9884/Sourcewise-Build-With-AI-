@@ -1120,62 +1120,68 @@ function buildNodeFallbackAgentResponse(message = '', context = {}, personalCont
     }
   }
 
-  if (m.includes('quiz') || m.includes('multiple-choice') || context?.action === 'create_quiz') {
+  if (m.includes('quiz') || m.includes('multiple-choice') || m.includes('test me') || context?.action === 'create_quiz') {
     return {
-      type: 'quiz',
-      message: `Here is a mastery quiz on ${topic}:\n\n` +
-        `**Question 1:** What is the primary objective of this topic?\n` +
-        `A) Maximize operational latency\nB) Optimize throughput and maintain invariant safety\nC) Bypass validation\nD) Disable fault recovery\n*Answer: B*\n\n` +
-        `**Question 2:** Which trade-off is critical during practical scaling?\n` +
-        `A) Throughput vs. Latency\nB) UI theme vs. Network protocol\nC) Cache size vs. Font resolution\nD) Disk footprint vs. Color depth\n*Answer: A*`,
-      data: {
-        topic,
-        questions: [
-          {
-            question: `What is the primary objective of ${topic}?`,
-            options: [
-              "Maximize operational latency",
-              "Optimize throughput and maintain invariant safety",
-              "Bypass validation",
-              "Disable fault recovery"
-            ],
-            answer: 1,
-            correct: 1,
-            explanation: "Optimizing throughput while strictly maintaining invariant safety ensures robust system reliability."
-          },
-          {
-            question: "Which trade-off is critical during practical scaling?",
-            options: [
-              "Throughput vs. Latency",
-              "UI theme vs. Network protocol",
-              "Cache size vs. Font resolution",
-              "Disk footprint vs. Color depth"
-            ],
-            answer: 0,
-            correct: 0,
-            explanation: "Balancing throughput and latency is essential for maintaining responsiveness under heavy load."
-          }
-        ]
-      },
+      type: 'navigation_redirect',
+      targetSection: 'quiz',
+      message: `### 🎯 Ready for an Interactive Practice Quiz?\n\n` +
+        `To test your understanding of **${topic}**, please switch to the **Quiz** tab right above in this workspace!\n\n` +
+        `**In the Quiz section you can:**\n` +
+        `- 📝 Customize question count (5, 10, 15) and difficulty (Easy, Medium, Hard)\n` +
+        `- ⏱️ Answer questions interactively with instant feedback & auto-grading\n` +
+        `- 💡 Read comprehensive explanations for every question\n` +
+        `- 📊 Track your concept mastery and learning progress over time\n\n` +
+        `👉 **Click the "Quiz" tab above to start your practice test!**`,
+      data: { topic, targetSection: 'quiz' },
       personal_context: personalContext,
     };
   }
 
-  if (m.includes('flashcard') || m.includes('flash') || context?.action === 'create_flashcards') {
+  if (m.includes('flashcard') || m.includes('flash card') || context?.action === 'create_flashcards') {
     return {
-      type: 'flashcards',
-      message: `Here are key flashcards for ${topic}:\n\n` +
-        `• **Card 1** — Front: Key Concept | Back: Core definitions and structural rules.\n` +
-        `• **Card 2** — Front: Important Principles | Back: Predictable transitions and consistent rules.\n` +
-        `• **Card 3** — Front: Key Trade-offs | Back: Speed vs. accuracy and resource balance.`,
-      data: {
-        topic,
-        cards: [
-          { front: "Core Concept", back: `Key foundation and structural definitions of ${topic}.` },
-          { front: "Important Principles", back: "Predictable state transitions and consistent rules." },
-          { front: "Key Trade-offs", back: "Speed vs. accuracy and resource balance." }
-        ]
-      },
+      type: 'navigation_redirect',
+      targetSection: 'flashcards',
+      message: `### 🗂️ Ready for Spaced-Repetition Flashcards?\n\n` +
+        `To review and memorize key terms and definitions for **${topic}**, please switch to the **Flashcards** tab right above in this workspace!\n\n` +
+        `**In the Flashcards section you can:**\n` +
+        `- 🔄 Flip cards to practice active recall on core concepts and formulas\n` +
+        `- ⭐ Rate card difficulty (Again, Hard, Good, Easy) to schedule reviews\n` +
+        `- 🎯 Focus on high-yield definitions and exam-critical takeaways\n\n` +
+        `👉 **Click the "Flashcards" tab above to open your deck!**`,
+      data: { topic, targetSection: 'flashcards' },
+      personal_context: personalContext,
+    };
+  }
+
+  if (m.includes('tutor') || m.includes('socratic') || context?.action === 'tutor') {
+    return {
+      type: 'navigation_redirect',
+      targetSection: 'tutor',
+      message: `### 🎓 Ready for 1-on-1 Interactive Tutoring?\n\n` +
+        `For personalized step-by-step guidance on **${topic}**, please switch to the **Tutor** tab right above in this workspace!\n\n` +
+        `**In the Tutor section you can:**\n` +
+        `- 🧑‍🏫 Choose your tutoring style (Friendly, Socratic, or Mentor)\n` +
+        `- 🔍 Walk through complex problems and conceptual frameworks step-by-step\n` +
+        `- 💬 Ask continuous follow-up questions tailored to your learning pace\n\n` +
+        `👉 **Click the "Tutor" tab above to begin your tutoring session!**`,
+      data: { topic, targetSection: 'tutor' },
+      personal_context: personalContext,
+    };
+  }
+
+  if (m.includes('note') || m.includes('notes') || context?.action === 'create_notes') {
+    return {
+      type: 'navigation_redirect',
+      targetSection: 'notes',
+      message: `### 📝 Looking for Structured Study Notes?\n\n` +
+        `To generate, format, and save structured notes on **${topic}**, please switch to the **Notes** tab right above in this workspace!\n\n` +
+        `**In the Notes section you can:**\n` +
+        `- 📑 Choose between Comprehensive, Executive, or Bullet-point study notes\n` +
+        `- ✏️ Edit notes in real-time with Markdown and LaTeX math support\n` +
+        `- 💾 Save notes directly to your personal Cloud Notebook\n` +
+        `- 📥 Export as PDF, Markdown, or JSON\n\n` +
+        `👉 **Click the "Notes" tab above to create your notes!**`,
+      data: { topic, targetSection: 'notes' },
       personal_context: personalContext,
     };
   }

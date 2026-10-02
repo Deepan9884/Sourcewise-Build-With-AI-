@@ -23,7 +23,150 @@ Guidelines:
    - Detail the structural/rhetorical flow and practical takeaways.
    - Suggest concrete next steps (e.g. key recall questions, reflection prompts).
 3. Format with clean GitHub markdown, bold highlights, clear section headers, and bullet points.
-4. NEVER provide generic, empty filler phrases. Deliver genuine, substantive academic substance.`;
+4. NEVER provide generic, empty filler phrases. Deliver genuine, substantive academic substance.
+5. CRITICAL DIRECTIVE FOR LEARNING FEATURE REQUESTS:
+   The SourceWise platform provides dedicated, specialized UI tabs and sections for specific learning activities:
+   - For Quizzes / Practice Tests ("quiz me", "give me a quiz", "test me", "generate quiz"):
+     Direct the user to the "Quiz" tab right above in this workspace. Explain that the Quiz tab has interactive multiple-choice & short-answer questions, customizable difficulty, instant grading, and progress tracking.
+   - For Flashcards / Spaced Repetition ("flashcards", "flashcard", "flip cards", "memorize"):
+     Direct the user to the "Flashcards" tab right above in this workspace for active-recall flip cards and spaced-repetition ratings.
+   - For 1-on-1 Tutoring / Socratic Method ("tutor me", "socratic tutoring", "teach me"):
+     Direct the user to the "Tutor" tab right above in this workspace for guided step-by-step dialogue.
+   - For Structured Notes / Summaries ("make notes", "generate notes", "study notes"):
+     Direct the user to the "Notes" tab right above in this workspace to generate, edit, cloud-save, and export formatted notes (PDF/Markdown/JSON).
+   - For Study Plan / Schedule / Calendar ("study plan", "make a schedule", "roadmap"):
+     Direct the user to the "My Plan" section (/plan) to track daily pacing and schedule study blocks.
+   - For Brain Games / Puzzles ("games", "puzzles", "crossword", "arena"):
+     Direct the user to the "Game Arena" (/puzzles) to play word searches and memory match challenges.
+   - For Code Execution ("compiler", "deepcode", "run code"):
+     Direct the user to "DeepCode" (/deepcode) for an in-browser code editor and runner.
+   ALWAYS clearly instruct the user to go to that respective dedicated tab or section whenever they ask to access or use these learning features.`;
+
+/**
+ * Dedicated Intent Router for SourceWise Features.
+ */
+function getFeatureRedirection(question, sourceName = 'your study material') {
+  const cleanQ = (question || '')
+    .replace(/^\[Context:.*?\]\s*/is, '')
+    .replace(/^Context:.*?\n+/is, '')
+    .trim();
+  const qLower = cleanQ.toLowerCase();
+
+  // 1. Quiz / Practice Test
+  if (
+    /\b(quiz|quiz me|give me a quiz|test me|practice quiz|practice test|generate a quiz|take a quiz|exam questions|test my knowledge|quizzes|mcq|mcqs)\b/i.test(qLower) ||
+    /^(quiz|quiz me|test me|give me a quiz)[\s!.,?]*$/i.test(qLower)
+  ) {
+    return `### 🎯 Ready for an Interactive Practice Quiz?
+
+To test your knowledge on **${sourceName}**, please switch to the **Quiz** tab right above in this workspace!
+
+**In the Quiz section you can:**
+- 📝 Customize question count (5, 10, 15 questions) and difficulty (Easy, Medium, Hard)
+- ⏱️ Answer questions interactively with instant feedback & auto-grading
+- 💡 Read step-by-step explanations for every question
+- 📊 Track your concept mastery and test scores over time
+
+👉 **Click the "Quiz" tab above to start your practice test!**`;
+  }
+
+  // 2. Flashcards
+  if (
+    /\b(flashcard|flashcards|flash card|flash cards|make flashcards|generate flashcards|flip cards|cards|spaced repetition|memorize)\b/i.test(qLower) ||
+    /^(flashcard|flashcards|flash cards)[\s!.,?]*$/i.test(qLower)
+  ) {
+    return `### 🗂️ Ready for Spaced-Repetition Flashcards?
+
+To review and memorize key terms and definitions from **${sourceName}**, please switch to the **Flashcards** tab right above in this workspace!
+
+**In the Flashcards section you can:**
+- 🔄 Flip cards to practice active recall on core concepts and formulas
+- ⭐ Rate card difficulty (Again, Hard, Good, Easy) to schedule reviews
+- 🎯 Focus on high-yield definitions and exam-critical takeaways
+
+👉 **Click the "Flashcards" tab above to open your deck!**`;
+  }
+
+  // 3. Tutor / Socratic
+  if (
+    /\b(tutor me|tutoring|socratic|teach me|tutor session|start tutoring|personal tutor|1-on-1 tutor)\b/i.test(qLower) ||
+    /^(tutor|tutor me)[\s!.,?]*$/i.test(qLower)
+  ) {
+    return `### 🎓 Ready for 1-on-1 Interactive Tutoring?
+
+For personalized step-by-step guidance on **${sourceName}**, please switch to the **Tutor** tab right above in this workspace!
+
+**In the Tutor section you can:**
+- 🧑‍🏫 Choose your tutoring style (Friendly, Socratic, or Mentor)
+- 🔍 Walk through complex problems and conceptual frameworks step-by-step
+- 💬 Ask continuous follow-up questions tailored to your learning pace
+
+👉 **Click the "Tutor" tab above to begin your tutoring session!**`;
+  }
+
+  // 4. Notes
+  if (
+    /\b(make notes|take notes|generate notes|study notes|create notes|structured notes|summary notes|export notes)\b/i.test(qLower) ||
+    /^(notes|make notes|study notes)[\s!.,?]*$/i.test(qLower)
+  ) {
+    return `### 📝 Looking for Structured Study Notes?
+
+To generate, format, and save structured notes on **${sourceName}**, please switch to the **Notes** tab right above in this workspace!
+
+**In the Notes section you can:**
+- 📑 Choose between Comprehensive, Executive, or Bullet-point study notes
+- ✏️ Edit notes in real-time with Markdown and LaTeX math support
+- 💾 Save notes directly to your personal Cloud Notebook
+- 📥 Export as PDF, Markdown, or JSON
+
+👉 **Click the "Notes" tab above to create your notes!**`;
+  }
+
+  // 5. Plan / Schedule
+  if (
+    /\b(study plan|planner|make a schedule|study schedule|exam schedule|my plan|roadmap|plan my studies|pacing)\b/i.test(qLower)
+  ) {
+    return `### 📅 Looking to Build or Check Your Study Plan?
+
+To manage your multi-subject study schedule, exam timeline, and daily pacing, navigate to the **My Plan** section (\`/plan\`)!
+
+**In My Plan you can:**
+- 📊 Track your daily pacing, streaks, and subject completion targets
+- 🗓️ Schedule study blocks and integrate with Google Calendar
+- 🔄 Get automatic adaptive replanning based on your schedule
+
+👉 **Navigate to My Plan (\`/plan\`) to manage your schedule!**`;
+  }
+
+  // 6. Games / Puzzles / Arena
+  if (
+    /\b(puzzle|puzzles|game|games|crossword|word search|memory flip|game arena|arena)\b/i.test(qLower)
+  ) {
+    return `### 🎮 Looking for Brain Games & Puzzles?
+
+To sharpen your memory with interactive study games based on your materials, visit the **Puzzles & Game Arena** section (\`/puzzles\`)!
+
+**In the Game Arena you can:**
+- 🧩 Solve vocabulary word searches and crosswords generated from your documents
+- 🃏 Play memory match and rapid recall challenges
+- 🏆 Earn study achievements and level up
+
+👉 **Navigate to Game Arena (\`/puzzles\`) to play!**`;
+  }
+
+  // 7. DeepCode / Compiler
+  if (
+    /\b(code|compiler|deepcode|run code|write code|execute code|programming)\b/i.test(qLower)
+  ) {
+    return `### 💻 Looking for Code Execution & Analysis?
+
+Visit the **DeepCode Compiler** section (\`/deepcode\`) to write, inspect, and run code in an interactive sandbox with real-time AI assistance!
+
+👉 **Navigate to DeepCode (\`/deepcode\`) to start coding!**`;
+  }
+
+  return null;
+}
 
 /**
  * Fetch source metadata from Supabase and demo state
@@ -151,6 +294,15 @@ async function generateText({ question, sourceIds = [], history = [], personalCo
   }
 
   const sources = await getSourcesMetadata(sourceIds, userId);
+  const primarySourceName = sources[0]?.name || 'your study material';
+  const redirection = getFeatureRedirection(question, primarySourceName);
+  if (redirection) {
+    return {
+      text: redirection,
+      model: 'system-intent-router',
+      sources: sources.map(s => s.name || s.id),
+    };
+  }
   const contents = buildGeminiContents(question, history, sources);
 
   let lastError = null;
@@ -236,6 +388,28 @@ async function generateJson({ prompt, systemPrompt = '' }) {
  */
 async function streamText(res, { question, sourceIds = [], history = [], userId = null }) {
   const sources = await getSourcesMetadata(sourceIds, userId);
+  const primarySourceName = sources[0]?.name || 'your study material';
+  const redirection = getFeatureRedirection(question, primarySourceName);
+  if (redirection) {
+    res.setHeader('Content-Type', 'text/event-stream');
+    res.setHeader('Cache-Control', 'no-cache');
+    res.setHeader('Connection', 'keep-alive');
+    if (sources.length > 0) {
+      const citations = sources.map(s => ({
+        source_id: s.id,
+        title: s.name,
+        snippet: `Active material: ${s.name}`,
+      }));
+      res.write(`data: ${JSON.stringify({ type: 'citations', data: citations })}\n\n`);
+    }
+    const tokens = redirection.split(/(\s+)/);
+    for (const tok of tokens) {
+      res.write(`data: ${JSON.stringify({ type: 'token', data: tok })}\n\n`);
+    }
+    res.write(`data: ${JSON.stringify({ type: 'done' })}\n\n`);
+    res.end();
+    return redirection;
+  }
   const contents = buildGeminiContents(question, history, sources);
 
   res.setHeader('Content-Type', 'text/event-stream');

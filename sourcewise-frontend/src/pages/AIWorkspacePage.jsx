@@ -11,7 +11,7 @@ import {
 import { useSourceStore } from '../store/sourceStore'
 import { useAuthStore } from '../store/authStore'
 import { useWorkspaceStore } from '../store/workspaceStore'
-import { streamChat } from '../lib/chatApi'
+import { streamChat, getFeatureRedirectionResponse } from '../lib/chatApi'
 import { sendAgentMessage } from '../lib/agentApi'
 import { exportNotesAsJson, exportNotesAsPdf, exportNotesAsMarkdown } from '../lib/notesExport'
 import { GlowCard } from '../components/ui/glow-card'
@@ -541,7 +541,20 @@ Begin our session by giving a warm 2-sentence welcome, introducing the first fun
     const userMessage = rawText.trim()
     if (textOverride === null) setInput('')
     setMessages(prev => [...prev, { role: 'user', content: userMessage }])
-    setIsGenerating(true)
+    // Check if query is an explicit request for a dedicated feature (Quiz, Flashcards, Tutor, Notes, Plan, Arena, DeepCode)
+    const activeMaterial = uploadedSources.find(s => selectedMaterialIds.includes(s.id)) || uploadedSources[0]
+    const materialName = activeMaterial?.name || 'your study material'
+    const featureRedir = getFeatureRedirectionResponse(userMessage, materialName)
+    if (featureRedir) {
+      setMessages(prev => [...prev, {
+        role: 'assistant',
+        content: featureRedir.message,
+        targetSection: featureRedir.target,
+        actionType: featureRedir.target
+      }])
+      setIsGenerating(false)
+      return
+    }
 
     // Check if query is greeting, personal productivity / task inquiry or if no sources selected
     const isPersonalQuery = selectedMaterialIds.length === 0 || 
@@ -857,6 +870,156 @@ Begin our session by giving a warm 2-sentence welcome, introducing the first fun
                 : 'bg-white border border-[#EDE7E1] text-[#1E1B16] shadow-xs'
             }`}>
               <RichMessageContent content={msg.content} isUser={msg.role === 'user'} />
+
+              {/* Feature Navigation Quick Action Card */}
+              {msg.role === 'assistant' && (
+                (() => {
+                  const content = msg.content || '';
+                  const actionType = msg.actionType || msg.targetSection;
+                  const isQuiz = actionType === 'quiz' || /\b(Quiz tab|Quiz section|practice quiz|interactive quiz|quiz me)\b/i.test(content);
+                  const isFlashcards = actionType === 'flashcards' || /\b(Flashcards tab|Flashcards section|flashcards|flashcard)\b/i.test(content);
+                  const isTutor = actionType === 'tutor' || /\b(Tutor tab|Tutor section|tutoring session|Socratic tutor)\b/i.test(content);
+                  const isNotes = actionType === 'notes' || /\b(Notes tab|Notes section|study notes|generate notes)\b/i.test(content);
+                  const isPlan = actionType === 'plan' || /\b(My Plan|study schedule|\/plan)\b/i.test(content);
+                  const isArena = actionType === 'arena' || /\b(Game Arena|Puzzles|\/puzzles|\/arena)\b/i.test(content);
+                  const isCode = actionType === 'code' || /\b(DeepCode|compiler|\/deepcode|\/code)\b/i.test(content);
+
+                  if (isQuiz) {
+                    return (
+                      <div className="mt-3.5 pt-3 border-t border-[#F3DFD5] flex flex-wrap items-center justify-between gap-2 bg-[#FFF8F5] -mx-5 -mb-4 p-3.5 rounded-b-2xl">
+                        <div className="flex items-center space-x-2 text-xs text-[#5B544E]">
+                          <HelpCircle className="w-4 h-4 text-[#E8845F]" />
+                          <span className="font-semibold text-[#1E1B16]">Practice Quizzes Available</span>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => setActiveMode('quiz')}
+                          className="sw-btn-primary !h-8 !px-3.5 !text-xs inline-flex items-center space-x-1.5 shadow-sm"
+                        >
+                          <span>Open Quiz Tab</span>
+                          <ArrowRight className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
+                    );
+                  }
+
+                  if (isFlashcards) {
+                    return (
+                      <div className="mt-3.5 pt-3 border-t border-[#F3DFD5] flex flex-wrap items-center justify-between gap-2 bg-[#FFF8F5] -mx-5 -mb-4 p-3.5 rounded-b-2xl">
+                        <div className="flex items-center space-x-2 text-xs text-[#5B544E]">
+                          <BookOpen className="w-4 h-4 text-[#E8845F]" />
+                          <span className="font-semibold text-[#1E1B16]">Spaced-Repetition Cards Available</span>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => setActiveMode('flashcards')}
+                          className="sw-btn-primary !h-8 !px-3.5 !text-xs inline-flex items-center space-x-1.5 shadow-sm"
+                        >
+                          <span>Open Flashcards Tab</span>
+                          <ArrowRight className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
+                    );
+                  }
+
+                  if (isTutor) {
+                    return (
+                      <div className="mt-3.5 pt-3 border-t border-[#F3DFD5] flex flex-wrap items-center justify-between gap-2 bg-[#FFF8F5] -mx-5 -mb-4 p-3.5 rounded-b-2xl">
+                        <div className="flex items-center space-x-2 text-xs text-[#5B544E]">
+                          <GraduationCap className="w-4 h-4 text-[#E8845F]" />
+                          <span className="font-semibold text-[#1E1B16]">Interactive Socratic Tutor Available</span>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => setActiveMode('tutor')}
+                          className="sw-btn-primary !h-8 !px-3.5 !text-xs inline-flex items-center space-x-1.5 shadow-sm"
+                        >
+                          <span>Open Tutor Tab</span>
+                          <ArrowRight className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
+                    );
+                  }
+
+                  if (isNotes) {
+                    return (
+                      <div className="mt-3.5 pt-3 border-t border-[#F3DFD5] flex flex-wrap items-center justify-between gap-2 bg-[#FFF8F5] -mx-5 -mb-4 p-3.5 rounded-b-2xl">
+                        <div className="flex items-center space-x-2 text-xs text-[#5B544E]">
+                          <FileText className="w-4 h-4 text-[#E8845F]" />
+                          <span className="font-semibold text-[#1E1B16]">Structured Notes & Summaries Available</span>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => setActiveMode('notes')}
+                          className="sw-btn-primary !h-8 !px-3.5 !text-xs inline-flex items-center space-x-1.5 shadow-sm"
+                        >
+                          <span>Open Notes Tab</span>
+                          <ArrowRight className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
+                    );
+                  }
+
+                  if (isPlan) {
+                    return (
+                      <div className="mt-3.5 pt-3 border-t border-[#F3DFD5] flex flex-wrap items-center justify-between gap-2 bg-[#FFF8F5] -mx-5 -mb-4 p-3.5 rounded-b-2xl">
+                        <div className="flex items-center space-x-2 text-xs text-[#5B544E]">
+                          <Compass className="w-4 h-4 text-[#E8845F]" />
+                          <span className="font-semibold text-[#1E1B16]">Study Plan & Calendar Available</span>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => navigate('/plan')}
+                          className="sw-btn-primary !h-8 !px-3.5 !text-xs inline-flex items-center space-x-1.5 shadow-sm"
+                        >
+                          <span>Go to My Plan</span>
+                          <ArrowRight className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
+                    );
+                  }
+
+                  if (isArena) {
+                    return (
+                      <div className="mt-3.5 pt-3 border-t border-[#F3DFD5] flex flex-wrap items-center justify-between gap-2 bg-[#FFF8F5] -mx-5 -mb-4 p-3.5 rounded-b-2xl">
+                        <div className="flex items-center space-x-2 text-xs text-[#5B544E]">
+                          <Award className="w-4 h-4 text-[#E8845F]" />
+                          <span className="font-semibold text-[#1E1B16]">Puzzles & Game Arena Available</span>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => navigate('/puzzles')}
+                          className="sw-btn-primary !h-8 !px-3.5 !text-xs inline-flex items-center space-x-1.5 shadow-sm"
+                        >
+                          <span>Go to Game Arena</span>
+                          <ArrowRight className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
+                    );
+                  }
+
+                  if (isCode) {
+                    return (
+                      <div className="mt-3.5 pt-3 border-t border-[#F3DFD5] flex flex-wrap items-center justify-between gap-2 bg-[#FFF8F5] -mx-5 -mb-4 p-3.5 rounded-b-2xl">
+                        <div className="flex items-center space-x-2 text-xs text-[#5B544E]">
+                          <Code className="w-4 h-4 text-[#E8845F]" />
+                          <span className="font-semibold text-[#1E1B16]">DeepCode Compiler Available</span>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => navigate('/deepcode')}
+                          className="sw-btn-primary !h-8 !px-3.5 !text-xs inline-flex items-center space-x-1.5 shadow-sm"
+                        >
+                          <span>Open DeepCode</span>
+                          <ArrowRight className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
+                    );
+                  }
+
+                  return null;
+                })()
+              )}
 
               {/* Interactive Personal AI Task Cards */}
               {msg.tasks && msg.tasks.length > 0 && (
