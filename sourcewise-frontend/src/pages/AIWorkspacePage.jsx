@@ -6,7 +6,7 @@ import {
   Award, AlertCircle, RefreshCw, Download, 
   CheckCircle2, SlidersHorizontal, ArrowRight, RotateCcw,
   GraduationCap, Layers, Compass, CheckSquare, Square, Key, Sparkles,
-  Cloud, CloudUpload, Folder, FolderOpen, Edit3, Eye, Trash2, Search, Code, ChevronDown, Pencil, FileDown
+  Cloud, CloudUpload, Folder, FolderOpen, Edit3, Eye, Trash2, Search, Code, ChevronDown, Pencil, FileDown, Plus
 } from 'lucide-react'
 import { useSourceStore } from '../store/sourceStore'
 import { useAuthStore } from '../store/authStore'
