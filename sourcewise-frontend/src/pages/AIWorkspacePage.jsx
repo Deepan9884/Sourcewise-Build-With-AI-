@@ -1118,12 +1118,24 @@ Begin our session by giving a warm 2-sentence welcome, introducing the first fun
             <div className="w-8 h-8 rounded-lg bg-[#FDEEE6] flex items-center justify-center mr-3 shrink-0">
               <Brain className="w-4 h-4 text-[#E8845F] animate-pulse" />
             </div>
-            <div className="bg-white border border-[#EDE7E1] rounded-2xl px-5 py-4 flex items-center space-x-2 shadow-xs">
-              <Loader2 className="w-4 h-4 animate-spin text-[#E8845F]" />
-              <span className="text-xs text-[#8A817B]">Grounding response in your documents...</span>
+            <div className="bg-white border border-[#EDE7E1] rounded-2xl px-4 py-3.5 shadow-xs flex items-center gap-1.5">
+              {/* Animated bouncing dots — clearly shows "thinking", not frozen */}
+              <span
+                className="w-2 h-2 rounded-full bg-[#E8845F] inline-block"
+                style={{ animation: 'swDot 1.2s infinite ease-in-out', animationDelay: '0s' }}
+              />
+              <span
+                className="w-2 h-2 rounded-full bg-[#E8845F] inline-block"
+                style={{ animation: 'swDot 1.2s infinite ease-in-out', animationDelay: '0.2s' }}
+              />
+              <span
+                className="w-2 h-2 rounded-full bg-[#E8845F] inline-block"
+                style={{ animation: 'swDot 1.2s infinite ease-in-out', animationDelay: '0.4s' }}
+              />
             </div>
           </div>
         )}
+
         <div ref={messagesEndRef} />
       </div>
     </div>
