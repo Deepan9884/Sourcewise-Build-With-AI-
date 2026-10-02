@@ -19,11 +19,15 @@ import { studyPlansApi } from '../lib/studyPlansApi'
 const API_URL = import.meta.env.VITE_API_URL || 'https://node-api-nine-flame.vercel.app'
 
 /* ─── helpers ─────────────────────────────────────────────────── */
-async function get(path, token) {
+async function get(path, token, timeoutMs = 6000) {
   try {
+    const controller = new AbortController()
+    const tid = setTimeout(() => controller.abort(), timeoutMs)
     const r = await fetch(`${API_URL}${path}`, {
       headers: { Authorization: `Bearer ${token}` },
+      signal: controller.signal,
     })
+    clearTimeout(tid)
     return r.ok ? r.json() : null
   } catch { return null }
 }
@@ -224,22 +228,32 @@ export default function AnalysisPage() {
   const [plans, setPlans]         = useState([])
 
   const load = async () => {
-    if (!accessToken) return
-    const [o, t, m, md, an] = await Promise.all([
-      get('/dashboard/overview', accessToken),
-      get('/progress/trends', accessToken),
-      get('/mastery', accessToken),
-      get('/mood/insights?days=30', accessToken),
-      get('/analytics/overview', accessToken),
-    ])
-    setOverview(o); setTrends(t)
-    setMastery(Array.isArray(m) ? m : [])
-    setMood(md); setAnalytics(an)
+    if (!accessToken) { setLoading(false); return }
+
+    // Safety cap: no matter what, stop the spinner after 8s
+    const safetyTimer = setTimeout(() => { setLoading(false); setRefreshing(false) }, 8000)
+
     try {
-      const ps = await studyPlansApi.list()
-      setPlans(Array.isArray(ps) ? ps : [])
-    } catch { setPlans([]) }
-    setLoading(false); setRefreshing(false)
+      const [o, t, m, md, an] = await Promise.all([
+        get('/dashboard/overview', accessToken),
+        get('/progress/trends', accessToken),
+        get('/mastery', accessToken),
+        get('/mood/insights?days=30', accessToken),
+        get('/analytics/overview', accessToken),
+      ])
+      setOverview(o); setTrends(t)
+      setMastery(Array.isArray(m) ? m : [])
+      setMood(md); setAnalytics(an)
+      try {
+        const ps = await studyPlansApi.list()
+        setPlans(Array.isArray(ps) ? ps : [])
+      } catch { setPlans([]) }
+    } catch {
+      // fail silently — seed data will still render the page
+    } finally {
+      clearTimeout(safetyTimer)
+      setLoading(false); setRefreshing(false)
+    }
   }
 
   useEffect(() => { load() }, [accessToken]) // eslint-disable-line
@@ -310,11 +324,43 @@ export default function AnalysisPage() {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center h-80">
-        <div className="flex flex-col items-center gap-3">
-          <div className="w-10 h-10 rounded-full border-2 border-[#E8845F]/30 border-t-[#E8845F] animate-spin" />
-          <p className="text-sm text-[#8C827A] font-medium">Loading your analytics…</p>
+      <div className="max-w-7xl mx-auto pb-12 space-y-6 animate-pulse">
+        {/* Header skeleton */}
+        <div className="flex items-center justify-between">
+          <div>
+            <div className="h-7 w-48 bg-[#EDE7E1] rounded-lg mb-2" />
+            <div className="h-4 w-72 bg-[#F3EFEB] rounded-lg" />
+          </div>
+          <div className="h-9 w-28 bg-[#EDE7E1] rounded-xl" />
         </div>
+        {/* Tab bar skeleton */}
+        <div className="flex gap-2 border-b border-[#EDE7E1] pb-2">
+          {[1,2,3,4,5].map(i => (
+            <div key={i} className="h-9 w-24 bg-[#F3EFEB] rounded-xl" />
+          ))}
+        </div>
+        {/* KPI cards skeleton */}
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+          {[1,2,3,4,5,6,7,8].map(i => (
+            <div key={i} className="bg-white rounded-2xl border border-[#EDE7E1] p-4 h-28">
+              <div className="h-8 w-8 bg-[#EDE7E1] rounded-xl mb-3" />
+              <div className="h-5 w-16 bg-[#EDE7E1] rounded mb-1.5" />
+              <div className="h-3 w-24 bg-[#F3EFEB] rounded" />
+            </div>
+          ))}
+        </div>
+        {/* Chart skeletons */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
+          <div className="bg-white rounded-2xl border border-[#EDE7E1] p-5 h-52">
+            <div className="h-4 w-32 bg-[#EDE7E1] rounded mb-4" />
+            <div className="h-32 bg-[#F3EFEB] rounded-xl" />
+          </div>
+          <div className="bg-white rounded-2xl border border-[#EDE7E1] p-5 h-52">
+            <div className="h-4 w-32 bg-[#EDE7E1] rounded mb-4" />
+            <div className="h-32 bg-[#F3EFEB] rounded-xl" />
+          </div>
+        </div>
+        <p className="text-center text-xs text-[#B0A8A0] mt-2">Fetching your analytics data…</p>
       </div>
     )
   }
