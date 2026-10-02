@@ -280,36 +280,16 @@ export default function AIWorkspacePage() {
     }
   }, [accessToken, activeMode, fetchCloudNotesList])
 
-  // Hydrate sources from backend if store is empty
-  const fetchSources = useCallback(async () => {
-    try {
-      const res = await fetch(`${API_URL}/sources`, {
-        headers: { Authorization: `Bearer ${accessToken}` },
-      })
-      if (res.ok) {
-        const data = await res.json()
-        const localIds = useSourceStore.getState().uploadedSources.map((s) => s.id)
-        const fresh = data.filter((s) => !localIds.includes(s.id) && (s.type || '').toLowerCase() !== 'note').map((s) => ({
-          id: s.id,
-          name: s.name,
-          size: s.size || 0,
-          type: s.type || 'pdf',
-          status: s.status || 'ready',
-          chunksIndexed: s.chunks_count ?? s.chunks_indexed ?? 0,
-          chunksCount: s.chunks_count ?? s.chunks_indexed ?? 0,
-        }))
-        if (fresh.length) {
-          useSourceStore.setState((st) => ({ uploadedSources: [...fresh, ...st.uploadedSources] }))
-        }
-      }
-    } catch {
-      // offline fallback
-    }
-  }, [accessToken])
-
+  // User sync: ensure stores are initialized and sources fetched for the current user
   useEffect(() => {
-    fetchSources()
-  }, [fetchSources])
+    if (user?.id) {
+      useSourceStore.getState().initForUser(user.id)
+      useWorkspaceStore.getState().initForUser(user.id)
+      if (accessToken) {
+        useSourceStore.getState().fetchSources(accessToken)
+      }
+    }
+  }, [user?.id, accessToken])
 
   // Initialize selected materials
   useEffect(() => {

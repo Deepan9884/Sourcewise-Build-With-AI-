@@ -120,20 +120,190 @@ export function parseFlashcardsText(text) {
   return cards
 }
 
-export const useWorkspaceStore = create(
-  persist(
-    (set, get) => ({
-      // Active workspace navigation mode
-      activeMode: 'chat',
-      setActiveMode: (mode) => {
-        set({ activeMode: mode })
-        // Clear notifications for this mode upon opening
-        get().clearNotification(mode)
-      },
+function getWorkspaceKey(userId) {
+  return userId ? `sourcewise_workspace_${userId}` : 'sourcewise_workspace_guest';
+}
 
-      // Multi-material selection state
-      selectedMaterialIds: [],
-      setSelectedMaterialIds: (ids) => set({ selectedMaterialIds: typeof ids === 'function' ? ids(get().selectedMaterialIds) : ids }),
+function getInitialWorkspaceData() {
+  try {
+    const rawAuth = localStorage.getItem('sourcewise-auth');
+    if (rawAuth) {
+      const parsed = JSON.parse(rawAuth);
+      const userId = parsed?.state?.user?.id;
+      if (userId) {
+        const raw = localStorage.getItem(getWorkspaceKey(userId));
+        if (raw) {
+          return { userId, data: JSON.parse(raw) };
+        }
+        return { userId, data: null };
+      }
+    }
+  } catch (_) {}
+  return { userId: null, data: null };
+}
+
+const initialWs = getInitialWorkspaceData();
+
+export const useWorkspaceStore = create(
+  (set, get) => ({
+    _userId: initialWs.userId,
+
+    initForUser: (userId) => {
+      // 1. Wipe in-memory state clean first so previous user's data vanishes immediately
+      set({
+        _userId: userId || null,
+        chatMessages: [],
+        selectedMaterialIds: [],
+        quiz: {
+          questions: [],
+          currentIndex: 0,
+          answers: {},
+          completed: false,
+          count: 5,
+          difficulty: 'medium',
+          type: 'multiple choice',
+          topic: '',
+          error: null,
+        },
+        flashcards: {
+          cards: [],
+          currentIndex: 0,
+          isFlipped: false,
+          rating: null,
+          count: 10,
+          focus: 'key terms and definitions',
+          topic: '',
+          error: null,
+        },
+        notes: {
+          id: null,
+          title: 'Study Notes',
+          content: '',
+          style: 'comprehensive',
+          depth: 'deep',
+          topic: '',
+          isCloudSaved: false,
+          isSavingCloud: false,
+          isFetchingCloud: false,
+          cloudNotes: [],
+          activeView: 'reader',
+          error: null,
+        },
+        notifications: {
+          quiz: 0,
+          flashcards: 0,
+          notes: 0,
+          total: 0,
+        },
+        activeMode: 'chat',
+      });
+
+      // 2. Load scoped data for this user if exists
+      if (userId) {
+        try {
+          const raw = localStorage.getItem(getWorkspaceKey(userId));
+          if (raw) {
+            const parsed = JSON.parse(raw);
+            set({
+              chatMessages: Array.isArray(parsed.chatMessages) ? parsed.chatMessages : [],
+              selectedMaterialIds: Array.isArray(parsed.selectedMaterialIds) ? parsed.selectedMaterialIds : [],
+              quiz: parsed.quiz ? { ...get().quiz, ...parsed.quiz } : get().quiz,
+              flashcards: parsed.flashcards ? { ...get().flashcards, ...parsed.flashcards } : get().flashcards,
+              notes: parsed.notes ? { ...get().notes, ...parsed.notes } : get().notes,
+              notifications: parsed.notifications || get().notifications,
+              activeMode: parsed.activeMode || 'chat',
+            });
+          }
+        } catch (_) {}
+      }
+    },
+
+    resetWorkspace: () => {
+      set({
+        _userId: null,
+        chatMessages: [],
+        selectedMaterialIds: [],
+        quiz: {
+          questions: [],
+          currentIndex: 0,
+          answers: {},
+          completed: false,
+          count: 5,
+          difficulty: 'medium',
+          type: 'multiple choice',
+          topic: '',
+          error: null,
+        },
+        flashcards: {
+          cards: [],
+          currentIndex: 0,
+          isFlipped: false,
+          rating: null,
+          count: 10,
+          focus: 'key terms and definitions',
+          topic: '',
+          error: null,
+        },
+        notes: {
+          id: null,
+          title: 'Study Notes',
+          content: '',
+          style: 'comprehensive',
+          depth: 'deep',
+          topic: '',
+          isCloudSaved: false,
+          isSavingCloud: false,
+          isFetchingCloud: false,
+          cloudNotes: [],
+          activeView: 'reader',
+          error: null,
+        },
+        notifications: {
+          quiz: 0,
+          flashcards: 0,
+          notes: 0,
+          total: 0,
+        },
+        activeMode: 'chat',
+      });
+      try {
+        localStorage.removeItem('sourcewise_workspace_storage');
+        localStorage.removeItem('sourcewise_workspace_guest');
+      } catch (_) {}
+    },
+
+    _persistWorkspace: () => {
+      const s = get();
+      try {
+        localStorage.setItem(
+          getWorkspaceKey(s._userId),
+          JSON.stringify({
+            chatMessages: s.chatMessages,
+            selectedMaterialIds: s.selectedMaterialIds,
+            quiz: s.quiz,
+            flashcards: s.flashcards,
+            notes: s.notes,
+            notifications: s.notifications,
+            activeMode: s.activeMode,
+          })
+        );
+      } catch (_) {}
+    },
+
+    // Active workspace navigation mode
+    activeMode: initialWs.data?.activeMode || 'chat',
+    setActiveMode: (mode) => {
+      set({ activeMode: mode });
+      get().clearNotification(mode);
+      get()._persistWorkspace();
+    },
+
+    // Multi-material selection state
+    selectedMaterialIds: initialWs.data?.selectedMaterialIds || [],
+    setSelectedMaterialIds: (ids) => {
+      set({ selectedMaterialIds: typeof ids === 'function' ? ids(get().selectedMaterialIds) : ids });
+      get()._persistWorkspace();
+    },
 
       // Background Generation Flags (per section so they don't block each other)
       isGenerating: {
@@ -456,10 +626,19 @@ export const useWorkspaceStore = create(
         set((s) => ({ tutor: { ...s.tutor, [key]: val } })),
 
       // ── Chat State ─────────────────────────────────────────────────────────
-      chatMessages: [],
-      setChatMessages: (msgs) => set({ chatMessages: typeof msgs === 'function' ? msgs(get().chatMessages) : msgs }),
-      addChatMessage: (msg) => set((s) => ({ chatMessages: [...s.chatMessages, msg] })),
-      clearChatMessages: () => set({ chatMessages: [] }),
+      chatMessages: initialWs.data?.chatMessages || [],
+      setChatMessages: (msgs) => {
+        set({ chatMessages: typeof msgs === 'function' ? msgs(get().chatMessages) : msgs })
+        get()._persistWorkspace()
+      },
+      addChatMessage: (msg) => {
+        set((s) => ({ chatMessages: [...s.chatMessages, msg] }))
+        get()._persistWorkspace()
+      },
+      clearChatMessages: () => {
+        set({ chatMessages: [] })
+        get()._persistWorkspace()
+      },
 
       // ── Notification Helpers ───────────────────────────────────────────────
       clearNotification: (mode) => {
@@ -803,17 +982,5 @@ CRITICAL REQUIREMENTS:
           throw err
         }
       },
-    }),
-    {
-      name: 'sourcewise_workspace_storage',
-      partialize: (state) => ({
-        quiz: state.quiz,
-        flashcards: state.flashcards,
-        notes: state.notes,
-        chatMessages: state.chatMessages,
-        notifications: state.notifications,
-        activeMode: state.activeMode,
-      }),
-    }
-  )
+    })
 )

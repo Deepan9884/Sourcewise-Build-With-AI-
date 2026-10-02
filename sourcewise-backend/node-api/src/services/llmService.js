@@ -188,14 +188,18 @@ async function getSourcesMetadata(sourceIds = [], userId = null, sourceNameHints
       }
     }
 
-    // 2. If specific sourceIds were provided, try to match from Supabase
+    // 2. If specific sourceIds were provided, try to match from Supabase (strictly scoped to this user)
     if (Array.isArray(sourceIds) && sourceIds.length > 0) {
       const validUuids = sourceIds.filter(id => /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id));
       if (validUuids.length > 0) {
-        const { data } = await supabase
+        let query = supabase
           .from('sources')
           .select('id, name, type, summary, concepts, analysis')
           .in('id', validUuids);
+        if (userId) {
+          query = query.eq('user_id', userId);
+        }
+        const { data } = await query;
         if (data && data.length > 0) {
           const existingIds = new Set(sources.map(s => s.id));
           for (const d of data) {

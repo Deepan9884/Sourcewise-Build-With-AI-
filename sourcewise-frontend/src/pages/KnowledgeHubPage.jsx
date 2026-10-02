@@ -87,22 +87,11 @@ export default function KnowledgeHubPage() {
   const [synthResult, setSynthResult] = useState(null)
   const [synthWorking, setSynthWorking] = useState(false)
 
-  const fetchSources = useCallback(async () => {
-    try {
-      const res = await fetch(`${API_URL}/sources`, { headers: { Authorization: `Bearer ${accessToken}` } })
-      if (res.ok) {
-        const data = await res.json()
-        const localIds = useSourceStore.getState().uploadedSources.map((s) => s.id)
-        const fresh = data.filter((s) => !localIds.includes(s.id) && (s.type || '').toLowerCase() !== 'note').map((s) => ({
-          id: s.id, name: s.name, size: s.size || 0, type: s.type || 'pdf',
-          status: s.status || 'ready', chunksIndexed: s.chunks_indexed || 0,
-        }))
-        if (fresh.length) useSourceStore.setState((st) => ({ uploadedSources: [...fresh, ...st.uploadedSources] }))
-      }
-    } catch { /* offline — local store stands */ }
+  useEffect(() => {
+    if (accessToken) {
+      useSourceStore.getState().fetchSources(accessToken)
+    }
   }, [accessToken])
-
-  useEffect(() => { fetchSources() }, [fetchSources])
 
   // Deep actions from Plan home (e.g. bonus missions, slot start).
   useEffect(() => {
