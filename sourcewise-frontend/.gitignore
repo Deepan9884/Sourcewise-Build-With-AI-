@@ -26,3 +26,4 @@ blob-report
 *.sln
 *.sw?
 .vercel
+.env*
