@@ -29,7 +29,15 @@ router.get('/', async (req, res) => {
       .eq('user_id', req.user._id)
       .order('created_at', { ascending: false });
     if (error) throw error;
-    res.json(data || []);
+
+    const formatted = (data || []).map(s => ({
+      ...s,
+      chunks_count: s.chunks_count || 0,
+      chunks_indexed: s.chunks_count || 0,
+      chunksIndexed: s.chunks_count || 0,
+    }));
+
+    res.json(formatted);
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
@@ -38,7 +46,7 @@ router.get('/', async (req, res) => {
 // POST /sources - Create source metadata
 router.post('/', async (req, res) => {
   try {
-    const { name, type, size, status, chunks_indexed } = req.body;
+    const { name, type, size, status, chunks_indexed, chunks_count, file_url, summary, concepts, analysis } = req.body;
 
     if (demoService.isDemoUser(req)) {
       const newSource = {
@@ -49,9 +57,9 @@ router.post('/', async (req, res) => {
         type: type || 'pdf',
         size: size || 102400,
         status: status || 'ready',
-        chunks_count: chunks_indexed || 12,
-        chunks_indexed: chunks_indexed || 12,
-        chunksIndexed: chunks_indexed || 12,
+        chunks_count: chunks_count || chunks_indexed || 12,
+        chunks_indexed: chunks_count || chunks_indexed || 12,
+        chunksIndexed: chunks_count || chunks_indexed || 12,
         created_at: new Date().toISOString(),
         summary: 'Demo study material uploaded and indexed.',
         concepts: ['Key Principles', 'Optimization Methods', 'System Overview'],
@@ -66,36 +74,63 @@ router.post('/', async (req, res) => {
       return res.status(201).json(newSource);
     }
 
+    const chunks = Number(chunks_count || chunks_indexed || 0);
+
+    const insertPayload = {
+      user_id: req.user._id,
+      name: name || 'Untitled',
+      type: type || 'pdf',
+      status: status || 'ready',
+      chunks_count: chunks,
+    };
+    if (file_url) insertPayload.file_url = file_url;
+    if (summary) insertPayload.summary = summary;
+    if (concepts) insertPayload.concepts = concepts;
+    if (analysis) insertPayload.analysis = analysis;
+
+    // Only assign id if it's a valid UUID; otherwise let Postgres generate UUID
+    const isUuid = req.body.id && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(req.body.id);
+    if (isUuid) {
+      insertPayload.id = req.body.id;
+    }
+
     const { data, error } = await supabase
       .from('sources')
-      .insert({
-        user_id: req.user._id,
-        name: name || 'Untitled',
-        type: type || 'pdf',
-        size: size || 0,
-        status: status || 'ready',
-        chunks_indexed: chunks_indexed || 0,
-      })
+      .insert(insertPayload)
       .select()
       .single();
 
-    if (error) throw error;
+    if (error) {
+      console.error('[SourceRoutes] Supabase insert error:', error.message);
+      throw error;
+    }
 
     // Trigger async analysis (don't wait for it)
     triggerSourceAnalysis(data.id, req.user._id).catch(err => {
       console.error('[SourceRoutes] Analysis trigger failed:', err.message);
     });
 
-    // Track progress event
-    await supabase.from('progress_events').insert({
-      user_id: req.user._id,
-      event_type: 'source_upload',
-      source_id: data.id,
-      metadata: { source_name: name, source_type: type },
-    });
+    // Track progress event (safely)
+    try {
+      await supabase.from('progress_events').insert({
+        user_id: req.user._id,
+        event_type: 'source_upload',
+        source_id: data.id,
+        metadata: { source_name: name, source_type: type },
+      });
+    } catch (peErr) {
+      console.warn('[SourceRoutes] Progress event logging skipped:', peErr.message);
+    }
 
-    res.status(201).json(data);
+    res.status(201).json({
+      ...data,
+      size: size || 0,
+      chunks_count: data.chunks_count ?? chunks,
+      chunks_indexed: data.chunks_count ?? chunks,
+      chunksIndexed: data.chunks_count ?? chunks,
+    });
   } catch (error) {
+    console.error('[SourceRoutes] POST /sources exception:', error.message);
     res.status(500).json({ error: error.message });
   }
 });
@@ -115,7 +150,12 @@ router.get('/:id', async (req, res) => {
       .eq('user_id', req.user._id)
       .single();
     if (error || !data) return res.status(404).json({ error: 'Source not found' });
-    res.json(data);
+    res.json({
+      ...data,
+      chunks_count: data.chunks_count || 0,
+      chunks_indexed: data.chunks_count || 0,
+      chunksIndexed: data.chunks_count || 0,
+    });
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
@@ -124,15 +164,31 @@ router.get('/:id', async (req, res) => {
 // PATCH /sources/:id - Update source
 router.patch('/:id', async (req, res) => {
   try {
+    const allowed = ['name', 'type', 'file_url', 'status', 'chunks_count', 'summary', 'concepts', 'analysis', 'difficulty', 'estimated_reading_time'];
+    const updatePayload = {};
+    for (const key of Object.keys(req.body)) {
+      if (allowed.includes(key)) {
+        updatePayload[key] = req.body[key];
+      }
+    }
+    if (req.body.chunks_indexed !== undefined && updatePayload.chunks_count === undefined) {
+      updatePayload.chunks_count = Number(req.body.chunks_indexed) || 0;
+    }
+
     const { data, error } = await supabase
       .from('sources')
-      .update(req.body)
+      .update(updatePayload)
       .eq('id', req.params.id)
       .eq('user_id', req.user._id)
       .select()
       .single();
     if (error || !data) return res.status(404).json({ error: 'Source not found' });
-    res.json(data);
+    res.json({
+      ...data,
+      chunks_count: data.chunks_count || 0,
+      chunks_indexed: data.chunks_count || 0,
+      chunksIndexed: data.chunks_count || 0,
+    });
   } catch (error) {
     res.status(500).json({ error: error.message });
   }

@@ -12,7 +12,7 @@ export const useSourceStore = create(
       error: null,
       
       addSource: (source) => set((state) => {
-        const filtered = state.uploadedSources.filter((s) => s.id !== source.id);
+        const filtered = state.uploadedSources.filter((s) => s.id !== source.id && s.name !== source.name);
         const nextSources = [source, ...filtered];
         const nextActive = state.activeSourceIds.includes(source.id)
           ? state.activeSourceIds
@@ -62,20 +62,31 @@ export const useSourceStore = create(
               size: s.size || 0,
               type: s.type || 'pdf',
               status: s.status || 'ready',
-              chunksIndexed: s.chunks_indexed || s.chunksIndexed || 0,
+              chunksIndexed: s.chunks_count ?? s.chunks_indexed ?? s.chunksIndexed ?? 0,
+              chunksCount: s.chunks_count ?? s.chunks_indexed ?? 0,
               createdAt: s.created_at,
+              summary: s.summary,
+              concepts: s.concepts,
+              analysis: s.analysis,
             }));
 
             set((state) => {
               const backendIds = new Set(formatted.map((s) => s.id));
-              // Keep local items that are in progress or not in backend
-              const localPending = state.uploadedSources.filter(
-                (s) => !backendIds.has(s.id) && (s.status === 'uploading' || s.status === 'processing')
-              );
-              // Combine backend sources with active in-flight uploads (no fallback to stale demo data)
-              const combined = [...formatted, ...localPending];
+              const backendNames = new Set(formatted.map((s) => (s.name || '').toLowerCase().trim()));
 
-              const validIds = state.activeSourceIds.filter((id) => combined.some((s) => s.id === id));
+              // Retain local uploaded documents defensively (whether uploading, processing, or ready)
+              // so a refresh or page switch never wipes out user files
+              const localRetained = (state.uploadedSources || []).filter((s) => {
+                if (backendIds.has(s.id)) return false;
+                const normName = (s.name || '').toLowerCase().trim();
+                if (normName && backendNames.has(normName)) return false;
+                if (typeof s.id === 'string' && (s.id.startsWith('demo-') || s.id.startsWith('src-demo-'))) return false;
+                return true;
+              });
+
+              const combined = [...formatted, ...localRetained];
+
+              const validIds = (state.activeSourceIds || []).filter((id) => combined.some((s) => s.id === id));
               const nextActive = validIds.length > 0
                 ? validIds
                 : (combined.length > 0 ? combined.slice(0, 3).map((s) => s.id) : []);

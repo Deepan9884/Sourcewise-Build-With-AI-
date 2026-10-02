@@ -138,11 +138,11 @@ export default function KnowledgeHubPage() {
               method: 'POST',
               headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${accessToken}` },
               body: JSON.stringify({
-                id: sourceId,
                 name: file.name,
                 type: file.name.split('.').pop().toLowerCase(),
                 size: file.size,
                 status: 'ready',
+                chunks_count: chunksCount,
                 chunks_indexed: chunksCount,
               }),
             })

@@ -287,20 +287,58 @@ export default function DashboardPage() {
   }
 
   // Dropzone for quick upload right on dashboard
-  const onDrop = useCallback((acceptedFiles) => {
+  const onDrop = useCallback(async (acceptedFiles) => {
     for (const file of acceptedFiles) {
+      const sourceId = `src_${Date.now()}_${Math.random().toString(36).substring(7)}`
+      const chunksCount = Math.max(1, Math.ceil(file.size / 1800))
       const newSource = {
-        id: `src_${Date.now()}_${Math.random().toString(36).substring(7)}`,
+        id: sourceId,
         name: file.name,
         size: file.size,
         type: file.name.split('.').pop().toLowerCase(),
         status: 'ready',
-        chunksIndexed: Math.floor(Math.random() * 24) + 8,
+        chunksIndexed: chunksCount,
+        file,
       }
       addSource(newSource)
       completeQuest('q3')
+
+      if (accessToken) {
+        try {
+          const res = await fetch(`${API_URL}/sources`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              Authorization: `Bearer ${accessToken}`,
+            },
+            body: JSON.stringify({
+              name: file.name,
+              type: file.name.split('.').pop().toLowerCase(),
+              size: file.size,
+              status: 'ready',
+              chunks_count: chunksCount,
+              chunks_indexed: chunksCount,
+            }),
+          })
+          if (res.ok) {
+            const saved = await res.json()
+            if (saved?.id) {
+              useSourceStore.setState((state) => ({
+                uploadedSources: state.uploadedSources.map((s) =>
+                  s.id === sourceId ? { ...s, id: saved.id } : s
+                ),
+                activeSourceIds: state.activeSourceIds.map((id) =>
+                  id === sourceId ? saved.id : id
+                ),
+              }))
+            }
+          }
+        } catch (apiErr) {
+          console.warn('[DashboardPage] Backend source save skipped:', apiErr)
+        }
+      }
     }
-  }, [addSource])
+  }, [addSource, accessToken])
 
   const { getRootProps, getInputProps, isDragActive } = useDropzone({
     onDrop,

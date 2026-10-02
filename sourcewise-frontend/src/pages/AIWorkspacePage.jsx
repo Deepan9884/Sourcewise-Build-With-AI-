@@ -295,7 +295,8 @@ export default function AIWorkspacePage() {
           size: s.size || 0,
           type: s.type || 'pdf',
           status: s.status || 'ready',
-          chunksIndexed: s.chunks_indexed || 0,
+          chunksIndexed: s.chunks_count ?? s.chunks_indexed ?? 0,
+          chunksCount: s.chunks_count ?? s.chunks_indexed ?? 0,
         }))
         if (fresh.length) {
           useSourceStore.setState((st) => ({ uploadedSources: [...fresh, ...st.uploadedSources] }))

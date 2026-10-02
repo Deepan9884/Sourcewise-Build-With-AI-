@@ -152,6 +152,7 @@ export default function PlanCreationWizard({ onComplete, isGenerating = false })
                 type: stagedItem.type,
                 size: file.size,
                 status: 'ready',
+                chunks_count: ingestRes?.chunks_indexed || 0,
                 chunks_indexed: ingestRes?.chunks_indexed || 0,
               }),
             })
