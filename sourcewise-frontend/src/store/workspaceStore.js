@@ -271,11 +271,21 @@ export const useWorkspaceStore = create(
           const raw = localStorage.getItem(getWorkspaceKey(userId));
           if (raw) {
             const parsed = JSON.parse(raw);
+            let cleanFlashcards = parsed.flashcards ? { ...get().flashcards, ...parsed.flashcards } : get().flashcards;
+            if (cleanFlashcards?.cards?.some(c => c.front?.toLowerCase().includes('institutional socialization') || c.front?.toLowerCase().includes('rhetorical framing'))) {
+              cleanFlashcards = { ...get().flashcards, cards: [] };
+            }
+
+            let cleanQuiz = parsed.quiz ? { ...get().quiz, ...parsed.quiz } : get().quiz;
+            if (cleanQuiz?.questions?.some(q => q.question?.toLowerCase().includes('institutional communication') || q.concept?.toLowerCase().includes('institutional socialization'))) {
+              cleanQuiz = { ...get().quiz, questions: [] };
+            }
+
             set({
               chatMessages: Array.isArray(parsed.chatMessages) ? parsed.chatMessages : [],
               selectedMaterialIds: Array.isArray(parsed.selectedMaterialIds) ? parsed.selectedMaterialIds : [],
-              quiz: parsed.quiz ? { ...get().quiz, ...parsed.quiz } : get().quiz,
-              flashcards: parsed.flashcards ? { ...get().flashcards, ...parsed.flashcards } : get().flashcards,
+              quiz: cleanQuiz,
+              flashcards: cleanFlashcards,
               notes: parsed.notes ? { ...get().notes, ...parsed.notes } : get().notes,
               notifications: parsed.notifications || get().notifications,
               activeMode: parsed.activeMode || 'chat',
