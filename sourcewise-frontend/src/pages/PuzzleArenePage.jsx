@@ -11,6 +11,7 @@ import { useAuthStore } from '../store/authStore'
 import { usePuzzleStore } from '../store/puzzleStore'
 import { useSourceStore } from '../store/sourceStore'
 import { ingestDocument } from '../lib/chatApi'
+import { readFilePayload } from '../lib/fileReader'
 import PuzzleResult from '../components/puzzles/shared/PuzzleResult'
 
 // Lazy-load game components for code splitting
@@ -241,6 +242,7 @@ export default function PuzzleArenePage() {
         let realId = sourceId
         if (accessToken) {
           try {
+            const payload = await readFilePayload(file)
             const res = await fetch(`${API_URL}/sources`, {
               method: 'POST',
               headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${accessToken}` },
@@ -251,6 +253,9 @@ export default function PuzzleArenePage() {
                 size: file.size,
                 status: 'ready',
                 chunks_indexed: chunksCount,
+                file_base64: payload.file_base64,
+                text_content: payload.text_content,
+                mime_type: payload.mime_type,
               }),
             })
             if (res.ok) {

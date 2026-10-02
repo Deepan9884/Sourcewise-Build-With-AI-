@@ -13,6 +13,7 @@ import { useAuthStore } from '../store/authStore'
 import { useWorkspaceStore } from '../store/workspaceStore'
 import { streamChat, getFeatureRedirectionResponse, getWellnessOrCasualResponse } from '../lib/chatApi'
 import { sendAgentMessage } from '../lib/agentApi'
+import { readFilePayload } from '../lib/fileReader'
 import { exportNotesAsJson, exportNotesAsPdf, exportNotesAsMarkdown } from '../lib/notesExport'
 import { GlowCard } from '../components/ui/glow-card'
 import { RichMessageContent } from '../components/ui/RichMessageContent'
@@ -264,6 +265,61 @@ export default function AIWorkspacePage() {
 
   const messagesEndRef = useRef(null)
   const inputRef = useRef(null)
+  const workspaceFileInputRef = useRef(null)
+  const [isUploadingMaterial, setIsUploadingMaterial] = useState(false)
+
+  const handleWorkspaceFileUpload = async (e) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+    setIsUploadingMaterial(true)
+    setError(null)
+    const sourceId = `src_${Date.now()}_${Math.random().toString(36).substring(7)}`
+    addSource({ id: sourceId, name: file.name, size: file.size, type: file.name.split('.').pop().toLowerCase(), status: 'uploading', file })
+
+    try {
+      updateSourceStatus(sourceId, 'processing')
+      const chunksCount = Math.max(1, Math.ceil(file.size / 1800))
+      const filePayload = await readFilePayload(file)
+      const summaryPreview = filePayload.text_content ? filePayload.text_content.slice(0, 2000) : ''
+      let realId = sourceId
+
+      if (accessToken) {
+        const res = await fetch(`${API_URL}/sources`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${accessToken}` },
+          body: JSON.stringify({
+            name: file.name,
+            type: file.name.split('.').pop().toLowerCase(),
+            size: file.size,
+            status: 'ready',
+            chunks_count: chunksCount,
+            chunks_indexed: chunksCount,
+            summary: summaryPreview,
+            text_content: filePayload.text_content,
+            file_base64: filePayload.file_base64,
+            mime_type: filePayload.mime_type,
+          }),
+        })
+        if (res.ok) {
+          const saved = await res.json()
+          if (saved?.id) realId = saved.id
+        }
+      }
+      updateSourceStatus(sourceId, 'ready')
+      useSourceStore.setState((st) => ({
+        uploadedSources: st.uploadedSources.map((s) => (s.id === sourceId ? { ...s, id: realId, chunksIndexed: chunksCount, status: 'ready' } : s)),
+        activeSourceIds: st.activeSourceIds.map((id) => (id === sourceId ? realId : id)),
+      }))
+      toggleMaterialSelection(realId)
+    } catch (err) {
+      console.error('[AIWorkspace] Quick upload error:', err)
+      setError(`Failed to upload ${file.name}: ${err.message}`)
+      updateSourceStatus(sourceId, 'error')
+    } finally {
+      setIsUploadingMaterial(false)
+      if (workspaceFileInputRef.current) workspaceFileInputRef.current.value = ''
+    }
+  }
 
   // Sync mode with URL
   useEffect(() => {
@@ -2729,13 +2785,40 @@ Begin our session by giving a warm 2-sentence welcome, introducing the first fun
               {selectedMaterialIds.length}/{uploadedSources.length} selected
             </span>
           </div>
-          <button
-            type="button"
-            onClick={() => navigate('/knowledge')}
-            className="text-[11px] text-[#8A817B] hover:text-[#1E1B16] transition-colors w-full text-left"
-          >
-            + Manage docs in Knowledge Hub
-          </button>
+          <div className="flex flex-col space-y-1 mt-1">
+            <button
+              type="button"
+              onClick={() => workspaceFileInputRef.current?.click()}
+              disabled={isUploadingMaterial}
+              className="text-[11px] font-semibold text-[#E8845F] hover:text-[#C05A35] transition-colors w-full text-left flex items-center space-x-1"
+            >
+              {isUploadingMaterial ? (
+                <>
+                  <Loader2 className="w-3 h-3 animate-spin text-[#E8845F]" />
+                  <span>Analyzing document with AI...</span>
+                </>
+              ) : (
+                <>
+                  <Plus className="w-3 h-3" />
+                  <span>Upload / Replace Material</span>
+                </>
+              )}
+            </button>
+            <button
+              type="button"
+              onClick={() => navigate('/knowledge')}
+              className="text-[10px] text-[#8A817B] hover:text-[#1E1B16] transition-colors w-full text-left"
+            >
+              Manage all in Knowledge Hub →
+            </button>
+          </div>
+          <input
+            type="file"
+            ref={workspaceFileInputRef}
+            onChange={handleWorkspaceFileUpload}
+            className="hidden"
+            accept=".pdf,.docx,.txt,.md,.json,.csv"
+          />
         </div>
       </div>
 

@@ -293,16 +293,19 @@ function buildGeminiContents(question, history = [], sources = []) {
     sources.forEach((s, idx) => {
       sourceContextText += `${idx + 1}. Document: "${s.name || 'Study Document'}" (Type: ${s.type || 'document'})\n`;
       const summaryText = typeof s.summary === 'string' ? s.summary : (s.analysis?.overview || '');
-      if (summaryText) {
-        sourceContextText += `   Summary/Key Excerpt: ${summaryText.slice(0, 1500)}\n`;
+      const extractedText = s.analysis?.extracted_text || '';
+      if (extractedText) {
+        sourceContextText += `   Material Excerpts:\n${extractedText.slice(0, 4000)}\n`;
+      } else if (summaryText) {
+        sourceContextText += `   Summary/Key Excerpt: ${summaryText.slice(0, 2500)}\n`;
       }
       const conceptsList = Array.isArray(s.concepts) ? s.concepts : (s.analysis?.key_concepts || []);
       if (conceptsList.length > 0) {
-        const cNames = conceptsList.map(c => (typeof c === 'string' ? c : c.name || '')).filter(Boolean);
-        sourceContextText += `   Key Concepts: ${cNames.slice(0, 8).join(', ')}\n`;
+        const cNames = conceptsList.map(c => (typeof c === 'string' ? c : (c.name ? `${c.name}: ${c.description || ''}` : ''))).filter(Boolean);
+        sourceContextText += `   Key Concepts & Lessons: ${cNames.slice(0, 10).join('; ')}\n`;
       }
       if (s.analysis?.key_takeaways?.length > 0) {
-        sourceContextText += `   Takeaways: ${s.analysis.key_takeaways.slice(0, 4).join('; ')}\n`;
+        sourceContextText += `   Takeaways: ${s.analysis.key_takeaways.slice(0, 6).join('; ')}\n`;
       }
     });
     sourceContextText += '\nPlease ground your analysis and answers deeply in these materials and their specific domain.\n\n';
@@ -598,32 +601,122 @@ Return JSON with this exact schema:
 /**
  * Deep Document Analysis (overview, key concepts, study takeaways)
  */
-async function analyzeDocument(docName, summary = '') {
-  const prompt = `Perform an in-depth academic and structural analysis of the study document "${docName}".
-${summary ? `Summary/Excerpts: ${summary}` : ''}
+/**
+ * Deep Document Analysis (overview, key concepts, study takeaways, extracted text)
+ * Supports native PDF / binary multimodal base64 ingestion via Gemini.
+ */
+async function analyzeDocument(docName, options = '') {
+  let summary = '';
+  let textContent = '';
+  let fileBase64 = '';
+  let mimeType = 'application/pdf';
+
+  if (typeof options === 'string') {
+    summary = options;
+  } else if (options && typeof options === 'object') {
+    summary = options.summary || '';
+    textContent = options.textContent || options.text_content || '';
+    fileBase64 = options.fileBase64 || options.file_base64 || '';
+    mimeType = options.mimeType || options.mime_type || (docName.toLowerCase().endsWith('.pdf') ? 'application/pdf' : 'application/octet-stream');
+  }
+
+  // 1. If fileBase64 is provided (e.g. PDF file), run native multimodal extraction and analysis via Gemini
+  if (fileBase64 && GEMINI_API_KEY) {
+    const prompt = `You are SourceWise AI, performing an in-depth academic analysis of the attached study document "${docName}".
+CRITICAL GROUNDING DIRECTIVE:
+- Deeply inspect the ACTUAL text, sections, rules, and facts in this document.
+- DO NOT invent generic tropes or guess from the title. Base your answers strictly on the material in the file.
+- Extract the core concepts, principles, rules, lessons, definitions, and takeaways taught inside this document.
 
 Return JSON with this exact schema:
 {
-  "overview": "Detailed executive overview of the document",
+  "overview": "Detailed executive overview of what this actual document covers and teaches",
   "key_concepts": [
-    {"name": "Concept 1", "description": "Detailed explanation"},
-    {"name": "Concept 2", "description": "Detailed explanation"},
-    {"name": "Concept 3", "description": "Detailed explanation"}
+    {"name": "Concept name from document", "description": "Accurate explanation from the document text"}
   ],
   "difficulty_assessment": "beginner" | "medium" | "advanced",
   "estimated_study_time": number,
-  "chapter_structure": ["Section 1", "Section 2", "Section 3"],
+  "chapter_structure": ["Section 1", "Section 2"],
   "key_takeaways": ["Takeaway 1", "Takeaway 2", "Takeaway 3"],
-  "recommendations": ["Recommendation 1", "Recommendation 2"]
+  "recommendations": ["Recommendation 1", "Recommendation 2"],
+  "extracted_text": "Detailed summary and essential excerpts from the actual text (up to 3000 words) for student revision"
 }`;
 
-  const jsonResult = await generateJson({ prompt });
-  if (jsonResult && jsonResult.overview) {
-    return jsonResult;
+    for (const model of GEMINI_MODELS) {
+      try {
+        const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${GEMINI_API_KEY}`;
+        const res = await fetch(url, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            contents: [{
+              parts: [
+                {
+                  inlineData: {
+                    mimeType: mimeType || 'application/pdf',
+                    data: fileBase64
+                  }
+                },
+                {
+                  text: prompt
+                }
+              ]
+            }],
+            generationConfig: {
+              responseMimeType: 'application/json',
+              temperature: 0.2,
+              maxOutputTokens: 4096
+            }
+          })
+        });
+
+        if (res.ok) {
+          const data = await res.json();
+          const jsonText = data.candidates?.[0]?.content?.parts?.[0]?.text;
+          if (jsonText) {
+            const parsed = JSON.parse(jsonText);
+            if (parsed.overview) return parsed;
+          }
+        }
+      } catch (err) {
+        console.warn(`[analyzeDocument] Gemini inlineData analysis error with ${model}:`, err.message);
+      }
+    }
   }
 
+  // 2. If text content is provided
+  const realText = textContent || summary || '';
+  if (realText && GEMINI_API_KEY) {
+    const prompt = `You are SourceWise AI, performing an in-depth academic analysis of the study document "${docName}".
+Study Material Content:
+${realText.slice(0, 30000)}
+
+CRITICAL GROUNDING DIRECTIVE:
+- Analyze the actual text provided above.
+- Extract the core concepts, principles, rules, lessons, definitions, and takeaways taught inside this document.
+
+Return JSON with this exact schema:
+{
+  "overview": "Detailed executive overview of what this actual document covers and teaches",
+  "key_concepts": [
+    {"name": "Concept name from document", "description": "Accurate explanation from the document text"}
+  ],
+  "difficulty_assessment": "beginner" | "medium" | "advanced",
+  "estimated_study_time": number,
+  "chapter_structure": ["Section 1", "Section 2"],
+  "key_takeaways": ["Takeaway 1", "Takeaway 2", "Takeaway 3"],
+  "recommendations": ["Recommendation 1", "Recommendation 2"],
+  "extracted_text": "${realText.slice(0, 3000).replace(/"/g, '\\"')}"
+}`;
+    try {
+      const jsonResult = await generateJson({ prompt });
+      if (jsonResult && jsonResult.overview) return jsonResult;
+    } catch (_) {}
+  }
+
+  // 3. Fallback generic analysis
   return {
-    overview: `Comprehensive analysis of ${docName} highlighting governing principles, operational workflows, and active study directives.`,
+    overview: `Academic analysis of ${docName} highlighting governing principles, operational workflows, and active study directives.`,
     key_concepts: [
       { name: "Core Premises", description: "Foundational rules, baseline definitions, and essential prerequisites." },
       { name: "Strategic Execution", description: "Step-by-step methodologies and practical application steps." },
@@ -631,13 +724,14 @@ Return JSON with this exact schema:
     ],
     difficulty_assessment: "medium",
     estimated_study_time: 45,
-    chapter_structure: ["Executive Introduction", "Core Conceptual Framework", "Practical Application & Review"],
+    chapter_structure: ["Introduction", "Core Conceptual Framework", "Practical Application & Review"],
     key_takeaways: [
       "Master foundational concepts before attempting complex problem variations.",
       "Engage in active recall and spaced repetition rather than passive rereading.",
       "Trace operational principles directly back to core source assertions."
     ],
-    recommendations: ["Review key definitions", "Test understanding with active recall quizzes"]
+    recommendations: ["Review key definitions", "Test understanding with active recall quizzes"],
+    extracted_text: realText ? realText.slice(0, 2000) : ''
   };
 }
 

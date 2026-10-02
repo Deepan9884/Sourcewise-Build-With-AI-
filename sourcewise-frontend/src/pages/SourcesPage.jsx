@@ -7,6 +7,7 @@ import { useAuthStore } from '../store/authStore'
 import { GlowCard } from '../components/ui/glow-card'
 import EmptyState from '../components/ui/empty-state'
 import { ingestDocument, deleteSourceVectors } from '../lib/chatApi'
+import { readFilePayload } from '../lib/fileReader'
 import KnowledgeGraph from '../components/ui/knowledge-graph'
 
 const API_URL = import.meta.env.VITE_API_URL || 'https://node-api-nine-flame.vercel.app'
@@ -69,10 +70,10 @@ export default function SourcesPage() {
         updateSourceStatus(sourceId, 'processing')
         
         const chunksCount = Math.max(1, Math.ceil(file.size / 1800))
-        const extractedText = await extractFileText(file)
-        const summaryText = extractedText ? extractedText.slice(0, 2000) : `Study document: ${file.name}`
+        const filePayload = await readFilePayload(file)
+        const summaryText = filePayload.text_content ? filePayload.text_content.slice(0, 2000) : `Study document: ${file.name}`
         
-        // Save metadata and document text to Node API
+        // Save metadata, base64, and document text to Node API
         let realId = sourceId
         if (accessToken) {
           try {
@@ -91,7 +92,9 @@ export default function SourcesPage() {
                 chunks_count: chunksCount,
                 chunks_indexed: chunksCount,
                 summary: summaryText,
-                text_content: extractedText,
+                text_content: filePayload.text_content,
+                file_base64: filePayload.file_base64,
+                mime_type: filePayload.mime_type,
               }),
             })
             if (res.ok) {

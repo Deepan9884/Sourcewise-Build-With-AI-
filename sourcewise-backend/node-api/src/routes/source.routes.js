@@ -65,7 +65,7 @@ router.get('/', async (req, res) => {
 // POST /sources - Create source metadata
 router.post('/', async (req, res) => {
   try {
-    const { name, type, size, status, chunks_indexed, chunks_count, file_url, summary, concepts, analysis, text_content } = req.body;
+    const { name, type, size, status, chunks_indexed, chunks_count, file_url, summary, concepts, analysis, text_content, textContent, file_base64, fileBase64, mime_type, mimeType } = req.body;
     const chunks = Number(chunks_count || chunks_indexed || 0);
 
     const insertPayload = {
@@ -110,8 +110,14 @@ router.post('/', async (req, res) => {
       demoService.addSource(savedData);
     }
 
-    // Trigger async cloud analysis with real text_content
-    triggerSourceAnalysis(savedData.id, req.user._id, text_content || summary).catch(err => {
+    // Trigger async cloud analysis with real file_base64 or text_content via Gemini
+    const payloadForAnalysis = {
+      textContent: text_content || textContent || summary || '',
+      fileBase64: file_base64 || fileBase64 || '',
+      mimeType: mime_type || mimeType || (type === 'pdf' ? 'application/pdf' : 'text/plain'),
+      fileName: name || savedData.name
+    };
+    triggerSourceAnalysis(savedData.id, req.user._id, payloadForAnalysis).catch(err => {
       console.error('[SourceRoutes] Analysis trigger failed:', err.message);
     });
 
@@ -319,23 +325,65 @@ router.post('/synthesize', async (req, res) => {
   }
 });
 
+// POST /sources/:id/reanalyze - Re-analyze an existing source with optional file_base64 / text_content
+router.post('/:id/reanalyze', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { file_base64, fileBase64, text_content, textContent, mime_type, mimeType } = req.body || {};
+    
+    const { data: s, error } = await supabase
+      .from('sources')
+      .select('*')
+      .eq('id', id)
+      .eq('user_id', req.user._id)
+      .single();
+
+    if (error || !s) {
+      return res.status(404).json({ error: 'Source not found' });
+    }
+
+    const payload = {
+      fileBase64: file_base64 || fileBase64 || '',
+      textContent: text_content || textContent || s.summary || '',
+      mimeType: mime_type || mimeType || (s.type === 'pdf' ? 'application/pdf' : 'text/plain'),
+      fileName: s.name,
+    };
+
+    const analysis = await triggerSourceAnalysis(id, req.user._id, payload);
+    res.json({ message: 'Source re-analyzed successfully', analysis });
+  } catch (error) {
+    console.error('[SourceRoutes] Reanalyze error:', error.message);
+    res.status(500).json({ error: error.message });
+  }
+});
+
 // Helper: Trigger source analysis via Gemini Cloud LLM
-async function triggerSourceAnalysis(sourceId, userId, textContent = '') {
+async function triggerSourceAnalysis(sourceId, userId, payload = {}) {
   try {
     let sourceName = 'Study Material';
-    let existingSummary = textContent || '';
+    let textContent = typeof payload === 'string' ? payload : (payload?.textContent || payload?.text_content || '');
+    let fileBase64 = typeof payload === 'object' ? (payload?.fileBase64 || payload?.file_base64 || '') : '';
+    let mimeType = typeof payload === 'object' ? (payload?.mimeType || payload?.mime_type || 'application/pdf') : 'application/pdf';
 
     // Fetch existing source from Supabase
     try {
       const { data: s } = await supabase.from('sources').select('*').eq('id', sourceId).single();
       if (s) {
         sourceName = s.name || sourceName;
-        existingSummary = textContent || s.summary || existingSummary;
+        textContent = textContent || s.summary || '';
+        if (!fileBase64 && s.file_url && s.file_url.startsWith('data:')) {
+          fileBase64 = s.file_url.split(',')[1] || '';
+        }
       }
     } catch (_) {}
 
     // Use Gemini Cloud LLM directly for deep document analysis
-    const analysis = await llmService.analyzeDocument(sourceName, existingSummary);
+    const analysis = await llmService.analyzeDocument(sourceName, {
+      summary: textContent,
+      textContent,
+      fileBase64,
+      mimeType
+    });
 
     // Save analysis to database
     try {

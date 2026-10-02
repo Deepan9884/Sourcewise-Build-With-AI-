@@ -12,6 +12,7 @@ import { useAuthStore } from '../store/authStore'
 import { useSourceStore } from '../store/sourceStore'
 import { GlowCard } from '../components/ui/glow-card'
 import { StudyProgressRing } from '../components/ui/study-progress-ring'
+import { readFilePayload } from '../lib/fileReader'
 
 const API_URL = import.meta.env.VITE_API_URL || 'https://node-api-nine-flame.vercel.app'
 
@@ -305,6 +306,7 @@ export default function DashboardPage() {
 
       if (accessToken) {
         try {
+          const payload = await readFilePayload(file)
           const res = await fetch(`${API_URL}/sources`, {
             method: 'POST',
             headers: {
@@ -318,6 +320,9 @@ export default function DashboardPage() {
               status: 'ready',
               chunks_count: chunksCount,
               chunks_indexed: chunksCount,
+              file_base64: payload.file_base64,
+              text_content: payload.text_content,
+              mime_type: payload.mime_type,
             }),
           })
           if (res.ok) {
@@ -325,7 +330,7 @@ export default function DashboardPage() {
             if (saved?.id) {
               useSourceStore.setState((state) => ({
                 uploadedSources: state.uploadedSources.map((s) =>
-                  s.id === sourceId ? { ...s, id: saved.id } : s
+                  s.id === sourceId ? { ...s, id: saved.id, analysis: saved.analysis, summary: saved.summary } : s
                 ),
                 activeSourceIds: state.activeSourceIds.map((id) =>
                   id === sourceId ? saved.id : id

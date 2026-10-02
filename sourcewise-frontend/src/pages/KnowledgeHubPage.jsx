@@ -11,6 +11,7 @@ import { useSourceStore } from '../store/sourceStore'
 import { useAuthStore } from '../store/authStore'
 import { useChatStore } from '../store/chatStore'
 import { ingestDocument, deleteSourceVectors } from '../lib/chatApi'
+import { readFilePayload } from '../lib/fileReader'
 import { synthesizeCrossSource } from '../lib/agentApi'
 import SourceSlideOver from '../components/knowledge/SourceSlideOver'
 import { RichMessageContent } from '../components/ui/RichMessageContent'
@@ -121,6 +122,9 @@ export default function KnowledgeHubPage() {
         }
 
         let realId = sourceId
+        const filePayload = await readFilePayload(file)
+        const summaryPreview = filePayload.text_content ? filePayload.text_content.slice(0, 2000) : ''
+
         if (accessToken) {
           try {
             const res = await fetch(`${API_URL}/sources`, {
@@ -133,6 +137,10 @@ export default function KnowledgeHubPage() {
                 status: 'ready',
                 chunks_count: chunksCount,
                 chunks_indexed: chunksCount,
+                summary: summaryPreview,
+                text_content: filePayload.text_content,
+                file_base64: filePayload.file_base64,
+                mime_type: filePayload.mime_type,
               }),
             })
             if (res.ok) {

@@ -23,6 +23,7 @@ import { subjectStyle } from '../utils/subjectPalette'
 import { useAuthStore } from '../../../store/authStore'
 import { useSourceStore } from '../../../store/sourceStore'
 import { ingestDocument } from '../../../lib/chatApi'
+import { readFilePayload } from '../../../lib/fileReader'
 
 const API_URL = import.meta.env.VITE_API_URL || 'https://node-api-nine-flame.vercel.app'
 
@@ -141,6 +142,7 @@ export default function PlanCreationWizard({ onComplete, isGenerating = false })
         let backendId = null
         if (accessToken) {
           try {
+            const payload = await readFilePayload(file)
             const res = await fetch(`${API_URL}/sources`, {
               method: 'POST',
               headers: {
@@ -154,6 +156,9 @@ export default function PlanCreationWizard({ onComplete, isGenerating = false })
                 status: 'ready',
                 chunks_count: ingestRes?.chunks_indexed || 0,
                 chunks_indexed: ingestRes?.chunks_indexed || 0,
+                file_base64: payload.file_base64,
+                text_content: payload.text_content,
+                mime_type: payload.mime_type,
               }),
             })
             if (res.ok) {
