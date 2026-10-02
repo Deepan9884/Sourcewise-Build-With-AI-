@@ -384,12 +384,20 @@ export default function DashboardPage() {
 
       {/* 2. Key Metrics Bar (Top Overview) */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        {[
-          { icon: Flame, label: 'Day Streak', val: `${dashboard?.streak || 1} Days`, note: 'Active Momentum' },
-          { icon: Clock, label: 'Today Focus', val: `${focusMinutesToday}m`, note: 'Ultradian Flow' },
-          { icon: Brain, label: 'Concepts Mastered', val: dashboard?.topicsMastered || (uploadedSources.length * 3) || 12, note: 'FSRS Retention' },
-          { icon: TrendingUp, label: 'Quiz Accuracy', val: `${dashboard?.quizAccuracy || 85}%`, note: 'Diagnostic Score' }
-        ].map((stat, i) => (
+        {(user?.email?.toLowerCase().trim() === 'demo@gmail.com'
+          ? [
+              { icon: Flame, label: 'Day Streak', val: `${dashboard?.streak || 14} Days`, note: 'Active Momentum' },
+              { icon: Clock, label: 'Today Focus', val: `${focusMinutesToday || 75}m`, note: 'Ultradian Flow' },
+              { icon: Brain, label: 'Concepts Mastered', val: dashboard?.topicsMastered || 18, note: 'FSRS Retention' },
+              { icon: TrendingUp, label: 'Quiz Accuracy', val: `${dashboard?.quizAccuracy || 85}%`, note: 'Diagnostic Score' }
+            ]
+          : [
+              { icon: Flame, label: 'Day Streak', val: `${dashboard?.streak || 0} Days`, note: 'Active Momentum' },
+              { icon: Clock, label: 'Today Focus', val: `${focusMinutesToday || 0}m`, note: 'Ultradian Flow' },
+              { icon: Brain, label: 'Concepts Mastered', val: dashboard?.topicsMastered != null ? dashboard.topicsMastered : (uploadedSources.length > 0 ? uploadedSources.length * 2 : 0), note: 'FSRS Retention' },
+              { icon: TrendingUp, label: 'Quiz Accuracy', val: dashboard?.quizAccuracy ? `${dashboard.quizAccuracy}%` : '—', note: 'Diagnostic Score' }
+            ]
+        ).map((stat, i) => (
           <motion.div
             key={stat.label}
             initial={{ opacity: 0, y: 12 }}

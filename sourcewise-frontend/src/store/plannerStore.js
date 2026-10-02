@@ -33,14 +33,37 @@ export const usePlannerStore = create((set, get) => ({
     set({ celebrating: true })
     setTimeout(() => set({ celebrating: false }), 1200)
   },
+  clearPlans: () => set({
+    plans: [],
+    currentPlan: null,
+    subjects: [],
+    schedule: [],
+    todaySlots: [],
+    pacing: null,
+    replans: [],
+    notification: null,
+  }),
 
   fetchPlans: async () => {
     set({ isLoading: true, error: '' })
     try {
       const plans = await studyPlansApi.list()
       const current = get().currentPlan
+      if (!plans || plans.length === 0) {
+        set({
+          plans: [],
+          currentPlan: null,
+          subjects: [],
+          schedule: [],
+          todaySlots: [],
+          pacing: null,
+          replans: [],
+          isLoading: false,
+        })
+        return []
+      }
       set({ plans, isLoading: false })
-      if (!current && plans.length > 0) {
+      if (!current || !plans.some(p => p.id === current.id)) {
         await get().loadPlan(plans[0].id).catch(() => {})
       }
       return plans

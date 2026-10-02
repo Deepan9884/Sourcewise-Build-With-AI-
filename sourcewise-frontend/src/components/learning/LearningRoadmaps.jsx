@@ -1,10 +1,12 @@
-import { useState } from 'react'
+import { useState, useMemo } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
   Compass, CheckCircle2, Play, Lock, Sparkles, BookOpen,
-  ArrowRight, Award, Zap, ChevronRight, Layers, Flame, Target
+  ArrowRight, Award, Zap, ChevronRight, Layers, Flame, Target, Map
 } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
+import { useAuthStore } from '../../store/authStore'
+import { usePlannerStore } from '../../store/plannerStore'
 
 export const ROADMAP_TRACKS = [
   {
@@ -304,8 +306,48 @@ export const ROADMAP_TRACKS = [
 
 export default function LearningRoadmaps() {
   const navigate = useNavigate()
-  const [selectedTrackId, setSelectedTrackId] = useState('track-ml')
-  const activeTrack = ROADMAP_TRACKS.find(t => t.id === selectedTrackId) || ROADMAP_TRACKS[0]
+  const { user } = useAuthStore()
+  const isDemo = user?.email?.toLowerCase().trim() === 'demo@gmail.com'
+  const { plans, subjects } = usePlannerStore()
+
+  const customTracks = useMemo(() => {
+    if (isDemo) return ROADMAP_TRACKS
+    const list = subjects?.length ? subjects : (plans?.[0]?.subjects || [])
+    if (!list || list.length === 0) return []
+    return list.map((s, idx) => ({
+      id: s.id || `track-${idx}`,
+      title: s.subject_name || s.name || `Subject ${idx + 1}`,
+      subtitle: `Progressive curriculum pathway for ${s.subject_name || 'Subject'}`,
+      badge: `Target ${s.target_mastery || 80}%`,
+      badgeColor: 'bg-emerald-50 text-emerald-700 border-emerald-200',
+      color: s.color || '#0D9488',
+      progress: s.current_mastery || 0,
+      totalHours: 30,
+      completedHours: Math.round(((s.current_mastery || 0) / 100) * 30),
+      stages: [
+        {
+          stageName: 'Stage 1: Core Fundamentals & Concept Mastery',
+          status: (s.current_mastery || 0) >= 50 ? 'completed' : 'in_progress',
+          nodes: [
+            {
+              id: `node-${idx}-1`,
+              title: `${s.subject_name || 'Subject'} Key Principles`,
+              desc: `Core concepts and foundational principles for ${s.subject_name || 'this subject'}.`,
+              status: (s.current_mastery || 0) >= 50 ? 'completed' : 'in_progress',
+              score: s.current_mastery || 0,
+              hours: 12,
+              concepts: [s.subject_name || 'Core', 'Theory', 'Practical Application'],
+              source: 'Course Material',
+            }
+          ]
+        }
+      ]
+    }))
+  }, [isDemo, subjects, plans])
+
+  const tracksToDisplay = isDemo ? ROADMAP_TRACKS : customTracks
+  const [selectedTrackId, setSelectedTrackId] = useState(() => (isDemo ? 'track-ml' : (tracksToDisplay[0]?.id || '')))
+  const activeTrack = tracksToDisplay.find(t => t.id === selectedTrackId) || tracksToDisplay[0]
 
   const handleStudyTopic = (topic, sourceName) => {
     navigate('/knowledge', {
@@ -325,11 +367,33 @@ export default function LearningRoadmaps() {
     })
   }
 
+  if (tracksToDisplay.length === 0) {
+    return (
+      <div className="bg-white rounded-2xl border border-[#EDE7E1] shadow-xs p-10 text-center" data-testid="learning-roadmaps-empty">
+        <div className="w-12 h-12 rounded-2xl bg-[#F1ECE6] flex items-center justify-center mx-auto mb-3">
+          <Map className="w-5 h-5 text-[#8A817B]" />
+        </div>
+        <p className="font-bold text-[#1E1B16]">No Learning Roadmaps Yet</p>
+        <p className="text-sm text-[#8A817B] mt-1 max-w-md mx-auto">
+          Create a personalized study plan or upload study materials to generate structured progressive learning pathways.
+        </p>
+        <div className="mt-5">
+          <button
+            onClick={() => navigate('/plan')}
+            className="px-4 py-2 rounded-xl text-xs font-bold text-white bg-[#1E1B16] hover:bg-[#C05A35] transition-colors shadow-2xs"
+          >
+            Create Study Plan
+          </button>
+        </div>
+      </div>
+    )
+  }
+
   return (
     <div className="space-y-6" data-testid="learning-roadmaps">
       {/* ── Track Switcher Tabs ── */}
       <div className="flex flex-wrap gap-2.5">
-        {ROADMAP_TRACKS.map(track => {
+        {tracksToDisplay.map(track => {
           const isSelected = track.id === selectedTrackId
           return (
             <button

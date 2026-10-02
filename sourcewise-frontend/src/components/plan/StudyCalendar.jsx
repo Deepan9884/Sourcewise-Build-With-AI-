@@ -5,6 +5,7 @@ import { subjectStyle } from '../planner/utils/subjectPalette'
 import { studyPlansApi } from '../../lib/studyPlansApi'
 import { useStudentEvents, getCategoryStyle } from '../../lib/studentEvents'
 import { usePlannerStore } from '../../store/plannerStore'
+import { useAuthStore } from '../../store/authStore'
 import CalendarActionMenu from './CalendarActionMenu'
 import AddEventModal from './AddEventModal'
 
@@ -45,7 +46,9 @@ function parseTime(dt) {
  */
 export default function StudyCalendar({ planId }) {
   const store = usePlannerStore()
-  const effectivePlanId = planId || store.currentPlan?.id || store.plans?.[0]?.id || 'plan-demo-ml-2026'
+  const { user } = useAuthStore()
+  const isDemo = user?.email?.toLowerCase().trim() === 'demo@gmail.com'
+  const effectivePlanId = planId || store.currentPlan?.id || store.plans?.[0]?.id || (isDemo ? 'plan-demo-ml-2026' : null)
 
   const today = useMemo(() => new Date(), [])
   const [viewYear, setViewYear] = useState(() => today.getFullYear())

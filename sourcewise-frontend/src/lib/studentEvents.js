@@ -183,40 +183,82 @@ export const INITIAL_EVENTS = [
 ];
 
 /**
- * Get all stored student events safely from localStorage, falling back to INITIAL_EVENTS.
+ * Helper to check if current logged-in user is the dedicated hackathon demo account.
  */
-export function getStoredEvents() {
-  if (typeof window === 'undefined') return INITIAL_EVENTS;
+export function isCurrentDemoUser() {
   try {
-    const raw = localStorage.getItem(STORAGE_KEY);
-    if (!raw) {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(INITIAL_EVENTS));
-      return INITIAL_EVENTS;
-    }
-    const parsed = JSON.parse(raw);
-    const list = Array.isArray(parsed) ? parsed : INITIAL_EVENTS;
-    // Auto-merge new October 2026 initial events if missing from localStorage
-    const existingIds = new Set(list.map(e => e.id));
-    const missing = INITIAL_EVENTS.filter(e => !existingIds.has(e.id));
-    if (missing.length > 0) {
-      const merged = [...missing, ...list];
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(merged));
-      return merged;
-    }
-    return list;
-  } catch (err) {
-    console.warn('[studentEvents] Failed to load events from storage:', err);
-    return INITIAL_EVENTS;
+    const raw = localStorage.getItem('sourcewise-auth');
+    if (!raw) return false;
+    const auth = JSON.parse(raw);
+    const email = auth?.state?.user?.email?.toLowerCase().trim();
+    return email === 'demo@gmail.com';
+  } catch {
+    return false;
   }
 }
 
 /**
- * Save events to localStorage and notify all listeners across pages/tabs.
+ * Returns user-specific localStorage key to prevent cross-account event leaks.
+ */
+export function getUserEventKey() {
+  try {
+    const raw = localStorage.getItem('sourcewise-auth');
+    if (!raw) return 'sourcewise_student_events_guest';
+    const auth = JSON.parse(raw);
+    const user = auth?.state?.user;
+    if (user?.email?.toLowerCase().trim() === 'demo@gmail.com') {
+      return 'sourcewise_student_events_demo';
+    }
+    const uid = user?.id || user?.userId || user?._id || (user?.email ? user.email.toLowerCase().trim() : 'guest');
+    return `sourcewise_student_events_${uid}`;
+  } catch {
+    return 'sourcewise_student_events_guest';
+  }
+}
+
+/**
+ * Get all stored student events safely from localStorage.
+ * STRICT ISOLATION: INITIAL_EVENTS is ONLY loaded for demo@gmail.com.
+ * All other user emails start with an empty event list [].
+ */
+export function getStoredEvents() {
+  const isDemo = isCurrentDemoUser();
+  if (typeof window === 'undefined') return isDemo ? INITIAL_EVENTS : [];
+  const key = getUserEventKey();
+  try {
+    const raw = localStorage.getItem(key);
+    if (!raw) {
+      const initial = isDemo ? INITIAL_EVENTS : [];
+      localStorage.setItem(key, JSON.stringify(initial));
+      return initial;
+    }
+    const parsed = JSON.parse(raw);
+    const list = Array.isArray(parsed) ? parsed : (isDemo ? INITIAL_EVENTS : []);
+    if (isDemo) {
+      // Auto-merge new October 2026 initial events ONLY for demo@gmail.com
+      const existingIds = new Set(list.map(e => e.id));
+      const missing = INITIAL_EVENTS.filter(e => !existingIds.has(e.id));
+      if (missing.length > 0) {
+        const merged = [...missing, ...list];
+        localStorage.setItem(key, JSON.stringify(merged));
+        return merged;
+      }
+    }
+    return list;
+  } catch (err) {
+    console.warn('[studentEvents] Failed to load events from storage:', err);
+    return isDemo ? INITIAL_EVENTS : [];
+  }
+}
+
+/**
+ * Save events to user-scoped localStorage and notify all listeners across pages/tabs.
  */
 export function setStoredEvents(events) {
   if (typeof window === 'undefined') return;
+  const key = getUserEventKey();
   try {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(events));
+    localStorage.setItem(key, JSON.stringify(events));
   } catch (err) {
     console.error('[studentEvents] Failed to save events:', err);
   }

@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { GraduationCap, CalendarCheck2, LayoutGrid, Map, Calendar, Sparkles } from 'lucide-react'
 import { usePlannerStore } from '../store/plannerStore'
+import { useAuthStore } from '../store/authStore'
 import LearningSection from '../components/plan/LearningSection'
 import LearningRoadmaps from '../components/learning/LearningRoadmaps'
 
@@ -15,6 +16,8 @@ import LearningRoadmaps from '../components/learning/LearningRoadmaps'
 export default function LearningPage() {
   const store = usePlannerStore()
   const { todaySlots, currentPlan, isLoading } = store
+  const { user } = useAuthStore()
+  const isDemo = user?.email?.toLowerCase().trim() === 'demo@gmail.com'
   const [activeTab, setActiveTab] = useState('both') // 'both' | 'sessions' | 'roadmaps'
 
   // Ensure plan and today's slots are loaded when navigating directly to /learning
@@ -31,9 +34,11 @@ export default function LearningPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [currentPlan?.id])
 
-  const total = todaySlots.length || 3
-  const done = todaySlots.filter(s => s.status === 'completed').length || 1
-  const pct = total ? Math.round((done / total) * 100) : 33
+  const total = isDemo ? (todaySlots.length || 3) : todaySlots.length
+  const done = isDemo
+    ? (todaySlots.filter(s => s.status === 'completed').length || 1)
+    : todaySlots.filter(s => s.status === 'completed').length
+  const pct = total ? Math.round((done / total) * 100) : 0
 
   return (
     <div className="max-w-5xl mx-auto space-y-8 pb-16" data-testid="learning-page">
@@ -47,8 +52,8 @@ export default function LearningPage() {
           </h1>
           <p className="text-sm text-[#8A817B] mt-1">
             {currentPlan
-              ? `Active Plan: ${currentPlan.name || currentPlan.title || 'ML Engineer Exam Prep 2026'}`
-              : 'Active Plan: ML Engineer Exam Prep 2026'}
+              ? `Active Plan: ${currentPlan.name || currentPlan.title || 'Personal Study Plan'}`
+              : (isDemo ? 'Active Plan: ML Engineer Exam Prep 2026' : 'No active study plan')}
           </p>
         </div>
 

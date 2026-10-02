@@ -12,10 +12,29 @@ export const useAuthStore = create(
       _hasHydrated: false,
 
       login: (userData, token) => {
+        const isDemo = userData?.email?.toLowerCase().trim() === 'demo@gmail.com';
+        if (!isDemo) {
+          try {
+            localStorage.removeItem('sourcewise-sources');
+            localStorage.removeItem('sourcewise_student_events');
+            localStorage.removeItem('sourcewise_student_events_guest');
+            localStorage.removeItem('sw_timer_left');
+            localStorage.removeItem('sw_focus_mins');
+            localStorage.removeItem('sw_focus_date');
+          } catch (_) {}
+        }
         set({ user: userData, accessToken: token, isAuthenticated: true });
       },
 
       logout: () => {
+        try {
+          localStorage.removeItem('sourcewise-sources');
+          localStorage.removeItem('sourcewise_student_events');
+          localStorage.removeItem('sourcewise_student_events_guest');
+          localStorage.removeItem('sw_timer_left');
+          localStorage.removeItem('sw_focus_mins');
+          localStorage.removeItem('sw_focus_date');
+        } catch (_) {}
         set({ user: null, accessToken: null, isAuthenticated: false });
       },
 

@@ -23,7 +23,8 @@ const PAUSE_KEY = 'sw_adaptive_paused'
 export default function PlanHomePage() {
   const navigate = useNavigate()
   const { planId } = useParams()
-  const { accessToken } = useAuthStore()
+  const { user, accessToken } = useAuthStore()
+  const isDemo = user?.email?.toLowerCase().trim() === 'demo@gmail.com'
   const store = usePlannerStore()
   const { currentPlan, todaySlots, moodState, pacing, notification, isAdapting } = store
 
@@ -82,12 +83,19 @@ export default function PlanHomePage() {
     else store.clearNotification()
   }
 
-  const kpis = [
-    { icon: Flame, label: 'Day streak', value: overview?.streak ?? 14, tint: 'text-coral-deep bg-coral-soft' },
-    { icon: Target, label: 'Pace', value: pacing ? `${pacing.pacePct}%` : '94%', tint: 'text-teal bg-teal-soft' },
-    { icon: BookOpen, label: 'Mastery', value: overview ? `${overview.masteryPercentage ?? 78}%` : '78%', tint: 'text-amberbrand bg-amberbrand-soft' },
-    { icon: Zap, label: "Today's tasks", value: todaySlots.length || 3, tint: 'text-subject-phys bg-subject-phys-soft' },
-  ]
+  const kpis = isDemo
+    ? [
+        { icon: Flame, label: 'Day streak', value: overview?.streak ?? 14, tint: 'text-coral-deep bg-coral-soft' },
+        { icon: Target, label: 'Pace', value: pacing ? `${pacing.pacePct}%` : '94%', tint: 'text-teal bg-teal-soft' },
+        { icon: BookOpen, label: 'Mastery', value: overview ? `${overview.masteryPercentage ?? 78}%` : '78%', tint: 'text-amberbrand bg-amberbrand-soft' },
+        { icon: Zap, label: "Today's tasks", value: todaySlots.length || 3, tint: 'text-subject-phys bg-subject-phys-soft' },
+      ]
+    : [
+        { icon: Flame, label: 'Day streak', value: overview?.streak ?? 0, tint: 'text-coral-deep bg-coral-soft' },
+        { icon: Target, label: 'Pace', value: pacing ? `${pacing.pacePct}%` : '—', tint: 'text-teal bg-teal-soft' },
+        { icon: BookOpen, label: 'Mastery', value: overview?.masteryPercentage != null ? `${overview.masteryPercentage}%` : '0%', tint: 'text-amberbrand bg-amberbrand-soft' },
+        { icon: Zap, label: "Today's tasks", value: todaySlots.length, tint: 'text-subject-phys bg-subject-phys-soft' },
+      ]
 
   return (
     <div className="max-w-7xl mx-auto space-y-6 pb-12" data-testid="plan-home">

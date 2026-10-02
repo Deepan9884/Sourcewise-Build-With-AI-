@@ -41,6 +41,8 @@ export const useSourceStore = create(
         uploadedSources: state.uploadedSources.map(s => s.id === id ? { ...s, chunksIndexed } : s)
       })),
 
+      clearSources: () => set({ uploadedSources: [], activeSourceIds: [] }),
+
       fetchSources: async (accessToken) => {
         if (!accessToken) return;
         set({ isLoading: true });
@@ -70,10 +72,8 @@ export const useSourceStore = create(
               const localPending = state.uploadedSources.filter(
                 (s) => !backendIds.has(s.id) && (s.status === 'uploading' || s.status === 'processing')
               );
-              // If backend has items, combine; if backend returned empty, preserve local items if available
-              const combined = formatted.length > 0
-                ? [...formatted, ...localPending]
-                : (state.uploadedSources.length > 0 ? state.uploadedSources : []);
+              // Combine backend sources with active in-flight uploads (no fallback to stale demo data)
+              const combined = [...formatted, ...localPending];
 
               const validIds = state.activeSourceIds.filter((id) => combined.some((s) => s.id === id));
               const nextActive = validIds.length > 0
