@@ -21,7 +21,7 @@ const MemoryFlipGame  = lazy(() => import('../components/puzzles/MemoryFlipGame'
 const AnagramGame     = lazy(() => import('../components/puzzles/AnagramGame'))
 const ClozeGame       = lazy(() => import('../components/puzzles/ClozeGame'))
 
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:4000'
+const API_URL = import.meta.env.VITE_API_URL || 'https://node-api-nine-flame.vercel.app'
 
 // ─── Game catalogue (Professional Active Recall Challenges) ───────────────────
 const PUZZLE_GAMES = [

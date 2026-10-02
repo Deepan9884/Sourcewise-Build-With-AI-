@@ -24,7 +24,7 @@ import { useAuthStore } from '../../../store/authStore'
 import { useSourceStore } from '../../../store/sourceStore'
 import { ingestDocument } from '../../../lib/chatApi'
 
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:4000'
+const API_URL = import.meta.env.VITE_API_URL || 'https://node-api-nine-flame.vercel.app'
 
 const STEPS = [
   { id: 1, title: 'Subject Name', hint: 'The course or topic to master', icon: BookOpen },

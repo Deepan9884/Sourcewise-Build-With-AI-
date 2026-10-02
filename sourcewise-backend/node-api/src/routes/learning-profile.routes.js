@@ -7,7 +7,7 @@ const axios = require('axios');
 const supabase = require('../utils/supabase');
 const { authenticate } = require('../middleware/auth');
 
-const PYTHON_AI_URL = process.env.PYTHON_AI_URL || 'http://localhost:8000';
+const PYTHON_AI_URL = process.env.PYTHON_AI_URL || '';
 
 const demoService = require('../services/demoAccountService');
 

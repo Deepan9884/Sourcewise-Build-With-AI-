@@ -9,11 +9,33 @@ import EmptyState from '../components/ui/empty-state'
 import { ingestDocument, deleteSourceVectors } from '../lib/chatApi'
 import KnowledgeGraph from '../components/ui/knowledge-graph'
 
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:4000'
-const AI_URL = import.meta.env.VITE_AI_URL || 'http://localhost:8000'
+const API_URL = import.meta.env.VITE_API_URL || 'https://node-api-nine-flame.vercel.app'
+
+async function extractFileText(file) {
+  try {
+    const name = file.name.toLowerCase()
+    if (name.endsWith('.txt') || name.endsWith('.md') || name.endsWith('.json') || name.endsWith('.csv') || name.endsWith('.py') || name.endsWith('.js')) {
+      const text = await file.text()
+      return text.slice(0, 50000)
+    }
+    const buffer = await file.arrayBuffer()
+    const bytes = new Uint8Array(buffer)
+    const decoder = new TextDecoder('utf-8', { fatal: false })
+    const decoded = decoder.decode(bytes)
+    const matches = decoded.match(/[A-Za-z0-9 ,.;:!?'"()\-_/\n]{4,}/g)
+    if (matches && matches.length > 0) {
+      const filtered = matches.filter(m => !m.startsWith('/Font') && !m.startsWith('/Type') && !m.startsWith('endstream') && !m.startsWith('xref') && !m.startsWith('Obj') && !m.startsWith('/Filter'))
+      return filtered.join(' ').replace(/\s+/g, ' ').trim().slice(0, 50000)
+    }
+    return ''
+  } catch (err) {
+    console.warn('[extractFileText] Error:', err)
+    return ''
+  }
+}
 
 export default function SourcesPage() {
-  const { uploadedSources, activeSourceIds, addSource, removeSource, toggleActiveSource, updateSourceStatus } = useSourceStore()
+  const { uploadedSources, activeSourceIds, addSource, removeSource, toggleActiveSource, updateSourceStatus, fetchSources: storeFetchSources } = useSourceStore()
   const { user, accessToken } = useAuthStore()
   const [uploadError, setUploadError] = useState(null)
   const [selectedSourceAnalysis, setSelectedSourceAnalysis] = useState(null)
@@ -21,37 +43,11 @@ export default function SourcesPage() {
   const [loadingGraph, setLoadingGraph] = useState(false)
 
   // Load sources from backend on mount
-  const fetchSources = async () => {
-    try {
-      const res = await fetch(`${API_URL}/sources`, {
-        headers: { Authorization: `Bearer ${accessToken}` }
-      })
-      if (res.ok) {
-        const data = await res.json()
-        // Merge with local store
-        const localIds = uploadedSources.map(s => s.id)
-        const newSources = data.filter(s => !localIds.includes(s.id) && (s.type || '').toLowerCase() !== 'note').map(s => ({
-          id: s.id,
-          name: s.name,
-          size: s.size || 0,
-          type: s.type || 'pdf',
-          status: s.status || 'ready',
-          chunksIndexed: s.chunks_indexed || 0,
-        }))
-        if (newSources.length > 0) {
-          useSourceStore.setState(state => ({
-            uploadedSources: [...newSources, ...state.uploadedSources]
-          }))
-        }
-      }
-    } catch (err) {
-      console.error('[Sources] Fetch error:', err)
-    }
-  }
-
   useEffect(() => {
-    fetchSources()
-  }, [])
+    if (accessToken) {
+      storeFetchSources(accessToken)
+    }
+  }, [accessToken, storeFetchSources])
 
   const onDrop = useCallback(async (acceptedFiles) => {
     setUploadError(null)
@@ -72,22 +68,11 @@ export default function SourcesPage() {
       try {
         updateSourceStatus(sourceId, 'processing')
         
-        let chunksCount = Math.max(1, Math.ceil(file.size / 1800))
-        try {
-          const result = await ingestDocument(
-            file,
-            sourceId,
-            user?.id || 'anonymous',
-            file.name
-          )
-          if (result && typeof result.chunks_indexed === 'number') {
-            chunksCount = result.chunks_indexed
-          }
-        } catch (aiErr) {
-          console.warn('[SourcesPage] Python AI vectorization skipped/offline:', aiErr)
-        }
+        const chunksCount = Math.max(1, Math.ceil(file.size / 1800))
+        const extractedText = await extractFileText(file)
+        const summaryText = extractedText ? extractedText.slice(0, 2000) : `Study document: ${file.name}`
         
-        // Save metadata to Node API
+        // Save metadata and document text to Node API
         let realId = sourceId
         if (accessToken) {
           try {
@@ -98,12 +83,15 @@ export default function SourcesPage() {
                 Authorization: `Bearer ${accessToken}`,
               },
               body: JSON.stringify({
+                id: sourceId,
                 name: file.name,
                 type: file.name.split('.').pop().toLowerCase(),
                 size: file.size,
                 status: 'ready',
                 chunks_count: chunksCount,
                 chunks_indexed: chunksCount,
+                summary: summaryText,
+                text_content: extractedText,
               }),
             })
             if (res.ok) {
@@ -115,20 +103,27 @@ export default function SourcesPage() {
           }
         }
         
-        // Update local store
+        // Update local store with finalized status and real ID
         updateSourceStatus(sourceId, 'ready')
-        useSourceStore.setState((state) => ({
-          uploadedSources: state.uploadedSources.map(s => 
+        useSourceStore.setState((state) => {
+          const nextUploaded = state.uploadedSources.map(s => 
             s.id === sourceId 
-              ? { ...s, id: realId, chunksIndexed: chunksCount, status: 'ready' }
+              ? { ...s, id: realId, chunksIndexed: chunksCount, summary: summaryText, status: 'ready' }
               : s
           )
-        }))
+          const nextActive = state.activeSourceIds.includes(sourceId)
+            ? state.activeSourceIds.map(id => id === sourceId ? realId : id)
+            : [...state.activeSourceIds, realId]
+          return {
+            uploadedSources: nextUploaded,
+            activeSourceIds: nextActive,
+          }
+        })
         
       } catch (error) {
         console.error('[Upload] Failed:', error)
         updateSourceStatus(sourceId, 'error')
-        const errorMsg = error?.message || error?.detail || JSON.stringify(error) || 'Unknown error';
+        const errorMsg = error?.message || error?.detail || JSON.stringify(error) || 'Unknown error'
         setUploadError(`Failed to upload ${file.name}: ${errorMsg}`)
         setTimeout(() => setUploadError(null), 5000)
       }
@@ -178,9 +173,11 @@ export default function SourcesPage() {
     if (activeSourceIds.length === 0) return
     setLoadingGraph(true)
     try {
-      const res = await fetch(`${AI_URL}/sources/knowledge-graph`, {
+      const headers = { 'Content-Type': 'application/json' }
+      if (accessToken) headers.Authorization = `Bearer ${accessToken}`
+      const res = await fetch(`${API_URL}/sources/knowledge-graph`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers,
         body: JSON.stringify({ source_ids: activeSourceIds }),
       })
       if (res.ok) {

@@ -17,7 +17,7 @@ import { exportNotesAsJson, exportNotesAsPdf, exportNotesAsMarkdown } from '../l
 import { GlowCard } from '../components/ui/glow-card'
 import { RichMessageContent } from '../components/ui/RichMessageContent'
 
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:4000'
+const API_URL = import.meta.env.VITE_API_URL || 'https://node-api-nine-flame.vercel.app'
 
 const MODES = {
   chat: { id: 'chat', label: 'Chat', icon: MessageSquare, description: 'Personal study companion & task assistant' },

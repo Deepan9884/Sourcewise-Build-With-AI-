@@ -11,7 +11,7 @@ import LandingBackground from '../components/landing/LandingBackground'
 import { ParticleBackground } from '../components/ui/particle-background'
 import { AmbientLight } from '../components/ui/ambient-light'
 
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:4000'
+const API_URL = import.meta.env.VITE_API_URL || 'https://node-api-nine-flame.vercel.app'
 
 export default function LoginPage() {
   const { register, handleSubmit, formState: { errors } } = useForm()

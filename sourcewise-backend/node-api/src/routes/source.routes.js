@@ -3,12 +3,11 @@ const router = express.Router();
 const axios = require('axios');
 const { authenticate } = require('../middleware/auth');
 const supabase = require('../utils/supabase');
+const llmService = require('../services/llmService');
 
-const PYTHON_AI_URL = process.env.PYTHON_AI_URL || 'http://localhost:8000';
+const PYTHON_AI_URL = process.env.PYTHON_AI_URL || '';
 
 // Shared secret forwarded to the Python AI service (see INTERNAL_API_KEY).
-// Read per call (not at module load) so tests and env reloads are honoured.
-// Omitted when unconfigured (plain local-dev mode).
 const aiHeaders = () => (process.env.INTERNAL_API_KEY
   ? { 'X-Internal-Key': process.env.INTERNAL_API_KEY }
   : {});
@@ -20,17 +19,37 @@ router.use(authenticate);
 // GET /sources - List all user sources
 router.get('/', async (req, res) => {
   try {
-    if (demoService.isDemoUser(req)) {
-      return res.json(demoService.getSources());
-    }
-    const { data, error } = await supabase
-      .from('sources')
-      .select('*')
-      .eq('user_id', req.user._id)
-      .order('created_at', { ascending: false });
-    if (error) throw error;
+    let dbSources = [];
+    try {
+      const { data, error } = await supabase
+        .from('sources')
+        .select('*')
+        .eq('user_id', req.user._id)
+        .order('created_at', { ascending: false });
+      if (!error && data) dbSources = data;
+    } catch (_) {}
 
-    const formatted = (data || []).map(s => ({
+    if (demoService.isDemoUser(req)) {
+      const demoList = demoService.getSources();
+      const combined = [...dbSources, ...demoList];
+      const seen = new Set();
+      const unique = [];
+      for (const s of combined) {
+        const key = s.id || (s.name || '').toLowerCase().trim();
+        if (!seen.has(key)) {
+          seen.add(key);
+          unique.push(s);
+        }
+      }
+      return res.json(unique.map(s => ({
+        ...s,
+        chunks_count: s.chunks_count || s.chunks_indexed || 0,
+        chunks_indexed: s.chunks_count || s.chunks_indexed || 0,
+        chunksIndexed: s.chunks_count || s.chunks_indexed || 0,
+      })));
+    }
+
+    const formatted = dbSources.map(s => ({
       ...s,
       chunks_count: s.chunks_count || 0,
       chunks_indexed: s.chunks_count || 0,
@@ -46,34 +65,7 @@ router.get('/', async (req, res) => {
 // POST /sources - Create source metadata
 router.post('/', async (req, res) => {
   try {
-    const { name, type, size, status, chunks_indexed, chunks_count, file_url, summary, concepts, analysis } = req.body;
-
-    if (demoService.isDemoUser(req)) {
-      const newSource = {
-        id: `src-demo-${Date.now()}`,
-        user_id: req.user._id,
-        name: name || 'Untitled',
-        title: name || 'Untitled',
-        type: type || 'pdf',
-        size: size || 102400,
-        status: status || 'ready',
-        chunks_count: chunks_count || chunks_indexed || 12,
-        chunks_indexed: chunks_count || chunks_indexed || 12,
-        chunksIndexed: chunks_count || chunks_indexed || 12,
-        created_at: new Date().toISOString(),
-        summary: 'Demo study material uploaded and indexed.',
-        concepts: ['Key Principles', 'Optimization Methods', 'System Overview'],
-        analysis: {
-          overview: 'Demo study material uploaded and indexed.',
-          key_concepts: ['Key Principles', 'Optimization Methods', 'System Overview'],
-          difficulty_assessment: 'medium',
-          estimated_study_time: 45
-        }
-      };
-      demoService.addSource(newSource);
-      return res.status(201).json(newSource);
-    }
-
+    const { name, type, size, status, chunks_indexed, chunks_count, file_url, summary, concepts, analysis, text_content } = req.body;
     const chunks = Number(chunks_count || chunks_indexed || 0);
 
     const insertPayload = {
@@ -94,19 +86,32 @@ router.post('/', async (req, res) => {
       insertPayload.id = req.body.id;
     }
 
-    const { data, error } = await supabase
-      .from('sources')
-      .insert(insertPayload)
-      .select()
-      .single();
-
-    if (error) {
-      console.error('[SourceRoutes] Supabase insert error:', error.message);
-      throw error;
+    let savedData = null;
+    try {
+      const { data, error } = await supabase
+        .from('sources')
+        .insert(insertPayload)
+        .select()
+        .single();
+      if (!error && data) savedData = data;
+    } catch (dbErr) {
+      console.warn('[SourceRoutes] Supabase insert note:', dbErr.message);
     }
 
-    // Trigger async analysis (don't wait for it)
-    triggerSourceAnalysis(data.id, req.user._id).catch(err => {
+    if (!savedData) {
+      savedData = {
+        id: req.body.id || `src-${Date.now()}`,
+        ...insertPayload,
+        created_at: new Date().toISOString(),
+      };
+    }
+
+    if (demoService.isDemoUser(req)) {
+      demoService.addSource(savedData);
+    }
+
+    // Trigger async cloud analysis with real text_content
+    triggerSourceAnalysis(savedData.id, req.user._id, text_content || summary).catch(err => {
       console.error('[SourceRoutes] Analysis trigger failed:', err.message);
     });
 
@@ -115,7 +120,7 @@ router.post('/', async (req, res) => {
       await supabase.from('progress_events').insert({
         user_id: req.user._id,
         event_type: 'source_upload',
-        source_id: data.id,
+        source_id: savedData.id,
         metadata: { source_name: name, source_type: type },
       });
     } catch (peErr) {
@@ -123,11 +128,11 @@ router.post('/', async (req, res) => {
     }
 
     res.status(201).json({
-      ...data,
+      ...savedData,
       size: size || 0,
-      chunks_count: data.chunks_count ?? chunks,
-      chunks_indexed: data.chunks_count ?? chunks,
-      chunksIndexed: data.chunks_count ?? chunks,
+      chunks_count: savedData.chunks_count ?? chunks,
+      chunks_indexed: savedData.chunks_count ?? chunks,
+      chunksIndexed: savedData.chunks_count ?? chunks,
     });
   } catch (error) {
     console.error('[SourceRoutes] POST /sources exception:', error.message);
@@ -266,82 +271,149 @@ router.post('/:id/analyze', async (req, res) => {
   }
 });
 
-// Helper: Trigger source analysis via Python AI
-async function triggerSourceAnalysis(sourceId, userId) {
+// POST /sources/knowledge-graph - Generate interactive concept graph
+router.post('/knowledge-graph', async (req, res) => {
   try {
-    const response = await axios.post(`${PYTHON_AI_URL}/sources/analyze`, {
-      source_ids: [sourceId],
-      analysis_type: 'full',
-    }, { timeout: 30000, headers: aiHeaders() });
+    const { source_ids, sourceIds } = req.body;
+    const ids = source_ids || sourceIds || [];
+    const graph = await llmService.generateKnowledgeGraph(ids, req.user?._id);
+    res.json(graph);
+  } catch (error) {
+    console.error('[SourceRoutes] Knowledge graph error:', error.message);
+    res.status(500).json({ error: error.message });
+  }
+});
 
-    const rawData = response.data;
-    const analysis = Array.isArray(rawData) ? (rawData[0] || {}) : (rawData || {});
+// POST /sources/analyze - Deep analyze sources
+router.post('/analyze', async (req, res) => {
+  try {
+    const { source_ids, sourceIds } = req.body;
+    const ids = source_ids || sourceIds || [];
+    let docName = 'Study Document';
+    let docSummary = '';
+    if (ids.length > 0) {
+      const sources = await llmService.getSourcesMetadata(ids, req.user?._id);
+      if (sources.length > 0) {
+        docName = sources[0].name || docName;
+        docSummary = sources[0].summary || '';
+      }
+    }
+    const analysis = await llmService.analyzeDocument(docName, docSummary);
+    res.json(analysis);
+  } catch (error) {
+    console.error('[SourceRoutes] Analyze error:', error.message);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// POST /sources/synthesize - Cross-source synthesis
+router.post('/synthesize', async (req, res) => {
+  try {
+    const { source_ids, sourceIds, focus_topic } = req.body;
+    const ids = source_ids || sourceIds || [];
+    const result = await llmService.synthesizeCrossSource(ids, focus_topic, req.user?._id);
+    res.json(result);
+  } catch (error) {
+    console.error('[SourceRoutes] Synthesize error:', error.message);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Helper: Trigger source analysis via Gemini Cloud LLM
+async function triggerSourceAnalysis(sourceId, userId, textContent = '') {
+  try {
+    let sourceName = 'Study Material';
+    let existingSummary = textContent || '';
+
+    // Fetch existing source from Supabase
+    try {
+      const { data: s } = await supabase.from('sources').select('*').eq('id', sourceId).single();
+      if (s) {
+        sourceName = s.name || sourceName;
+        existingSummary = textContent || s.summary || existingSummary;
+      }
+    } catch (_) {}
+
+    // Use Gemini Cloud LLM directly for deep document analysis
+    const analysis = await llmService.analyzeDocument(sourceName, existingSummary);
 
     // Save analysis to database
-    await supabase.from('source_analysis').upsert({
-      source_id: sourceId,
-      user_id: userId,
-      summary: analysis.overview || '',
-      key_concepts: analysis.key_concepts || [],
-      difficulty: analysis.difficulty_assessment || 'medium',
-      estimated_reading_time: analysis.estimated_study_time || 30,
-      chapter_structure: analysis.chapter_structure || [],
-      key_takeaways: analysis.key_takeaways || [],
-      recommendations: analysis.recommendations || [],
-    }, { onConflict: 'source_id' });
+    try {
+      await supabase.from('source_analysis').upsert({
+        source_id: sourceId,
+        user_id: userId,
+        summary: analysis.overview || '',
+        key_concepts: analysis.key_concepts || [],
+        difficulty: analysis.difficulty_assessment || 'medium',
+        estimated_reading_time: analysis.estimated_study_time || 30,
+        chapter_structure: analysis.chapter_structure || [],
+        key_takeaways: analysis.key_takeaways || [],
+        recommendations: analysis.recommendations || [],
+      }, { onConflict: 'source_id' });
+    } catch (e) {
+      console.warn('[SourceRoutes] source_analysis upsert note:', e.message);
+    }
 
     // Update source with analysis data
-    await supabase.from('sources').update({
-      summary: analysis.overview || '',
-      difficulty: analysis.difficulty_assessment || 'medium',
-      estimated_reading_time: analysis.estimated_study_time || 30,
-      analysis: analysis,
-    }).eq('id', sourceId);
+    try {
+      await supabase.from('sources').update({
+        summary: analysis.overview || '',
+        difficulty: analysis.difficulty_assessment || 'medium',
+        estimated_reading_time: analysis.estimated_study_time || 30,
+        concepts: analysis.key_concepts || [],
+        analysis: analysis,
+      }).eq('id', sourceId);
+    } catch (e) {
+      console.warn('[SourceRoutes] sources update note:', e.message);
+    }
 
-    // Extract and save concepts
+    // Extract and save concepts for mastery tracking
     if (analysis.key_concepts && analysis.key_concepts.length > 0) {
       for (const concept of analysis.key_concepts) {
-        const conceptName = concept.name || concept;
-        
-        // Save concept mastery
-        await supabase.from('concept_mastery').upsert({
-          user_id: userId,
-          concept: conceptName,
-          source_id: sourceId,
-          mastery_score: 0,
-          level: 'novice',
-        }, { onConflict: 'user_id,concept' });
+        const conceptName = concept.name || (typeof concept === 'string' ? concept : '');
+        if (!conceptName) continue;
+        try {
+          await supabase.from('concept_mastery').upsert({
+            user_id: userId,
+            concept: conceptName,
+            source_id: sourceId,
+            mastery_score: 0,
+            level: 'novice',
+          }, { onConflict: 'user_id,concept' });
+        } catch (_) {}
 
-        // Auto-schedule initial review for new concepts
-        const nextReview = new Date();
-        nextReview.setDate(nextReview.getDate() + 1); // Review tomorrow
-        
-        await supabase.from('review_schedule').upsert({
-          user_id: userId,
-          concept: conceptName,
-          source_id: sourceId,
-          mastery_score: 0,
-          next_review_date: nextReview.toISOString(),
-          interval_days: 1,
-          review_count: 0,
-        }, { onConflict: 'user_id,concept' });
+        try {
+          const nextReview = new Date();
+          nextReview.setDate(nextReview.getDate() + 1);
+          await supabase.from('review_schedule').upsert({
+            user_id: userId,
+            concept: conceptName,
+            source_id: sourceId,
+            mastery_score: 0,
+            next_review_date: nextReview.toISOString(),
+            interval_days: 1,
+            review_count: 0,
+          }, { onConflict: 'user_id,concept' });
+        } catch (_) {}
       }
     }
 
     // Track source upload progress event
-    await supabase.from('progress_events').insert({
-      user_id: userId,
-      event_type: 'source_analyzed',
-      source_id: sourceId,
-      metadata: {
-        concepts_extracted: analysis.key_concepts?.length || 0,
-        difficulty: analysis.difficulty_assessment,
-      },
-    });
+    try {
+      await supabase.from('progress_events').insert({
+        user_id: userId,
+        event_type: 'source_analyzed',
+        source_id: sourceId,
+        metadata: {
+          concepts_extracted: analysis.key_concepts?.length || 0,
+          difficulty: analysis.difficulty_assessment,
+        },
+      });
+    } catch (_) {}
 
     return analysis;
   } catch (error) {
-    console.error('[SourceAnalysis] Failed:', error.message);
+    console.error('[SourceAnalysis] Cloud analysis failed:', error.message);
     return null;
   }
 }

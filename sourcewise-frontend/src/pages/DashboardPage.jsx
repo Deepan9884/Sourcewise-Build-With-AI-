@@ -13,7 +13,7 @@ import { useSourceStore } from '../store/sourceStore'
 import { GlowCard } from '../components/ui/glow-card'
 import { StudyProgressRing } from '../components/ui/study-progress-ring'
 
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:4000'
+const API_URL = import.meta.env.VITE_API_URL || 'https://node-api-nine-flame.vercel.app'
 
 // Curated active recall flashcards for instant dopamine & learning
 const INITIAL_FLASHCARDS = [

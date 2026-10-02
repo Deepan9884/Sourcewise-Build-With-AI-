@@ -8,7 +8,7 @@ import { useAuthStore } from '../store/authStore'
 import { GlowCard } from '../components/ui/glow-card'
 import { StudyProgressRing } from '../components/ui/study-progress-ring'
 
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:4000'
+const API_URL = import.meta.env.VITE_API_URL || 'https://node-api-nine-flame.vercel.app'
 
 export default function ProgressCenterPage() {
   const { accessToken } = useAuthStore()

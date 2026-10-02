@@ -15,7 +15,7 @@ import { synthesizeCrossSource } from '../lib/agentApi'
 import SourceSlideOver from '../components/knowledge/SourceSlideOver'
 import { RichMessageContent } from '../components/ui/RichMessageContent'
 
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:4000'
+const API_URL = import.meta.env.VITE_API_URL || 'https://node-api-nine-flame.vercel.app'
 
 function formatFileSize(bytes) {
   if (!bytes || bytes <= 0) return null

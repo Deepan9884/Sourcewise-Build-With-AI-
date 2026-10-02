@@ -14,7 +14,7 @@ import {
 } from 'lucide-react'
 import { EVENTS_CHANGED_EVENT } from '../../lib/studentEvents'
 
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:4000'
+const API_URL = import.meta.env.VITE_API_URL || 'https://node-api-nine-flame.vercel.app'
 
 // Section Navigation Definitions
 const NAV_SECTIONS = [

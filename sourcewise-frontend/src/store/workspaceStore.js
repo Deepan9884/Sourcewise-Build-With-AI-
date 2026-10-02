@@ -3,7 +3,7 @@ import { persist } from 'zustand/middleware'
 import { sendAgentMessage } from '../lib/agentApi'
 import { fetchCloudNotes, saveCloudNote, updateCloudNote, deleteCloudNote } from '../lib/notesApi'
 
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:4000'
+const API_URL = import.meta.env.VITE_API_URL || 'https://node-api-nine-flame.vercel.app'
 
 /**
  * Text parser for quiz questions if LLM outputs markdown format

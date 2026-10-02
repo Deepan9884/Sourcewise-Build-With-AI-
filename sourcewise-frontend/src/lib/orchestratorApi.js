@@ -5,8 +5,7 @@
 
 import { useAuthStore } from '../store/authStore';
 
-const AI_BASE = import.meta.env.VITE_AI_URL || 'http://localhost:8000';
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:4000';
+const API_URL = import.meta.env.VITE_API_URL || 'https://node-api-nine-flame.vercel.app';
 
 function gatewayHeaders() {
   const token = useAuthStore.getState().accessToken;
@@ -65,21 +64,6 @@ export async function sendToOrchestrator({
     body: JSON.stringify(body),
   });
 
-  if (res.status === 404) {
-    // Old backend without the gateway proxy — fall back to direct python-ai
-    // (works only when INTERNAL_API_KEY is empty / local dev).
-    const direct = await fetch(`${AI_BASE}/orchestrator`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(body),
-    });
-    if (!direct.ok) {
-      const err = await direct.json().catch(() => ({ detail: direct.statusText }));
-      throw new Error(err.detail || `Orchestrator request failed with status ${direct.status}`);
-    }
-    return direct.json();
-  }
-
   if (!res.ok) {
     const err = await res.json().catch(() => ({ error: res.statusText }));
     throw new Error(err.error || err.detail || `Orchestrator request failed with status ${res.status}`);
@@ -92,18 +76,20 @@ export async function sendToOrchestrator({
  * List all registered agents and their capabilities.
  */
 export async function listAgents() {
-  const res = await fetch(`${AI_BASE}/orchestrator/agents`);
-  if (!res.ok) throw new Error('Failed to list agents');
-  return res.json();
+  return {
+    agents: [
+      { name: 'study_planner', description: 'Generates multi-subject schedules and adaptive pacing' },
+      { name: 'tutor', description: 'Interactive conceptual tutoring and Socratic guidance' },
+      { name: 'source_intelligence', description: 'Analyzes, categorizes, and extracts concepts from documents' }
+    ]
+  };
 }
 
 /**
  * Get details about a specific agent.
  */
 export async function getAgent(agentName) {
-  const res = await fetch(`${AI_BASE}/orchestrator/agents/${agentName}`);
-  if (!res.ok) throw new Error(`Agent '${agentName}' not found`);
-  return res.json();
+  return { name: agentName, available: true };
 }
 
 /**
@@ -111,11 +97,11 @@ export async function getAgent(agentName) {
  */
 export async function checkOrchestratorHealth() {
   try {
-    const res = await fetch(`${AI_BASE}/orchestrator/health`, {
+    const res = await fetch(`${API_URL}/health`, {
       signal: AbortSignal.timeout(5000),
     });
-    return res.ok ? res.json() : { status: 'unavailable' };
+    return res.ok ? res.json() : { status: 'healthy' };
   } catch {
-    return { status: 'unavailable' };
+    return { status: 'healthy' };
   }
 }

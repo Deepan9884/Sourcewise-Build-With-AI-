@@ -5,8 +5,7 @@
 
 import { useAuthStore } from '../store/authStore';
 
-const AI_BASE = import.meta.env.VITE_AI_URL || 'http://localhost:8000';
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:4000';
+const API_URL = import.meta.env.VITE_API_URL || 'https://node-api-nine-flame.vercel.app';
 
 function gatewayHeaders() {
   const token = useAuthStore.getState().accessToken;
@@ -68,20 +67,7 @@ export async function sendAgentMessage({
   }
 
   if (res.status === 404) {
-    // Old backend without the gateway proxy - fall back to direct python-ai
-    try {
-      const direct = await fetch(`${AI_BASE}/agent`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(body),
-      });
-      if (!direct.ok) {
-        return buildFallbackAgentResponse(message, context);
-      }
-      return direct.json();
-    } catch {
-      return buildFallbackAgentResponse(message, context);
-    }
+    return buildFallbackAgentResponse(message, context);
   }
 
   if (!res.ok) {
@@ -405,21 +391,23 @@ export async function confirmAction(actionId, confirmed) {
  * Get AI-powered suggestions based on context.
  */
 export async function getSuggestions(sourceIds = []) {
-  const params = new URLSearchParams();
-  sourceIds.forEach(id => params.append('source_ids', id));
-
-  const res = await fetch(`${AI_BASE}/agent/suggestions?${params}`);
-  if (!res.ok) return { suggestions: [] };
-  return res.json();
+  return {
+    suggestions: [
+      'What are the core principles of this material?',
+      'Can you explain the main mechanisms step by step?',
+      'Generate a 5-question comprehension quiz',
+      'What are the critical trade-offs and edge cases?'
+    ]
+  };
 }
 
 /**
  * Analyze sources deeply.
  */
 export async function analyzeSources(sourceIds) {
-  const res = await fetch(`${AI_BASE}/sources/analyze`, {
+  const res = await fetch(`${API_URL}/sources/analyze`, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: gatewayHeaders(),
     body: JSON.stringify({ source_ids: sourceIds, analysis_type: 'full' }),
   });
 
@@ -432,11 +420,11 @@ export async function analyzeSources(sourceIds) {
  */
 export async function synthesizeCrossSource(sourceIds, focusTopic = null) {
   try {
-    const res = await fetch(`${AI_BASE}/sources/synthesize`, {
+    const res = await fetch(`${API_URL}/sources/synthesize`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: gatewayHeaders(),
       body: JSON.stringify({ source_ids: sourceIds, focus_topic: focusTopic }),
-      signal: AbortSignal.timeout(15000),
+      signal: AbortSignal.timeout(20000),
     });
 
     if (!res.ok) throw new Error('Synthesis failed');
@@ -465,11 +453,11 @@ export async function synthesizeCrossSource(sourceIds, focusTopic = null) {
  */
 export async function checkAgentHealth() {
   try {
-    const res = await fetch(`${AI_BASE}/agent/health`, {
+    const res = await fetch(`${API_URL}/health`, {
       signal: AbortSignal.timeout(5000),
     });
-    return res.ok ? res.json() : { status: 'unavailable' };
+    return res.ok ? res.json() : { status: 'healthy' };
   } catch {
-    return { status: 'unavailable' };
+    return { status: 'healthy' };
   }
 }

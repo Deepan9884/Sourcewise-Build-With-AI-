@@ -8,7 +8,7 @@ import {
 import { GlowCard } from '../components/ui/glow-card'
 import { useAuthStore } from '../store/authStore'
 
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:4000'
+const API_URL = import.meta.env.VITE_API_URL || 'https://node-api-nine-flame.vercel.app'
 
 const AI_MODES = [
   {

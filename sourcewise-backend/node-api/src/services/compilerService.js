@@ -1,8 +1,9 @@
 const axios = require('axios');
 const logger = require('../utils/logger');
+const llmService = require('./llmService');
 
 const WANDBOX_API = 'https://wandbox.org/api/compile.json';
-const AI_URL = process.env.PYTHON_AI_URL || 'http://localhost:8000';
+const AI_URL = process.env.PYTHON_AI_URL || '';
 const INTERNAL_KEY = process.env.INTERNAL_API_KEY || '';
 
 const aiHeaders = () => ({
@@ -359,29 +360,46 @@ async function aiAssist({ action, language, code, error_output = '', user_id = n
 
   const instruction = prompts[action] || prompts.explain;
 
-  try {
-    // Proxy to python-ai /chat endpoint
-    const response = await axios.post(
-      `${AI_URL}/chat`,
-      {
-        question: `You are DeepCode AI Inspector, an expert programming mentor and compiler diagnostics engine.\n\n${instruction}\n\nHere is the code:\n\`\`\`${canonical}\n${code}\n\`\`\``,
-        source_ids: [],
-        conversation_history: [],
-        user_id: user_id || 'anonymous_scholar',
-      },
-      { headers: aiHeaders(), timeout: 35000 }
-    );
-
-    const answer = response.data?.answer || response.data?.reply || response.data?.message;
-    if (answer) {
-      return {
+  // Direct Cloud Gemini LLM diagnostics
+  if (process.env.GEMINI_API_KEY || !AI_URL || AI_URL.includes('localhost')) {
+    try {
+      const explanation = await llmService.explainCode({
+        canonical,
+        code,
         action,
-        language: canonical,
-        analysis: answer,
-      };
+        instruction,
+      });
+      if (explanation && explanation.analysis) {
+        return explanation;
+      }
+    } catch (llmErr) {
+      logger.warn('compiler.llm_assist_failed', { err: llmErr.message, action });
     }
-  } catch (err) {
-    logger.warn('compiler.ai_assist_failed', { err: err.message, action });
+  } else {
+    try {
+      // Proxy to python-ai /chat endpoint
+      const response = await axios.post(
+        `${AI_URL}/chat`,
+        {
+          question: `You are DeepCode AI Inspector, an expert programming mentor and compiler diagnostics engine.\n\n${instruction}\n\nHere is the code:\n\`\`\`${canonical}\n${code}\n\`\`\``,
+          source_ids: [],
+          conversation_history: [],
+          user_id: user_id || 'anonymous_scholar',
+        },
+        { headers: aiHeaders(), timeout: 35000 }
+      );
+
+      const answer = response.data?.answer || response.data?.reply || response.data?.message;
+      if (answer) {
+        return {
+          action,
+          language: canonical,
+          analysis: answer,
+        };
+      }
+    } catch (err) {
+      logger.warn('compiler.ai_assist_failed', { err: err.message, action });
+    }
   }
 
   // Local fallback intelligent diagnostic inspector

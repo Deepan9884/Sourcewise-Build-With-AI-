@@ -16,7 +16,7 @@ import { useAuthStore } from '../store/authStore'
 import { useSourceStore } from '../store/sourceStore'
 import { studyPlansApi } from '../lib/studyPlansApi'
 
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:4000'
+const API_URL = import.meta.env.VITE_API_URL || 'https://node-api-nine-flame.vercel.app'
 
 /* ─── helpers ─────────────────────────────────────────────────── */
 async function get(path, token) {

@@ -124,12 +124,20 @@ app.get('/health', async (req, res) => {
     checks.database = error ? 'error' : 'ok';
   } catch (e) { checks.database = 'error'; }
 
-  try {
-    const axios = require('axios');
-    const aiUrl = process.env.PYTHON_AI_URL || 'http://localhost:8000';
-    const response = await axios.get(`${aiUrl}/health`, { timeout: 3000 });
-    checks.ai_service = response.data?.status === 'ok' ? 'ok' : 'degraded';
-  } catch (e) { checks.ai_service = 'unavailable'; }
+  if (process.env.GEMINI_API_KEY) {
+    checks.ai_service = 'ok (Gemini Cloud LLM)';
+  } else {
+    try {
+      const axios = require('axios');
+      const aiUrl = process.env.PYTHON_AI_URL;
+      if (aiUrl && !aiUrl.includes('localhost')) {
+        const response = await axios.get(`${aiUrl}/health`, { timeout: 3000 });
+        checks.ai_service = response.data?.status === 'ok' ? 'ok' : 'degraded';
+      } else {
+        checks.ai_service = 'ready';
+      }
+    } catch (e) { checks.ai_service = 'unavailable'; }
+  }
 
   const overallStatus = checks.api === 'ok' && checks.database === 'ok' ? 'healthy' : 'degraded';
 

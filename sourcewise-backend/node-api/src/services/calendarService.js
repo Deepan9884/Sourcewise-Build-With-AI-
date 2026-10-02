@@ -15,7 +15,7 @@ function googleConfig() {
   return {
     clientId: process.env.GOOGLE_CLIENT_ID || '',
     clientSecret: process.env.GOOGLE_CLIENT_SECRET || '',
-    redirectUri: process.env.GOOGLE_REDIRECT_URI || 'http://localhost:4000/calendar/callback',
+    redirectUri: process.env.GOOGLE_REDIRECT_URI || 'https://node-api-nine-flame.vercel.app/calendar/callback',
   };
 }
 

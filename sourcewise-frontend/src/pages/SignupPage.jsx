@@ -11,7 +11,7 @@ import LandingBackground from '../components/landing/LandingBackground'
 import { ParticleBackground } from '../components/ui/particle-background'
 import { AmbientLight } from '../components/ui/ambient-light'
 
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:4000'
+const API_URL = import.meta.env.VITE_API_URL || 'https://node-api-nine-flame.vercel.app'
 
 const calculatePasswordStrength = (pass) => {
   if (!pass) return { score: 0, label: '', color: 'bg-transparent' }

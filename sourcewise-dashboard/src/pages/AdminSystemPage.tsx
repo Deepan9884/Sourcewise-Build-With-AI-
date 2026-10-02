@@ -3,7 +3,7 @@ import { Gauge, Server, Timer } from 'lucide-react'
 import AdminLayout, { StatCard } from '../components/admin/AdminLayout'
 import { adminApi } from '../lib/adminApi'
 
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:4000'
+const API_URL = import.meta.env.VITE_API_URL || 'https://node-api-nine-flame.vercel.app'
 
 interface UptimeData {
   uptimePercent: number

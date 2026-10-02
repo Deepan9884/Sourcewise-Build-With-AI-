@@ -5,8 +5,7 @@ import { useAuthStore } from '../../store/authStore'
 import { sendAgentMessage, synthesizeCrossSource } from '../../lib/agentApi'
 import KnowledgeGraph from '../ui/knowledge-graph'
 
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:4000'
-const AI_URL = import.meta.env.VITE_AI_URL || 'http://localhost:8000'
+const API_URL = import.meta.env.VITE_API_URL || 'https://node-api-nine-flame.vercel.app'
 
 const ACTIONS = [
   { id: 'chat', label: 'Chat', icon: MessageCircle },
@@ -344,8 +343,12 @@ export default function SourceSlideOver({ source, onClose, onOpenChat }) {
       if (action === 'map') {
         let mapData = null
         try {
-          const res = await fetch(`${AI_URL}/sources/knowledge-graph`, {
-            method: 'POST', headers: { 'Content-Type': 'application/json' },
+          const token = useAuthStore.getState().accessToken
+          const headers = { 'Content-Type': 'application/json' }
+          if (token) headers.Authorization = `Bearer ${token}`
+          const res = await fetch(`${API_URL}/sources/knowledge-graph`, {
+            method: 'POST',
+            headers,
             body: JSON.stringify({ source_ids: [source.id] }),
           })
           if (res.ok) mapData = await res.json()

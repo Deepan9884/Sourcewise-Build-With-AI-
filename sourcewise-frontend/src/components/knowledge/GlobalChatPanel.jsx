@@ -127,7 +127,7 @@ export default function GlobalChatPanel({ open, onClose, sourceIds = [], context
       },
       onError: (msg) => {
         setStreaming(false)
-        setError(msg || 'Chat response failed. Check that python-ai (:8000) is running.')
+        setError(msg || 'Chat response failed. Please try again.')
         setMessages((m) => m.filter((x) => !x.streaming))
       },
     })

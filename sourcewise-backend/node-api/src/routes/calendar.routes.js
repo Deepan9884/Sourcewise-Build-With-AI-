@@ -29,10 +29,10 @@ router.get('/callback', async (req, res) => {
     if (!code) return res.status(400).send('Missing code');
     // state carries userId from /auth; validate by attempting connect
     await calendarService.connectGoogleCalendar(state, code);
-    const origin = process.env.FRONTEND_ORIGIN || 'http://localhost:5173';
+    const origin = process.env.FRONTEND_ORIGIN || 'https://sourcewise-app.vercel.app';
     res.redirect(`${origin}/planner-v2?calendar=connected`);
   } catch (error) {
-    const origin = process.env.FRONTEND_ORIGIN || 'http://localhost:5173';
+    const origin = process.env.FRONTEND_ORIGIN || 'https://sourcewise-app.vercel.app';
     res.redirect(`${origin}/planner-v2?calendar=error&msg=${encodeURIComponent(error.message)}`);
   }
 });

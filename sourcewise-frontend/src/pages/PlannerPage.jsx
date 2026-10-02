@@ -7,7 +7,7 @@ import { useAuthStore } from '../store/authStore'
 import { sendAgentMessage } from '../lib/agentApi'
 import { sendToOrchestrator } from '../lib/orchestratorApi'
 
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:4000'
+const API_URL = import.meta.env.VITE_API_URL || 'https://node-api-nine-flame.vercel.app'
 
 export default function PlannerPage() {
   const { activeSourceIds } = useSourceStore()
@@ -115,7 +115,7 @@ export default function PlannerPage() {
         }
       } catch (fallbackError) {
         console.error('Fallback plan generation also failed:', fallbackError)
-        setPlanError(fallbackError.message || 'Plan generation failed. Check that the API (port 4000) and AI service (port 8000) are running, then try again.')
+        setPlanError(fallbackError.message || 'Plan generation failed. Please try again.')
       }
     } finally {
       setIsGenerating(false)

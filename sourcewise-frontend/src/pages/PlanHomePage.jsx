@@ -10,7 +10,7 @@ import TaskHybridList from '../components/plan/TaskHybridList'
 import StudyCalendar from '../components/plan/StudyCalendar'
 import CalendarActionMenu from '../components/plan/CalendarActionMenu'
 
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:4000'
+const API_URL = import.meta.env.VITE_API_URL || 'https://node-api-nine-flame.vercel.app'
 const ADAPT_KEY = () => `sw_adapt_${new Date().toDateString()}`
 const PAUSE_KEY = 'sw_adaptive_paused'
 

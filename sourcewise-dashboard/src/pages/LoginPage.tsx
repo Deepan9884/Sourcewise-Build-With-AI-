@@ -3,7 +3,7 @@ import { useNavigate, Navigate } from 'react-router-dom'
 import { ShieldCheck, Loader2 } from 'lucide-react'
 import { useAuthStore } from '../store/authStore'
 
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:4000'
+const API_URL = import.meta.env.VITE_API_URL || 'https://node-api-nine-flame.vercel.app'
 
 export default function LoginPage() {
   const navigate = useNavigate()

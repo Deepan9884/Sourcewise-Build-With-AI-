@@ -4,7 +4,7 @@
 import { create } from 'zustand';
 import axios from 'axios';
 
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:4000';
+const API_URL = import.meta.env.VITE_API_URL || 'https://node-api-nine-flame.vercel.app';
 
 const useTutorStore = create((set, get) => ({
   // State

@@ -1,4 +1,4 @@
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:4000'
+const API_URL = import.meta.env.VITE_API_URL || 'https://node-api-nine-flame.vercel.app'
 
 export async function generatePuzzle({ type, sourceIds, topic, difficulty = 'study', count = 10 }, token) {
   const res = await fetch(`${API_URL}/puzzles/generate`, {
