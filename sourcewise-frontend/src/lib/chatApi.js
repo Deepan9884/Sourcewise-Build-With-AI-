@@ -496,6 +496,7 @@ export async function streamChat({
       body: JSON.stringify({
         question,
         sourceIds: sourceIds || [],
+        sourceNames: activeSources.map(s => s.name || s.title).filter(Boolean),
         userId: userId || 'anonymous',
         history: history || [],
       }),

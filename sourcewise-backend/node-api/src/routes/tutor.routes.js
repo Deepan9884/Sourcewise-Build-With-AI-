@@ -30,9 +30,12 @@ router.post('/ask', authenticate, tokenBudget({ endpoint: 'tutor/ask' }), async 
   const budget = req.tokenBudget || {};
   const { provider: activeProvider, model: activeModel } = tokenService.currentProvider();
   try {
-    const { question, sourceIds, source_ids, mode, sessionId } = req.body;
+    const { question, sourceIds, source_ids, sourceNames, mode, sessionId } = req.body;
     const userId = req.user.userId || req.user.id;
     const sIds = Array.isArray(sourceIds) ? sourceIds : (Array.isArray(source_ids) ? source_ids : []);
+    // sourceNames: array of document name strings sent by the frontend to help Gemini
+    // answer from the correct document even when Supabase doesn't have full metadata yet
+    const sNames = Array.isArray(sourceNames) ? sourceNames : [];
 
     if (!question || !String(question).trim()) {
       return res.status(400).json({ 
@@ -93,6 +96,7 @@ router.post('/ask', authenticate, tokenBudget({ endpoint: 'tutor/ask' }), async 
       const fullResponse = await llmService.streamText(res, {
         question,
         sourceIds: sIds,
+        sourceNameHints: sNames,
         history,
         userId,
       });

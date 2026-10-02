@@ -40,7 +40,8 @@ Guidelines:
      Direct the user to the "Game Arena" (/puzzles) to play word searches and memory match challenges.
    - For Code Execution ("compiler", "deepcode", "run code"):
      Direct the user to "DeepCode" (/deepcode) for an in-browser code editor and runner.
-   ALWAYS clearly instruct the user to go to that respective dedicated tab or section whenever they ask to access or use these learning features.`;
+   ALWAYS clearly instruct the user to go to that respective dedicated tab or section whenever they ask to access or use these learning features.
+6. DOCUMENT GROUNDING RULE: The "Context:" header before the user question tells you EXACTLY which document(s) are selected. Answer ONLY about those named documents. NEVER substitute or invent other textbooks or materials not in the context. If you lack the document full text, say so honestly and ask the user to share excerpts.`;
 
 /**
  * Dedicated Intent Router for SourceWise Features.
@@ -169,9 +170,10 @@ Visit the **DeepCode Compiler** section (\`/deepcode\`) to write, inspect, and r
 }
 
 /**
- * Fetch source metadata from Supabase and demo state
+ * Fetch source metadata from Supabase.
+ * Returns only real user-owned sources — never injects demo sources into a user's context.
  */
-async function getSourcesMetadata(sourceIds = [], userId = null) {
+async function getSourcesMetadata(sourceIds = [], userId = null, sourceNameHints = []) {
   let sources = [];
   try {
     // 1. Fetch user's persistent sources from Supabase if userId is provided
@@ -186,7 +188,7 @@ async function getSourcesMetadata(sourceIds = [], userId = null) {
       }
     }
 
-    // 2. If specific sourceIds were provided, search for them
+    // 2. If specific sourceIds were provided, try to match from Supabase
     if (Array.isArray(sourceIds) && sourceIds.length > 0) {
       const validUuids = sourceIds.filter(id => /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id));
       if (validUuids.length > 0) {
@@ -201,37 +203,25 @@ async function getSourcesMetadata(sourceIds = [], userId = null) {
           }
         }
       }
-
-      // Check demo sources if ID or name matches
-      try {
-        const demoService = require('./demoAccountService');
-        const demoSources = demoService.getSources();
-        for (const sid of sourceIds) {
-          const found = demoSources.find(d => d.id === sid || d.name === sid);
-          if (found && !sources.some(s => s.id === found.id)) {
-            sources.unshift(found);
-          }
-        }
-      } catch (_) {}
-    }
-
-    // 3. Fallback to demo sources if no user sources exist yet
-    if (sources.length === 0) {
-      try {
-        const demoService = require('./demoAccountService');
-        sources = demoService.getSources().slice(0, 3);
-      } catch (_) {}
     }
   } catch (err) {
     console.warn('[llmService] Source metadata query error:', err.message);
   }
 
-  // If specific sourceIds are given, prefer returning those matching sources
+  // 3. Filter to requested sourceIds if provided
   if (Array.isArray(sourceIds) && sourceIds.length > 0) {
     const matched = sources.filter(s => sourceIds.includes(s.id) || sourceIds.includes(s.name));
     if (matched.length > 0) return matched;
   }
 
+  // 4. If we have source name hints (from the frontend upload), create lightweight stubs
+  //    so Gemini knows WHAT document it's answering about — without fake demo content.
+  if (sourceNameHints && sourceNameHints.length > 0) {
+    return sourceNameHints.map(name => ({ id: name, name, type: 'document', summary: '', concepts: [] }));
+  }
+
+  // 5. Return whatever real user sources we found (most recent first), or empty array.
+  //    NEVER fall back to demo sources — that caused hallucinated CS textbook content.
   return sources;
 }
 
@@ -288,12 +278,12 @@ function buildGeminiContents(question, history = [], sources = []) {
 /**
  * Generate a complete text response via Gemini with multi-model fallback
  */
-async function generateText({ question, sourceIds = [], history = [], personalContext = {}, userId = null }) {
+async function generateText({ question, sourceIds = [], history = [], personalContext = {}, userId = null, sourceNameHints = [] }) {
   if (!GEMINI_API_KEY) {
     throw new Error('GEMINI_API_KEY environment variable is not configured');
   }
 
-  const sources = await getSourcesMetadata(sourceIds, userId);
+  const sources = await getSourcesMetadata(sourceIds, userId, sourceNameHints);
   const primarySourceName = sources[0]?.name || 'your study material';
   const redirection = getFeatureRedirection(question, primarySourceName);
   if (redirection) {
@@ -386,8 +376,8 @@ async function generateJson({ prompt, systemPrompt = '' }) {
 /**
  * Stream response tokens directly to an Express response using Server-Sent Events (SSE)
  */
-async function streamText(res, { question, sourceIds = [], history = [], userId = null }) {
-  const sources = await getSourcesMetadata(sourceIds, userId);
+async function streamText(res, { question, sourceIds = [], history = [], userId = null, sourceNameHints = [] }) {
+  const sources = await getSourcesMetadata(sourceIds, userId, sourceNameHints);
   const primarySourceName = sources[0]?.name || 'your study material';
   const redirection = getFeatureRedirection(question, primarySourceName);
   if (redirection) {
