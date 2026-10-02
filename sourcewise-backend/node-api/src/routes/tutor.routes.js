@@ -865,6 +865,7 @@ router.post('/agent', authenticate, tokenBudget({ endpoint: 'tutor/agent' }), as
     };
     // If Gemini Cloud LLM is configured or Python AI is localhost, generate directly with zero latency
     if (process.env.GEMINI_API_KEY || !PYTHON_AI_URL || PYTHON_AI_URL.includes('localhost')) {
+      try {
         if (payload.context?.action === 'create_flashcards') {
           const count = Number(payload.context?.count) || 5;
           const focus = payload.context?.focus || 'key terms and definitions';
