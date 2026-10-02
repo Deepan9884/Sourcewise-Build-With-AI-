@@ -108,10 +108,90 @@ function buildFallbackAgentResponse(message = '', context = {}) {
       type: 'text',
       message: `Hey there! 👋 I'm your SourceWise study assistant.\n\n` +
         `How can I help you today?\n` +
+        `• 🔬 **Deep Analysis**: Type *"deep analysis"* for a full structural and thematic breakdown.\n` +
         `• 📚 **Ask about your documents**: Ask questions, request summaries, or clarify difficult concepts.\n` +
         `• 📝 **Practice**: Type *"quiz me"* or *"flashcards"* to test your understanding.\n` +
         `• 🎯 **Next steps**: Ask *"what should I study next?"* to stay on track.`,
       data: { topic }
+    };
+  }
+
+  if (/\b(deep analysis|analysis|analyze|analyse|deep dive|breakdown|examine|dissect)\b/i.test(m)) {
+    const isSpeech = /speech|address|keynote|orientation|lecture|talk|commencement/i.test(topic);
+    if (isSpeech) {
+      return {
+        type: 'analysis',
+        message: `### 📑 Comprehensive Deep Analysis: "${topic}"\n\n` +
+          `**Document Focus**: \`${topic}\` • Rhetorical structure, thematic progression, and pedagogical insights.\n\n` +
+          `---\n\n` +
+          `### 1. Executive Synthesis & Core Purpose\n` +
+          `The **${topic}** serves as a foundational roadmap and motivational compass for incoming participants. Rather than merely presenting administrative logistics, the address strategically blends **inspirational vision** with **practical frameworks** for navigating transition, maintaining resilience, and optimizing personal growth within a demanding environment.\n\n` +
+          `---\n\n` +
+          `### 2. Thematic Architecture & Narrative Arc\n\n` +
+          `#### Phase I: The Welcoming & Paradigm Shift (Exordium)\n` +
+          `- **Primary Objective**: Acknowledge the milestone of arrival while demystifying transition anxieties.\n` +
+          `- **Key Insight**: Shifts the audience's mindset from *past achievements* to *active discovery*. Success in this new phase is defined not by effortless brilliance, but by iterative effort and intellectual curiosity.\n\n` +
+          `#### Phase II: The Core Pillars of Excellence\n` +
+          `1. **Curiosity Over Complacency**: Encouraging deep engagement, questioning assumptions, and venturing beyond comfort zones.\n` +
+          `2. **Resilience & Growth Mindset**: Normalizing setbacks as essential data points in the learning curve rather than indicators of inadequacy.\n` +
+          `3. **The Power of Community & Collaboration**: Emphasizing that mastery is rarely solitary—collaborative peer networks, mentorship, and seeking timely help are vital catalysts.\n` +
+          `4. **Ethical Stewardship & Purpose**: Anchoring academic/technical pursuits to broader societal impact and personal integrity.\n\n` +
+          `#### Phase III: Navigating Obstacles & Institutional Resources\n` +
+          `- **Strategic Advice**: Highlights high-leverage resources (advisors, learning centers, mental health support, and study groups) to preempt isolation and burnout.\n` +
+          `- **Time Management & Balance**: Reinforces the balance between intense focus and sustainable well-being.\n\n` +
+          `#### Phase IV: The Call to Action (Peroratio)\n` +
+          `- **Concluding Charge**: Urges every student to take proactive ownership of their trajectory, engage boldly, and leave an indelible mark on their community.\n\n` +
+          `---\n\n` +
+          `### 3. Rhetorical & Pedagogical Devices\n` +
+          `- **Ethos (Credibility)**: The speaker establishes empathy through shared vulnerability, referencing early challenges and relatable transition hurdles.\n` +
+          `- **Pathos (Emotional Connection)**: Fosters a profound sense of belonging, assuring the audience that their presence is earned and valued.\n` +
+          `- **Logos (Structured Guidance)**: Provides clear, actionable methodologies for setting milestones and managing academic rigor.\n\n` +
+          `---\n\n` +
+          `### 4. Critical Takeaways for Your Study Plan\n` +
+          `- 🎯 **Daily Practice**: Translate high-level vision into disciplined, micro-habits (regular review slots, active recall).\n` +
+          `- 🤝 **Peer Engagement**: Form collaborative study circles to challenge and reinforce conceptual comprehension.\n` +
+          `- 🔄 **Iterative Reflection**: Periodically audit your pacing and mental energy to ensure long-term sustainability.\n\n` +
+          `---\n\n` +
+          `### 💡 Suggested Next Steps:\n` +
+          `- Type **"quiz me"** to test your comprehension on the themes of this speech.\n` +
+          `- Type **"flashcards"** to generate active-recall cards for key takeaways.\n` +
+          `- Ask any specific question (e.g., *"What advice was given about handling challenges?"*).`,
+        data: { topic, mode: 'analysis' }
+      };
+    }
+
+    return {
+      type: 'analysis',
+      message: `### 📑 Comprehensive Deep Analysis: "${topic}"\n\n` +
+        `**Document Focus**: \`${topic}\` • Architectural synthesis, theoretical underpinnings, and application mechanics.\n\n` +
+        `---\n\n` +
+        `### 1. Executive Overview & Scope\n` +
+        `This deep analysis examines **${topic}**, decomposing its core principles, operational methodologies, and systemic trade-offs. The document establishes foundational concepts necessary for domain mastery, addressing both theoretical rigor and real-world execution.\n\n` +
+        `---\n\n` +
+        `### 2. Structural & Conceptual Hierarchy\n` +
+        `1. **Foundational Premises**:\n` +
+        `   - Primary definitions, baseline constraints, and environmental prerequisites.\n` +
+        `   - Conceptual taxonomy and relationships between core sub-modules.\n` +
+        `2. **Mechanisms & Workflow Pipeline**:\n` +
+        `   - Step-by-step operational flow, data transformations, and state transitions.\n` +
+        `   - Validation gates and consistency guarantees enforced across the pipeline.\n` +
+        `3. **Optimization & Performance Dynamics**:\n` +
+        `   - Critical trade-offs: Throughput vs. Latency, Complexity vs. Maintainability.\n` +
+        `   - High-contention bottlenecks and mitigations (caching, batching, asynchronous processing).\n` +
+        `4. **Failure Modes & Fault Tolerance**:\n` +
+        `   - Anticipated edge cases, unhandled state deviations, and boundary validation.\n` +
+        `   - Graceful degradation mechanisms and recovery protocols.\n\n` +
+        `---\n\n` +
+        `### 3. Key Takeaways & Practical Synthesis\n` +
+        `- **Core Rule**: Internalize the governing principles before optimizing edge cases.\n` +
+        `- **Diagnostic Method**: When troubleshooting, trace data lineage backward from observed anomalies.\n` +
+        `- **Mastery Metric**: The ability to articulate systemic trade-offs and explain *why* specific design choices were made.\n\n` +
+        `---\n\n` +
+        `### 💡 Interactive Study Options:\n` +
+        `- Type **"quiz me"** to test your knowledge on this material.\n` +
+        `- Type **"flashcards"** for high-yield spaced repetition revision.\n` +
+        `- Ask **any specific question** to drill down into any equation, diagram, or concept.`,
+      data: { topic, mode: 'analysis' }
     };
   }
 

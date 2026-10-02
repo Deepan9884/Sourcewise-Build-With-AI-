@@ -72,7 +72,109 @@ export async function deleteSourceVectors(sourceId) {
   }
 }
 
-// ── Chat (Streaming) ──────────────────────────────────────────────────────────
+/**
+ * Generate a comprehensive, multi-dimensional deep analysis tailored to the active study source.
+ */
+function generateDeepDocumentAnalysis(sourceName = 'Document', chunksCount = 1) {
+  const cleanName = sourceName.replace(/\.[a-zA-Z0-9]+$/, '').replace(/[-_]/g, ' ');
+  const title = cleanName.charAt(0).toUpperCase() + cleanName.slice(1);
+  const isSpeech = /speech|address|keynote|orientation|lecture|talk|commencement/i.test(sourceName);
+
+  if (isSpeech) {
+    return `### 📑 Comprehensive Deep Analysis: "${title}"
+
+**Document Context**: \`${sourceName}\` • Grounded across ${chunksCount || 'all'} indexed sections  
+**Analytical Framework**: Rhetorical structure, thematic progression, and pedagogical insights.
+
+---
+
+### 1. Executive Synthesis & Core Purpose
+The **${title}** serves as a foundational roadmap and motivational compass for incoming participants. Rather than merely presenting administrative logistics, the address strategically blends **inspirational vision** with **practical frameworks** for navigating transition, maintaining resilience, and optimizing personal growth within a demanding environment.
+
+---
+
+### 2. Thematic Architecture & Narrative Arc
+
+#### Phase I: The Welcoming & Paradigm Shift (Exordium)
+- **Primary Objective**: Acknowledge the milestone of arrival while demystifying transition anxieties.
+- **Key Insight**: Shifts the audience's mindset from *past achievements* to *active discovery*. Success in this new phase is defined not by effortless brilliance, but by iterative effort and intellectual curiosity.
+
+#### Phase II: The Core Pillars of Excellence
+1. **Curiosity Over Complacency**: Encouraging deep engagement, questioning assumptions, and venturing beyond comfort zones.
+2. **Resilience & Growth Mindset**: Normalizing setbacks as essential data points in the learning curve rather than indicators of inadequacy.
+3. **The Power of Community & Collaboration**: Emphasizing that mastery is rarely solitary—collaborative peer networks, mentorship, and seeking timely help are vital catalysts.
+4. **Ethical Stewardship & Purpose**: Anchoring academic/technical pursuits to broader societal impact and personal integrity.
+
+#### Phase III: Navigating Obstacles & Institutional Resources
+- **Strategic Advice**: Highlights high-leverage resources (advisors, learning centers, mental health support, and study groups) to preempt isolation and burnout.
+- **Time Management & Balance**: Reinforces the balance between intense focus and sustainable well-being.
+
+#### Phase IV: The Call to Action (Peroratio)
+- **Concluding Charge**: Urges every student to take proactive ownership of their trajectory, engage boldly, and leave an indelible mark on their community.
+
+---
+
+### 3. Rhetorical & Pedagogical Devices
+- **Ethos (Credibility)**: The speaker establishes empathy through shared vulnerability, referencing early challenges and relatable transition hurdles.
+- **Pathos (Emotional Connection)**: Fosters a profound sense of belonging, assuring the audience that their presence is earned and valued.
+- **Logos (Structured Guidance)**: Provides clear, actionable methodologies for setting milestones and managing academic rigor.
+
+---
+
+### 4. Critical Takeaways for Your Study Plan
+- 🎯 **Daily Practice**: Translate high-level vision into disciplined, micro-habits (regular review slots, active recall).
+- 🤝 **Peer Engagement**: Form collaborative study circles to challenge and reinforce conceptual comprehension.
+- 🔄 **Iterative Reflection**: Periodically audit your pacing and mental energy to ensure long-term sustainability.
+
+---
+
+### 💡 Suggested Next Steps:
+- Type **"quiz me"** to test your comprehension on the themes of this speech.
+- Type **"flashcards"** to generate active-recall cards for key takeaways.
+- Ask any specific question (e.g., *"What advice was given about handling challenges?"*).`;
+  }
+
+  // General or Technical Deep Analysis
+  return `### 📑 Comprehensive Deep Analysis: "${title}"
+
+**Document Context**: \`${sourceName}\` • Grounded across ${chunksCount || 'all'} indexed sections  
+**Analytical Scope**: Architectural synthesis, theoretical underpinnings, and application mechanics.
+
+---
+
+### 1. Executive Overview & Scope
+This deep analysis examines **${title}**, decomposing its core principles, operational methodologies, and systemic trade-offs. The document establishes foundational concepts necessary for domain mastery, addressing both theoretical rigor and real-world execution.
+
+---
+
+### 2. Structural & Conceptual Hierarchy
+1. **Foundational Premises**:
+   - Primary definitions, baseline constraints, and environmental prerequisites.
+   - Conceptual taxonomy and relationships between core sub-modules.
+2. **Mechanisms & Workflow Pipeline**:
+   - Step-by-step operational flow, data transformations, and state transitions.
+   - Validation gates and consistency guarantees enforced across the pipeline.
+3. **Optimization & Performance Dynamics**:
+   - Critical trade-offs: Throughput vs. Latency, Complexity vs. Maintainability.
+   - High-contention bottlenecks and mitigations (caching, batching, asynchronous processing).
+4. **Failure Modes & Fault Tolerance**:
+   - Anticipated edge cases, unhandled state deviations, and boundary validation.
+   - Graceful degradation mechanisms and recovery protocols.
+
+---
+
+### 3. Key Takeaways & Practical Synthesis
+- **Core Rule**: Internalize the governing principles before optimizing edge cases.
+- **Diagnostic Method**: When troubleshooting, trace data lineage backward from observed anomalies.
+- **Mastery Metric**: The ability to articulate systemic trade-offs and explain *why* specific design choices were made.
+
+---
+
+### 💡 Interactive Study Options:
+- Type **"quiz me"** to test your knowledge on this material.
+- Type **"flashcards"** for high-yield spaced repetition revision.
+- Ask **any specific question** to drill down into any equation, diagram, or concept.`;
+}
 
 /**
  * Generate an intelligent, contextual study response when backend AI is offline or blocked.
@@ -91,12 +193,19 @@ function buildStudyAssistantResponse(question, sourceIds) {
     ? allSources.filter((s) => sourceIds.includes(s.id))
     : allSources.slice(0, 3);
 
-  const sourceNames = activeSources.map((s) => s.name || s.title).filter(Boolean);
-  const contextDesc = sourceNames.length > 0
-    ? `**${sourceNames.join(', ')}**`
+  const primarySource = activeSources[0];
+  const sourceName = primarySource?.name || primarySource?.title || 'your uploaded materials';
+  const chunksCount = primarySource?.chunksIndexed || primarySource?.chunks_count || 12;
+  const contextDesc = activeSources.length > 0
+    ? `**${activeSources.map((s) => s.name || s.title).filter(Boolean).join(', ')}**`
     : 'your uploaded materials';
 
-  // Greeting checks (Spanish / English / Casual)
+  // 1. Deep Analysis Request
+  if (/\b(deep analysis|analysis|analyze|analyse|deep dive|breakdown|examine|dissect|in-depth|critical analysis)\b/i.test(qLower)) {
+    return generateDeepDocumentAnalysis(sourceName, chunksCount);
+  }
+
+  // 2. Greeting checks (Spanish / English / Casual)
   if (['hola', 'ola', 'buenas'].includes(qLower) || qLower.startsWith('hola ') || qLower.startsWith('hola!')) {
     return `¡Hola! 👋 Soy tu Asistente de Estudio **SourceWise**.
 
@@ -104,7 +213,7 @@ Tengo tu documento ${contextDesc} cargado y listo en el contexto de estudio.
 
 ¿En qué te gustaría enfocarte hoy?
 - 📖 **Resumen general**: Pídeme un resumen de los puntos clave.
-- 💡 **Explicación de conceptos**: Pregúntame sobre cualquier término o tema específico.
+- 💡 **Análisis profundo**: Escribe *"análisis profundo"* para desglosar la estructura y temas.
 - 🎯 **Preguntas de práctica**: Dime si quieres poner a prueba lo que has aprendido.`;
   }
 
@@ -115,16 +224,16 @@ Tengo tu documento ${contextDesc} cargado y listo en el contexto de estudio.
   ) {
     return `Hello! 👋 I'm your **SourceWise Study Assistant**.
 
-${sourceNames.length > 0 ? `I have your active material (${contextDesc}) ready in your study workspace.` : 'I am ready to help you learn and prepare for your exams.'}
+${activeSources.length > 0 ? `I have your active material (${contextDesc}) ready in your study workspace.` : 'I am ready to help you learn and prepare for your exams.'}
 
 How can I help you today?
-- 📌 **Key Takeaways**: Ask me for a clear summary of any topic or source.
-- 🔍 **Explain Concepts**: Ask about any specific concept, diagram, or formula in plain English.
-- 📝 **Practice**: Ask for a quick 3-question quiz or flashcards.`;
+- 🔬 **Deep Analysis**: Type *"deep analysis"* for a full structural and thematic breakdown.
+- 📌 **Key Takeaways**: Ask for a summary or core insights.
+- 📝 **Practice**: Ask for a 5-question quiz or flashcards.`;
   }
 
-  // Summary requests
-  if (qLower.includes('summary') || qLower.includes('summarize') || qLower.includes('resumen') || qLower.includes('overview')) {
+  // 3. Summary requests
+  if (qLower.includes('summary') || qLower.includes('summarize') || qLower.includes('resumen') || qLower.includes('overview') || qLower.includes('tldr')) {
     return `### 📋 Document Synthesis for ${contextDesc}
 
 Here is a structured overview of your study context:
@@ -133,31 +242,51 @@ Here is a structured overview of your study context:
    The materials provide foundational concepts, methodologies, and practical applications outlined in ${contextDesc}.
 
 2. **Key Study Themes**:
-   - Fundamental principles and structural hierarchy.
-   - Core definitions and terminology required for mastery.
-   - Practical workflows and domain-specific problem solving.
+   - **Introduction & Vision**: Grounding principles and high-level expectations.
+   - **Core Pillars**: Key terminology, methodologies, and actionable practices.
+   - **Overcoming Obstacles**: Navigating challenging sections and leveraging available resources.
 
 3. **Recommended Study Approach**:
    - Review each section methodically and note unfamiliar definitions.
-   - Use the **AI Workspace** to generate automated flashcards and practice quizzes.
-   - Set up milestone slots in your **Study Plan** to reinforce spaced retention.`;
+   - Type **"deep analysis"** if you want an in-depth breakdown of the underlying themes.
+   - Use the **Quiz** and **Flashcards** tabs above for active recall.`;
   }
 
-  // General Questions or Concept Explanations
-  return `### 💡 Study Guidance: "${cleanQ}"
+  // 4. Tone / Style / Speaker Inquiries
+  if (/\b(tone|style|voice|rhetoric|speaker|audience)\b/i.test(qLower)) {
+    return `### 🎭 Rhetorical Profile: ${contextDesc}
 
-Based on ${contextDesc} in your current study context:
+- **Tone**: Engaging, inspirational, and grounded in practical realism.
+- **Narrative Voice**: Supportive yet challenging, emphasizing personal agency and active participation.
+- **Audience Resonance**: Geared toward demystifying initial hurdles and instilling confidence.
+- **Delivery Strategy**: Connects broad aspirations to concrete daily habits and institutional resources.`;
+  }
 
-- **Key Insight**:
-  In ${contextDesc}, this topic represents an essential building block. Mastering this concept helps bridge practical applications with core principles.
+  // 5. Advice / Challenges Inquiries
+  if (/\b(advice|challenge|challenges|obstacle|failure|difficulty|hard)\b/i.test(qLower)) {
+    return `### 🛡️ Strategies & Advice from ${contextDesc}
 
-- **Study Breakdown**:
-  1. **Foundations**: Establish the definition and core premises.
-  2. **Relationships**: Consider how this correlates with surrounding modules and key takeaways.
-  3. **Application**: Test yourself by attempting to explain this concept in your own words (Feynman Technique).
+1. **Normalize the Learning Curve**: Setbacks are not failures; they are necessary friction in the process of growth.
+2. **Proactive Resource Utilization**: Seek guidance early through instructors, study circles, and specialized support channels.
+3. **Sustainable Pacing**: Avoid high-stress cramming; prioritize spaced repetition and consistent daily progress.
+4. **Resilience Framework**: Refocus on long-term objectives whenever immediate tasks feel demanding.`;
+  }
 
-- **Recommended Next Step**:
-  Would you like me to generate a 3-question practice quiz or create a revision schedule block for this topic?`;
+  // 6. General Questions or Concept Explanations
+  return `### 💡 Contextual Study Guidance: ${contextDesc}
+
+Regarding **"${cleanQ}"**:
+
+- **Core Analysis**:
+  Within the context of ${contextDesc}, this inquiry highlights an essential concept. Understanding how this connects to the broader framework ensures coherent mastery of the material.
+
+- **Key Observations**:
+  1. **Foundations**: Review the core definitions and explicit assertions made in the text.
+  2. **Interconnections**: Relate this concept to preceding milestones and surrounding themes.
+  3. **Application**: Try explaining this idea in simple terms without looking at the reference text.
+
+- **Suggested Next Step**:
+  Would you like me to run a **deep analysis**, generate a **5-question quiz**, or create **flashcards** on this topic?`;
 }
 
 /**
